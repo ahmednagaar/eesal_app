@@ -1,0 +1,395 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.DailyInvoicesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
+
+    <Grid Background="{StaticResource BgSurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ STEP 1: SETUP PANEL ═══ -->
+        <Border x:Name="SetupPanel" Grid.Row="0" Grid.RowSpan="3"
+                Background="{StaticResource BgSurfaceBrush}" Visibility="Visible">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16"
+                    Padding="32" Margin="40,40" VerticalAlignment="Center"
+                    HorizontalAlignment="Center" MinWidth="500"
+                    BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="⚙️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <TextBlock Text="اختر الخط والتاريخ" FontSize="22" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,24"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                    <!-- Route Selection -->
+                    <TextBlock Text="الخط" FontSize="13" Margin="0,0,0,6"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <ComboBox x:Name="RouteCombo" Height="44" FontSize="14" FontFamily="Segoe UI"
+                              Margin="0,0,0,16" DisplayMemberPath="DisplayText"
+                              SelectedValuePath="RouteId"/>
+
+                    <!-- Date -->
+                    <TextBlock Text="التاريخ" FontSize="13" Margin="0,0,0,6"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <DatePicker x:Name="DatePicker" Height="44" FontSize="14" FontFamily="Segoe UI"
+                                Margin="0,0,0,16" FlowDirection="LeftToRight"/>
+
+                    <!-- Driver -->
+                    <TextBlock Text="السائق (اختياري)" FontSize="13" Margin="0,0,0,6"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="DriverBox" Style="{StaticResource ModernTextBox}" Margin="0,0,0,24"/>
+
+                    <!-- Error -->
+                    <TextBlock x:Name="SetupError" Foreground="{StaticResource AccentDangerBrush}"
+                               FontSize="13" HorizontalAlignment="Center" Margin="0,0,0,12"
+                               Visibility="Collapsed"/>
+
+                    <!-- Start Button -->
+                    <Button x:Name="StartBtn" Content="▶  بدء تحديد الفواتير"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="Start_Click" Height="48" FontSize="16"/>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ═══ STEP 2: TABS (hidden until started) ═══ -->
+        <TabControl x:Name="MainTabControl" Grid.Row="0" Grid.RowSpan="2" Visibility="Collapsed">
+            
+            <!-- TAB 1: Checklist -->
+            <TabItem Header="📋  قائمة التجار">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Top: Counter + Quick Add -->
+                    <Border x:Name="ChecklistPanel" Grid.Row="0"
+                            Background="{StaticResource BgDeepBrush}" Padding="20,12"
+                            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <!-- Counter Row -->
+                <Grid Margin="0,0,0,12">
+                    <TextBlock x:Name="CounterText" Text="✅ تم تحديد 0 من 0 تاجر"
+                               FontSize="15" FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <Button Content="↩  رجوع" Style="{StaticResource SecondaryButton}"
+                            Click="Back_Click" HorizontalAlignment="Left"
+                            Padding="16,8" FontSize="12"/>
+                </Grid>
+
+                <!-- Quick Add Search -->
+                <Border Background="{StaticResource BgInputBrush}" CornerRadius="10"
+                        BorderBrush="{StaticResource BorderFocusBrush}" BorderThickness="2"
+                        Padding="4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="⚡" FontSize="18"
+                                   VerticalAlignment="Center" Margin="10,0,8,0"/>
+                        <TextBox x:Name="QuickAddBox" Grid.Column="1"
+                                 Background="Transparent" BorderThickness="0"
+                                 Foreground="{StaticResource TextPrimaryBrush}"
+                                 CaretBrush="{StaticResource AccentPrimaryBrush}"
+                                 FontSize="15" FontFamily="Segoe UI" Padding="4,10"
+                                 TextChanged="QuickAdd_TextChanged"
+                                 KeyDown="QuickAdd_KeyDown"/>
+                        <TextBlock Grid.Column="1" Text="🔍 اكتب اسم التاجر واضغط Enter للإضافة..."
+                                   x:Name="QuickAddPlaceholder"
+                                   FontSize="13" VerticalAlignment="Center" Margin="8,0"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   IsHitTestVisible="False"/>
+                        <Button x:Name="QuickAddClear" Grid.Column="2" Content="✕"
+                                Background="Transparent" Foreground="{StaticResource TextSecondaryBrush}"
+                                BorderThickness="0" FontSize="14" Cursor="Hand" Padding="10,4"
+                                Click="QuickAddClear_Click" Visibility="Collapsed"/>
+                    </Grid>
+                </Border>
+
+                <!-- Quick Add Results Popup -->
+                <Popup x:Name="QuickAddPopup" Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=QuickAddBox}"
+                       StaysOpen="False" AllowsTransparency="True">
+                    <Border Background="{StaticResource BgCardBrush}" CornerRadius="10"
+                            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                            MaxHeight="300" MinWidth="400">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.4"/>
+                        </Border.Effect>
+                        <ListBox x:Name="QuickAddResults"
+                                 Background="Transparent" BorderThickness="0"
+                                 SelectionChanged="QuickAddResult_Selected"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="8,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="36"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="28" Height="28"
+                                                CornerRadius="14"
+                                                Background="{StaticResource AccentPrimaryBrush}">
+                                            <TextBlock Text="{Binding PositionOrder}" FontSize="12"
+                                                       FontWeight="Bold" Foreground="White"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding MerchantName}"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" Text="Enter ↵" FontSize="11"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Popup>
+            </StackPanel>
+        </Border>
+
+        <!-- Merchant Checklist -->
+        <ListView x:Name="MerchantList" Grid.Row="1"
+                  Background="Transparent" BorderThickness="0"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  SelectionMode="Single" Padding="8,4">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="8,3"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListViewItem">
+                                <ContentPresenter/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Border x:Name="rowBorder" CornerRadius="10" Padding="14,12"
+                            BorderThickness="1" Margin="0,1"
+                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                            Background="{StaticResource BgCardBrush}">
+                        <StackPanel>
+                            <!-- Main Row -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          Checked="Merchant_Checked" Unchecked="Merchant_Unchecked"
+                                          VerticalAlignment="Center" Margin="0,0,6,0"/>
+
+                                <Border Grid.Column="1" Width="32" Height="32" CornerRadius="16"
+                                        VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource BorderSubtleBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource AccentSuccessBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding PositionOrder}" FontSize="12"
+                                               FontWeight="Bold" Foreground="White"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="10,0">
+                                    <TextBlock Text="{Binding MerchantName}" FontSize="15"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding City}" FontSize="12"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Visibility="{Binding City, Converter={StaticResource NullToCollapsed}}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Invoice Fields (visible only when checked) -->
+                            <Grid Margin="48,10,0,0">
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="رقم الفاتورة" FontSize="11"
+                                               Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding InvoiceNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" FontSize="13" Padding="8,8"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                    <TextBlock Text="الكمية / البيان" FontSize="11"
+                                               Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" FontSize="13" Padding="8,8"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                                    <TextBlock Text="المبلغ" FontSize="11"
+                                               Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Amount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" FontSize="13" Padding="8,8"
+                                             FlowDirection="LeftToRight"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="3">
+                                    <TextBlock Text="ملاحظات" FontSize="11"
+                                               Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" FontSize="13" Padding="8,8"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                            <Setter TargetName="rowBorder" Property="BorderBrush"
+                                    Value="{StaticResource AccentSuccessBrush}"/>
+                            <Setter TargetName="rowBorder" Property="Background"
+                                    Value="{StaticResource SelectedSuccessBgBrush}"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB 2: Preview & Reorder -->
+            <TabItem Header="👁  معاينة وترتيب" Selector.Selected="PreviewTab_Selected">
+                <Grid>
+                    <!-- Empty State for Preview -->
+                    <StackPanel x:Name="EmptyPreviewState" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock Text="👆" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.4"/>
+                        <TextBlock Text="اختر تجار من قائمة التجار أولاً" FontSize="16" HorizontalAlignment="Center"
+                                   Foreground="{StaticResource TextMutedBrush}"/>
+                    </StackPanel>
+
+                    <ListBox x:Name="PreviewList" Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="16"
+                             AllowDrop="True" Drop="PreviewList_Drop">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="rowBorder" Padding="10,12" BorderThickness="0,0,0,1"
+                                        BorderBrush="{StaticResource RowBorderBrush}" Background="Transparent">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Drag Handle -->
+                                        <TextBlock Grid.Column="0" Text="⋮⋮" FontSize="16" FontWeight="Bold"
+                                                   Foreground="{StaticResource DragHandleBrush}" VerticalAlignment="Center" Margin="0,0,12,0"
+                                                   Cursor="SizeAll" MouseLeftButtonDown="PreviewDragHandle_MouseLeftButtonDown"/>
+
+                                        <!-- Sequence Badge -->
+                                        <Border Grid.Column="1" Width="28" Height="28" CornerRadius="14"
+                                                Background="{StaticResource AccentGradient}" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding Sequence}" FontSize="12.8" FontWeight="Bold"
+                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Merchant Info -->
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding MerchantName}" FontSize="14.7" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <TextBlock Text="{Binding Quantity}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,12,0" Visibility="{Binding Quantity, Converter={StaticResource NullToCollapsed}}"/>
+                                                <TextBlock Text="{Binding InvoiceNumber}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Visibility="{Binding InvoiceNumber, Converter={StaticResource NullToCollapsed}}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="rowBorder" Property="Background" Value="{StaticResource RowHoverBrush}"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- ═══ BOTTOM ACTION BAR ═══ -->
+        <Border x:Name="ActionBar" Grid.Row="2" Visibility="Collapsed"
+                Background="{StaticResource BgDeepBrush}" Padding="20,14"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="SelectedCountText" Text="0 تاجر محدد"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center" Margin="0,0,20,0"/>
+                    <TextBlock x:Name="TotalAmountText" Text=""
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button Content="🚚  طباعة قائمة التسليم"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="PrintDelivery_Click" Margin="0,0,10,0"
+                            Padding="20,10" FontSize="13"/>
+                    <Button Content="📦  طباعة قائمة التحميل"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="PrintLoading_Click"
+                            Padding="20,10" FontSize="13"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

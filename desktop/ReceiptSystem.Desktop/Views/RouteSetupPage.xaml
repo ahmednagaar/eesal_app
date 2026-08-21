@@ -1,0 +1,290 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.RouteSetupPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
+
+    <Grid Background="{StaticResource BgSurfaceBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ═══ LEFT PANEL: Routes List ═══ -->
+        <Border Grid.Column="0" Background="{StaticResource BgDeepBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,1,0">
+            <Grid Margin="16,20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                    <TextBlock Text="🗺️  الخطوط" FontSize="18" FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                </StackPanel>
+
+                <!-- Add Route Button / Input -->
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <!-- Default State: Button -->
+                    <Button x:Name="ShowAddRouteBtn" Content="➕  إضافة خط جديد"
+                            Style="{StaticResource PrimaryButton}"
+                            Padding="12,10" FontSize="14"
+                            Click="ShowAddRouteBtn_Click"/>
+
+                    <!-- Add State: Input -->
+                    <Border x:Name="AddRoutePanel" Visibility="Collapsed"
+                            Background="{StaticResource BgCardBrush}"
+                            CornerRadius="10" Padding="12"
+                            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="اسم الخط الجديد" FontSize="12" Margin="0,0,0,6"
+                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBox x:Name="NewRouteNameBox" Style="{StaticResource ModernTextBox}"
+                                     Margin="0,0,0,12" KeyDown="NewRouteNameBox_KeyDown"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="إلغاء" Style="{StaticResource SecondaryButton}"
+                                        Padding="12,6" Margin="0,0,8,0"
+                                        Click="CancelAddRoute_Click"/>
+                                <Button Content="✅ إضافة" Style="{StaticResource PrimaryButton}"
+                                        Padding="12,6"
+                                        Click="ConfirmAddRoute_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Routes List -->
+                <ListBox x:Name="RoutesList" Grid.Row="2"
+                         Background="Transparent" BorderThickness="0"
+                         SelectionChanged="RoutesList_SelectionChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0,3"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="rowBorder" CornerRadius="10" Padding="12,14"
+                                                Background="Transparent">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="rowBorder" Property="Background" Value="{StaticResource BgCardBrush}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="rowBorder" Property="Background">
+                                                    <Setter.Value>
+                                                        <SolidColorBrush Color="{StaticResource AccentPrimary}" Opacity="0.12"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Setter Property="Foreground" Value="{StaticResource AccentPrimaryBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding RouteName}" FontWeight="SemiBold" FontSize="14.25"
+                                           VerticalAlignment="Center"/>
+                                <Border Background="{StaticResource BadgeNeutralBgBrush}" CornerRadius="10"
+                                        Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding MerchantCount}" FontSize="11.7"
+                                               Foreground="{StaticResource BadgeNeutralTextBrush}"/>
+                                </Border>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Empty State for Routes -->
+                <StackPanel x:Name="EmptyRoutesState" Grid.Row="2" VerticalAlignment="Center"
+                            Visibility="Collapsed">
+                    <TextBlock Text="🗺️" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8" Opacity="0.3"/>
+                    <TextBlock Text="لا توجد خطوط بعد" FontSize="14" HorizontalAlignment="Center"
+                               Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ RIGHT PANEL: Merchants ═══ -->
+        <Border Grid.Column="1" Background="{StaticResource BgSurfaceBrush}">
+            <Grid>
+                <!-- Empty State: No Route Selected -->
+                <StackPanel x:Name="NoRouteSelectedState" VerticalAlignment="Center" Visibility="Visible">
+                    <TextBlock Text="👆" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.4"/>
+                    <TextBlock Text="اختر خط من القائمة لعرض التجار" FontSize="18" HorizontalAlignment="Center"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <Grid x:Name="MerchantsGrid" Visibility="Collapsed" Margin="24">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,24">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🏪" FontSize="20" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="SelectedRouteTitle" Text="اسم الخط" FontSize="20" FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Content="👤  إضافة تاجر" Style="{StaticResource PrimaryButton}"
+                                HorizontalAlignment="Left" Padding="16,8"
+                                Click="ShowAddMerchantCard_Click"/>
+                    </Grid>
+
+                    <!-- Add Merchant Card (Dashed) -->
+                    <Border x:Name="AddMerchantCard" Grid.Row="1" Visibility="Collapsed"
+                            BorderBrush="{StaticResource DashedCardBorderBrush}" BorderThickness="2"
+                            Background="{StaticResource DashedCardBgBrush}" CornerRadius="10"
+                            Padding="20" Margin="0,0,0,20">
+                        <Grid>
+                            <!-- Merchant Search Box -->
+                            <StackPanel Margin="0,0,0,0">
+                                <TextBlock Text="ابحث عن التاجر" FontSize="13" Margin="0,0,0,6"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBox x:Name="MerchantSearchBox" Style="{StaticResource ModernTextBox}"
+                                         TextChanged="MerchantSearchBox_TextChanged"/>
+                                <Popup x:Name="MerchantSearchPopup" PlacementTarget="{Binding ElementName=MerchantSearchBox}"
+                                       StaysOpen="False" AllowsTransparency="True">
+                                    <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                            MaxHeight="250" MinWidth="{Binding ActualWidth, ElementName=MerchantSearchBox}">
+                                        <ListBox x:Name="MerchantSearchResults" Background="Transparent" BorderThickness="0"
+                                                 SelectionChanged="MerchantSearchResults_SelectionChanged">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" Margin="4,2">
+                                                        <TextBlock Text="{Binding MerchantName}" FontWeight="SemiBold"/>
+                                                        <TextBlock Text=" — " Foreground="{StaticResource TextMutedBrush}"/>
+                                                        <TextBlock Text="{Binding City}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </Popup>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                    <TextBlock Text="ضعه في الترتيب رقم:" VerticalAlignment="Center" Margin="0,0,8,0"
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBox x:Name="PositionBox" Style="{StaticResource ModernTextBox}"
+                                             Width="80" Text="1" HorizontalContentAlignment="Center"/>
+                                </StackPanel>
+
+                                <Border Background="{StaticResource BgSurfaceBrush}" CornerRadius="6" Padding="12" Margin="0,16,0,0">
+                                    <TextBlock Foreground="{StaticResource AccentPrimaryBrush}" TextWrapping="Wrap">
+                                        💡 التاجر سيُدرج في الموضع المحدد وسيتم تحريك باقي التجار تلقائياً. 
+                                        <Run x:Name="PositionHintText" Text="(يوجد حالياً 0 تاجر)"/>
+                                    </TextBlock>
+                                </Border>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                                    <Button Content="إلغاء" Style="{StaticResource SecondaryButton}" Padding="16,8" Margin="0,0,8,0"
+                                            Click="CancelAddMerchant_Click"/>
+                                    <Button Content="✅ إضافة للخط" Style="{StaticResource PrimaryButton}" Padding="16,8"
+                                            Click="ConfirmAddMerchant_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Search within route -->
+                    <TextBox x:Name="FilterRouteMerchantsBox" Grid.Row="2" Style="{StaticResource ModernTextBox}"
+                             Margin="0,0,0,16" TextChanged="FilterRouteMerchantsBox_TextChanged"/>
+                    <TextBlock Grid.Row="2" Text="🔍 بحث في تجار الخط..." FontSize="13" Margin="12,0"
+                               VerticalAlignment="Center" IsHitTestVisible="False"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               x:Name="FilterPlaceholder"/>
+
+                    <!-- Ordered Merchants List -->
+                    <ListBox x:Name="RouteMerchantsList" Grid.Row="3"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             AllowDrop="True" Drop="RouteMerchantsList_Drop">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="rowBorder" Padding="10,12" BorderThickness="0,0,0,1"
+                                        BorderBrush="{StaticResource RowBorderBrush}" Background="Transparent">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Drag Handle -->
+                                        <TextBlock Grid.Column="0" Text="⋮⋮" FontSize="16" FontWeight="Bold"
+                                                   Foreground="{StaticResource DragHandleBrush}" VerticalAlignment="Center" Margin="0,0,12,0"
+                                                   Cursor="SizeAll" MouseLeftButtonDown="DragHandle_MouseLeftButtonDown"/>
+
+                                        <!-- Position Badge -->
+                                        <Border Grid.Column="1" Width="28" Height="28" CornerRadius="14"
+                                                Background="{StaticResource AccentGradient}" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding PositionOrder}" FontSize="12.8" FontWeight="Bold"
+                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Merchant Info -->
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding MerchantName}" FontSize="14.7" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding City}" FontSize="12.5"
+                                                       Foreground="{StaticResource TextMutedBrush}"
+                                                       Visibility="{Binding City, Converter={StaticResource NullToCollapsed}}"/>
+                                        </StackPanel>
+
+                                        <!-- Delete Button -->
+                                        <Button Grid.Column="3" Content="🗑️" Background="Transparent" BorderThickness="0"
+                                                Foreground="{StaticResource AccentDangerBrush}" FontSize="16" Cursor="Hand" Padding="8,4"
+                                                ToolTip="حذف من الخط" Click="RemoveMerchant_Click"/>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="rowBorder" Property="Background" Value="{StaticResource RowHoverBrush}"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Empty State for Merchants -->
+                    <StackPanel x:Name="EmptyMerchantsState" Grid.Row="3" VerticalAlignment="Center"
+                                Visibility="Collapsed">
+                        <TextBlock Text="👤" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.3"/>
+                        <TextBlock Text="لا يوجد تجار في هذا الخط بعد" FontSize="16" HorizontalAlignment="Center"
+                                   Foreground="{StaticResource TextMutedBrush}"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

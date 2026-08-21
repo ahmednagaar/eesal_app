@@ -1,0 +1,217 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.RouteHistoryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
+
+    <Grid Background="{StaticResource BgSurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ HEADER & FILTERS ═══ -->
+        <Border Grid.Row="0" Background="{StaticResource BgDeepBrush}" Padding="24"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="📜" FontSize="28" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="سجل الخطوط" FontSize="20" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="تاريخ ومسودات تسليم الخطوط" FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Filters -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="الخط" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <ComboBox x:Name="RouteFilterBox"
+                                  Width="180" DisplayMemberPath="RouteName" SelectedValuePath="RouteId"
+                                  SelectionChanged="Filter_Changed"/>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="التاريخ" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <DatePicker x:Name="DateFilterBox" Width="180"
+                                    SelectedDateChanged="Filter_Changed"
+                                    Foreground="{StaticResource TextPrimaryBrush}">
+                            <DatePicker.Resources>
+                                <Style TargetType="DatePickerTextBox">
+                                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                </Style>
+                            </DatePicker.Resources>
+                        </DatePicker>
+                    </StackPanel>
+
+                    <Button Content="🗑️ مسح الفلاتر" Style="{StaticResource SecondaryButton}"
+                            VerticalAlignment="Bottom" Padding="12,8" Margin="0,0,0,2"
+                            Click="ClearFilters_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ DATA GRID ═══ -->
+        <DataGrid x:Name="HistoryGrid" Grid.Row="1" Margin="24"
+                  AutoGenerateColumns="False" CanUserAddRows="False"
+                  CanUserDeleteRows="False" IsReadOnly="True"
+                  HeadersVisibility="Column" SelectionMode="Single"
+                  Background="Transparent" RowBackground="Transparent"
+                  BorderThickness="0" GridLinesVisibility="Horizontal"
+                  HorizontalGridLinesBrush="{StaticResource RowBorderBrush}"
+                  Foreground="{StaticResource TextPrimaryBrush}"
+                  FontSize="14">
+            
+            <!-- We'll reuse the style from DriversPage but define it locally if we need to override -->
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="{StaticResource BgDeepBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="Padding" Value="16,12"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+            
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Padding" Value="0,8"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource RowHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{StaticResource RowSelectedBrush}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+            
+            <DataGrid.CellStyle>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Padding" Value="16,12"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="DataGridCell">
+                                <Border Padding="{TemplateBinding Padding}" Background="Transparent">
+                                    <ContentPresenter VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.CellStyle>
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="التاريخ" Binding="{Binding DeliveryDate, StringFormat=dd/MM/yyyy}" Width="120" />
+                <DataGridTextColumn Header="الخط" Binding="{Binding RouteName}" Width="*" />
+                
+                <DataGridTemplateColumn Header="السائق" Width="140">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding AssignedDriver}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="التجار" Binding="{Binding TotalMerchants}" Width="80" />
+                
+                <DataGridTemplateColumn Header="المبلغ" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding TotalAmount, StringFormat=N2}" FontWeight="SemiBold" Foreground="{StaticResource AccentPrimaryBrush}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="الحالة" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="12" Padding="12,4" HorizontalAlignment="Left">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="Draft">
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentWarningBrush}"/>
+                                                <Setter Property="Background" Value="#1A4A3500"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Confirmed">
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentSuccessBrush}"/>
+                                                <Setter Property="Background" Value="#1A004A25"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Printed">
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                                                <Setter Property="Background" Value="#1A003366"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Draft">
+                                                    <Setter Property="Text" Value="مسودة"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource AccentWarningBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Confirmed">
+                                                    <Setter Property="Text" Value="مؤكد"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Printed">
+                                                    <Setter Property="Text" Value="مطبوع"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource AccentPrimaryBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="" Width="180">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="📦 تحميل" Style="{StaticResource SecondaryButton}" 
+                                        Margin="0,0,8,0" Padding="12,6" FontSize="12"
+                                        Click="PrintLoading_Click"/>
+                                <Button Content="🚚 تسليم" Style="{StaticResource PrimaryButton}" 
+                                        Padding="12,6" FontSize="12"
+                                        Click="PrintDelivery_Click"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Loading State -->
+        <TextBlock x:Name="LoadingText" Grid.Row="1" Text="⏳ جاري تحميل السجل..."
+                   FontSize="16" Foreground="{StaticResource TextSecondaryBrush}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Visibility="Collapsed"/>
+    </Grid>
+</UserControl>

@@ -1,0 +1,154 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.ReceiptSearchPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
+    <Grid x:Name="RootGrid" Background="{StaticResource BgSurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ FILTER PANEL ═══ -->
+        <Border Grid.Row="0" Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="16,12" Margin="24,20,24,0">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="التاجر" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="FilterMerchant" Style="{StaticResource ModernTextBox}" Height="34"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                        <TextBlock Text="السائق" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <ComboBox x:Name="FilterDriver" Height="34" DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                        <TextBlock Text="من تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <DatePicker x:Name="FilterDateFrom" Height="34"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3">
+                        <TextBlock Text="إلى تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <DatePicker x:Name="FilterDateTo" Height="34"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="رقم الإيصال" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="FilterReceiptNum" Style="{StaticResource ModernTextBox}" Height="34"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                        <TextBlock Text="المبلغ من" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="FilterAmountMin" Style="{StaticResource ModernTextBox}" Height="34" FlowDirection="LeftToRight"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                        <TextBlock Text="المبلغ إلى" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="FilterAmountMax" Style="{StaticResource ModernTextBox}" Height="34" FlowDirection="LeftToRight"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <Button Content="🔍 بحث" Style="{StaticResource PrimaryButton}" Padding="16,6" FontSize="13"
+                                Click="Search_Click" Height="34"/>
+                        <Button Content="مسح" Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
+                                Click="ClearFilters_Click" Margin="8,0,0,0" Height="34"/>
+                        <Button x:Name="ExportBtn" Content="📥 تصدير Excel" Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
+                                Click="Export_Click" Margin="8,0,0,0" Height="34" IsEnabled="False"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ RESULTS GRID ═══ -->
+        <Border Grid.Row="1" Background="{StaticResource BgCardBrush}" CornerRadius="12" Margin="24,12,24,0" Padding="0">
+            <Grid>
+                <DataGrid x:Name="ResultsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" Background="Transparent" BorderThickness="0"
+                          RowBackground="{StaticResource BgCardBrush}"
+                          AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
+                          Foreground="{StaticResource TextPrimaryBrush}"
+                          FontSize="13" GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                          HeadersVisibility="Column">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="{StaticResource BgDeepBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                            <Setter Property="Padding" Value="12,10"/>
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="12,8"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridCell">
+                                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                            <ContentPresenter VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </DataGrid.CellStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding receiptNumber}" Width="100"/>
+                        <DataGridTextColumn Header="التاجر" Binding="{Binding merchantName}" Width="*"/>
+                        <DataGridTextColumn Header="السائق" Binding="{Binding driverName}" Width="*"/>
+                        <DataGridTextColumn Header="المبلغ" Binding="{Binding amount}" Width="100"/>
+                        <DataGridTextColumn Header="التاريخ" Binding="{Binding date}" Width="100"/>
+                        <DataGridTextColumn Header="المصدر" Binding="{Binding source}" Width="70"/>
+                        <DataGridTextColumn Header="الجلسة" Binding="{Binding sessionId}" Width="70"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock x:Name="EmptyState" Text="ابدأ بالبحث أعلاه" Visibility="Visible"
+                           FontSize="14" Foreground="{StaticResource TextMutedBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- ═══ TOTALS + PAGINATION ═══ -->
+        <Border Grid.Row="2" Background="{StaticResource BgCardBrush}" CornerRadius="12" Margin="24,12,24,20" Padding="16,10">
+            <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="الإيصالات:" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TotalCount" Text="0" FontSize="14" FontWeight="Bold" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="الإجمالي:" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TotalAmount" Text="0.00" FontSize="14" FontWeight="Bold"
+                               Foreground="{StaticResource AccentPrimaryBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button x:Name="PrevBtn" Content="◀" Style="{StaticResource SecondaryButton}" Padding="10,4"
+                            Click="Prev_Click" IsEnabled="False" FontSize="12"/>
+                    <TextBlock x:Name="PageInfo" Text="" FontSize="12" Margin="10,0" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <Button x:Name="NextBtn" Content="▶" Style="{StaticResource SecondaryButton}" Padding="10,4"
+                            Click="Next_Click" IsEnabled="False" FontSize="12"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Loading -->
+        <Border x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#88000000" Visibility="Collapsed">
+            <TextBlock Text="⏳ جاري البحث..." FontSize="16" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

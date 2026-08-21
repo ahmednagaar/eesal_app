@@ -1,0 +1,381 @@
+@use '@angular/material' as mat;
+
+// ── Custom Theme ──
+html {
+  @include mat.theme((
+    color: (
+      theme-type: light,
+      primary: mat.$azure-palette,
+      tertiary: mat.$violet-palette,
+    ),
+    typography: Cairo,
+    density: 0,
+  ));
+}
+
+// ── Global Styles ──
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  direction: rtl;
+  font-family: 'Cairo', sans-serif;
+  background: #f0f2f5;
+  color: #1a1a2e;
+}
+
+// ── RTL Overrides for Angular Material ──
+[dir="rtl"] {
+  .mat-mdc-form-field { direction: rtl; }
+  .mat-mdc-table { direction: rtl; }
+  .mat-mdc-dialog-container { direction: rtl; }
+  .mat-mdc-snack-bar-container { direction: rtl; }
+  .mat-mdc-select-panel { direction: rtl; }
+  .mat-mdc-menu-panel { direction: rtl; }
+  .mat-mdc-autocomplete-panel { direction: rtl; }
+}
+
+// ── Sidebar Nav Text Fix (prevent clipping) ──
+.app-sidenav {
+  .mdc-list-item__primary-text,
+  .mat-mdc-list-item-unscoped-content,
+  [matlistitemtitle] {
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: nowrap !important;
+    color: rgba(255,255,255,0.85) !important;
+    font-weight: 600 !important;
+  }
+  .mat-mdc-list-item {
+    overflow: visible !important;
+  }
+  .mdc-list-item__content {
+    overflow: visible !important;
+  }
+}
+
+// ── Scrollbar ──
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #888; }
+
+// ── Utility Classes ──
+.spacer { flex: 1 1 auto; }
+.full-width { width: 100%; }
+
+.page-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1a1a2e;
+  }
+}
+
+// ── Stat Cards Grid ──
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 959px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 599px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .page-container { padding: 12px; }
+  .page-header h1 { font-size: 1.2rem; }
+}
+
+// ── Stat Card ──
+.stat-card {
+  border-radius: 16px !important;
+  padding: 20px !important;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12) !important;
+  }
+
+  .stat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  &.green { background: linear-gradient(135deg, #00b09b, #96c93d); }
+  &.blue { background: linear-gradient(135deg, #667eea, #764ba2); }
+  &.red { background: linear-gradient(135deg, #f85032, #e73827); }
+  &.orange { background: linear-gradient(135deg, #f7971e, #ffd200); }
+}
+
+// ── Gap Warning Banner ──
+.gap-warning {
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  animation: pulse-warning 2s ease-in-out infinite;
+
+  button {
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,0.5) !important;
+  }
+}
+
+@keyframes pulse-warning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 65, 108, 0.4); }
+  50% { box-shadow: 0 0 20px 5px rgba(255, 65, 108, 0.2); }
+}
+
+// ── Tables ──
+.data-table-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.mat-mdc-table {
+  width: 100%;
+
+  .mat-mdc-header-row {
+    background: #f8f9fa;
+  }
+
+  .mat-mdc-header-cell {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #495057;
+  }
+
+  .mat-mdc-row:hover {
+    background: #f0f7ff;
+  }
+}
+
+// ── Status Badges ──
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 4px;
+
+  &.open { background: #fee2e2; color: #dc2626; }
+  &.under-investigation { background: #fff7ed; color: #ea580c; }
+  &.resolved { background: #dcfce7; color: #16a34a; }
+  &.explained { background: #dbeafe; color: #2563eb; }
+  &.available { background: #dcfce7; color: #16a34a; }
+  &.assigned { background: #dbeafe; color: #2563eb; }
+  &.in-progress { background: #fff7ed; color: #ea580c; }
+  &.completed { background: #f3f4f6; color: #6b7280; }
+}
+
+// ── Mobile Receipt Cards ──
+.mobile-receipt-cards { display: none; }
+.desktop-table { display: block; }
+
+@media (max-width: 599px) {
+  .mobile-receipt-cards { display: block; }
+  .desktop-table { display: none; }
+}
+
+// ── Totals Bar ──
+.totals-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #fff;
+  border-radius: 12px;
+  margin-top: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  flex-wrap: wrap;
+
+  span { font-size: 0.95rem; }
+  strong { font-weight: 700; color: #1a1a2e; }
+}
+
+@media (max-width: 599px) {
+  .totals-bar {
+    position: sticky;
+    bottom: 60px;
+    z-index: 10;
+    border-radius: 0;
+    margin: 0 -12px;
+    padding: 12px 16px;
+  }
+}
+
+// ── Print Styles ──
+@media print {
+  mat-sidenav, mat-toolbar, .no-print, .bottom-nav,
+  .mat-mdc-snack-bar-container, button.no-print,
+  .mat-mdc-tab-group, .action-bar, .page-header,
+  .setup-card, .checklist-header { display: none !important; }
+
+  .print-report, .print-sheet {
+    display: block !important;
+    direction: rtl;
+    font-family: 'Cairo', sans-serif;
+  }
+
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page-break { page-break-before: always; }
+
+  .merchant-checklist { display: none !important; }
+}
+
+// ── Bottom Nav (Mobile) ──
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  z-index: 100;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+
+  a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #6b7280;
+    font-size: 0.7rem;
+    font-weight: 600;
+    gap: 2px;
+    transition: color 0.2s;
+
+    .nav-icon { font-size: 22px; }
+
+    &.active, &:hover { color: #2563eb; }
+
+    &.fab-btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      margin-top: -20px;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      font-size: 1.4rem;
+    }
+  }
+}
+
+@media (max-width: 599px) {
+  .bottom-nav { display: flex; }
+}
+
+// ── Form Fields ──
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  mat-form-field { flex: 1; min-width: 200px; }
+}
+
+@media (max-width: 599px) {
+  .form-row {
+    flex-direction: column;
+    mat-form-field { min-width: 100%; }
+  }
+}
+
+// ── Dialog styles ──
+.gap-alert-header {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin-bottom: 16px;
+}
+
+.alert-note {
+  background: #fef3cd;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+// ── Receipt Card (Mobile) ──
+.receipt-card {
+  margin-bottom: 12px;
+  border-radius: 12px !important;
+  border-right: 4px solid #667eea;
+
+  &.has-error { border-right-color: #dc2626; }
+
+  mat-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+  }
+}
+
+// ── Loading ──
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+}
