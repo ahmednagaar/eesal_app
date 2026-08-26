@@ -476,6 +476,54 @@ public class ApiClient
     }
 
     // ══════════════════════════════════════
+    // Book Series
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetSeriesListJsonAsync()
+    {
+        return await GetAsync("book-series");
+    }
+
+    public async Task<dynamic?> CreateSeriesAsync(string seriesCode, int totalBooks = 500, int receiptsPerBook = 50, int startReceiptNumber = 1, string? notes = null)
+    {
+        return await PostAsync("book-series", new
+        {
+            SeriesCode = seriesCode,
+            TotalBooks = totalBooks,
+            ReceiptsPerBook = receiptsPerBook,
+            StartReceiptNumber = startReceiptNumber,
+            Notes = notes
+        });
+    }
+
+    public async Task<string?> GetSeriesDetailJsonAsync(int seriesId)
+    {
+        return await GetAsync($"book-series/{seriesId}");
+    }
+
+    public async Task<bool> CompleteSeriesAsync(int seriesId)
+    {
+        return await PutAsync($"book-series/{seriesId}/complete", new { });
+    }
+
+    public async Task<string?> GetSeriesAlertsJsonAsync()
+    {
+        return await GetAsync("book-series/alerts");
+    }
+
+    // ── Book Lifecycle (Return & Verify) ──
+
+    public async Task<bool> ReturnBookAsync(int bookId, string? notes = null)
+    {
+        return await PutAsync($"books/{bookId}/return", new { Notes = notes });
+    }
+
+    public async Task<bool> VerifyBookAsync(int bookId)
+    {
+        return await PutAsync($"books/{bookId}/verify", new { });
+    }
+
+    // ══════════════════════════════════════
     // ERP Import (Module 1)
     // ══════════════════════════════════════
 

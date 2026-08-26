@@ -4,40 +4,142 @@
              FlowDirection="RightToLeft">
     <Grid x:Name="RootGrid" Background="{StaticResource BgSurfaceBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>  <!-- Alerts -->
+            <RowDefinition Height="Auto"/>  <!-- Series Cards -->
+            <RowDefinition Height="*"/>     <!-- Books Grid -->
+            <RowDefinition Height="Auto"/>  <!-- Book Actions -->
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="*" MinWidth="320"/>
-        </Grid.ColumnDefinitions>
 
-        <!-- ═══ LEFT: BOOKS LIST ═══ -->
-        <Border Grid.Row="0" Grid.Column="0" Background="{StaticResource BgCardBrush}"
-                CornerRadius="12" Margin="24,20,12,0" Padding="0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+        <!-- ═══ ALERTS BAR ═══ -->
+        <Border x:Name="AlertsBar" Grid.Row="0" Background="#33EF4444" CornerRadius="10"
+                Margin="24,16,24,0" Padding="14,10" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="⚠️ تنبيهات الدفاتر" FontSize="13" FontWeight="Bold"
+                           Foreground="{StaticResource AccentDangerBrush}" Margin="0,0,0,6"/>
+                <ItemsControl x:Name="AlertsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding message}" FontSize="12"
+                                       Foreground="{StaticResource AccentDangerBrush}" Margin="0,2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
 
+        <!-- ═══ SERIES SECTION ═══ -->
+        <Border Grid.Row="1" Background="{StaticResource BgCardBrush}" CornerRadius="12"
+                Margin="24,12,24,0" Padding="16,12">
+            <StackPanel>
                 <!-- Header -->
-                <Border Grid.Row="0" Background="{StaticResource BgDeepBrush}" CornerRadius="12,12,0,0" Padding="16,12">
-                    <Grid>
-                        <TextBlock Text="دفاتر الإيصالات" FontSize="16" FontWeight="Bold"/>
-                        <Button Content="⟳" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"
-                                Padding="10,4" Click="Refresh_Click" FontSize="14"/>
-                    </Grid>
-                </Border>
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="📚 دورات الدفاتر" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" FlowDirection="LeftToRight">
+                        <Button Content="➕ إنشاء دورة جديدة" Style="{StaticResource PrimaryButton}"
+                                Padding="14,6" FontSize="12" Click="CreateSeries_Click" Margin="0,0,8,0"/>
+                        <Button Content="⟳ تحديث" Style="{StaticResource SecondaryButton}"
+                                Padding="10,6" FontSize="12" Click="Refresh_Click"/>
+                    </StackPanel>
+                </Grid>
 
-                <DataGrid x:Name="BooksGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True"
-                          CanUserAddRows="False" Background="Transparent" BorderThickness="0"
+                <!-- Series Cards -->
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MaxHeight="140">
+                    <ItemsControl x:Name="SeriesList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="SeriesCard" Background="{StaticResource BgInputBrush}"
+                                        CornerRadius="10" Padding="16,12" Margin="0,0,10,0"
+                                        MinWidth="200" Cursor="Hand"
+                                        MouseLeftButtonDown="SeriesCard_Click"
+                                        BorderThickness="2" BorderBrush="Transparent">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <TextBlock Text="{Binding seriesCode}" FontSize="22" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentPrimaryBrush}"/>
+                                            <Border Background="{Binding statusColor}" CornerRadius="4"
+                                                    Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding statusDisplay}" FontSize="10"
+                                                           Foreground="White"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                                            <Run Text="{Binding totalBooks}"/>
+                                            <Run Text="دفتر • "/>
+                                            <Run Text="{Binding receiptsPerBook}"/>
+                                            <Run Text="إيصال/دفتر"/>
+                                        </TextBlock>
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding availableBooks}" FontSize="18" FontWeight="Bold"
+                                                           Foreground="{StaticResource AccentSuccessBrush}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="متاح" FontSize="10"
+                                                           Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding assignedBooks}" FontSize="18" FontWeight="Bold"
+                                                           Foreground="{StaticResource AccentWarningBrush}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="مُعيّن" FontSize="10"
+                                                           Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding completedBooks}" FontSize="18" FontWeight="Bold"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="مكتمل" FontSize="10"
+                                                           Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Empty state -->
+                <TextBlock x:Name="SeriesEmpty" Text="لا توجد دورات — أنشئ دورة جديدة للبدء"
+                           FontSize="13" Foreground="{StaticResource TextMutedBrush}"
+                           HorizontalAlignment="Center" Margin="0,12,0,0" Visibility="Collapsed"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ BOOKS GRID ═══ -->
+        <Border Grid.Row="2" Background="{StaticResource BgCardBrush}" CornerRadius="12"
+                Margin="24,12,24,0" Padding="0">
+            <Grid>
+                <!-- Selected Series Header -->
+                <StackPanel x:Name="BooksHeader" Orientation="Horizontal" VerticalAlignment="Top"
+                            Margin="16,12,16,0">
+                    <TextBlock x:Name="BooksTitle" Text="اختر دورة لعرض الدفاتر" FontSize="14" FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="BooksSubtitle" Text="" FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    <Button x:Name="CompleteSeriesBtn" Content="✓ إغلاق الدورة"
+                            Style="{StaticResource SecondaryButton}" Padding="10,4" FontSize="11"
+                            Margin="16,0,0,0" Click="CompleteSeries_Click" Visibility="Collapsed"/>
+                </StackPanel>
+
+                <DataGrid x:Name="BooksGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" CanUserDeleteRows="False"
+                          Background="Transparent" BorderThickness="0"
                           RowBackground="{StaticResource BgCardBrush}"
                           AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
                           Foreground="{StaticResource TextPrimaryBrush}"
-                          FontSize="13" GridLinesVisibility="Horizontal"
+                          FontSize="12" GridLinesVisibility="Horizontal"
                           HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
                           HeadersVisibility="Column" SelectionMode="Single"
+                          Margin="0,42,0,0"
                           SelectionChanged="BooksGrid_SelectionChanged">
 
                     <DataGrid.ColumnHeaderStyle>
@@ -70,102 +172,102 @@
                     </DataGrid.CellStyle>
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="رقم الدفتر" Binding="{Binding bookNumber}" Width="90"/>
-                        <DataGridTextColumn Header="من" Binding="{Binding startReceipt}" Width="80"/>
-                        <DataGridTextColumn Header="إلى" Binding="{Binding endReceipt}" Width="80"/>
+                        <DataGridTextColumn Header="الدفتر" Binding="{Binding displayName}" Width="100"/>
+                        <DataGridTextColumn Header="النطاق" Binding="{Binding range}" Width="120"/>
                         <DataGridTextColumn Header="الحالة" Binding="{Binding statusDisplay}" Width="90"/>
                         <DataGridTextColumn Header="السائق" Binding="{Binding driverName}" Width="*"/>
-                        <DataGridTextColumn Header="المتبقي" Binding="{Binding remaining}" Width="70"/>
+                        <DataGridTextColumn Header="تاريخ التسليم" Binding="{Binding assignedDate}" Width="100"/>
+                        <DataGridTextColumn Header="مستخدم" Binding="{Binding usedReceipts}" Width="70"/>
+                        <DataGridTextColumn Header="متبقي" Binding="{Binding remainingReceipts}" Width="70"/>
+                        <DataGridTextColumn Header="تم التحقق" Binding="{Binding verifiedDisplay}" Width="80"/>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <!-- Empty state for books -->
+                <TextBlock x:Name="BooksEmpty" Text="اختر دورة من الأعلى" Visibility="Visible"
+                           FontSize="13" Foreground="{StaticResource TextMutedBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <!-- ═══ RIGHT: ACTION PANEL ═══ -->
-        <Border Grid.Row="0" Grid.Column="1" Background="{StaticResource BgCardBrush}"
-                CornerRadius="12" Margin="0,20,24,0" Padding="20,16">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <!-- Tab-like toggle -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <RadioButton x:Name="TabCreate" Content="إنشاء دفتر" GroupName="BookTab"
-                                     IsChecked="True" Checked="Tab_Changed" Style="{x:Null}" Cursor="Hand"
-                                     FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,16,0"/>
-                        <RadioButton x:Name="TabAssign" Content="تعيين لسائق" GroupName="BookTab"
-                                     Checked="Tab_Changed" Style="{x:Null}" Cursor="Hand"
-                                     FontSize="13" Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </StackPanel>
-
-                    <!-- Create Book Form -->
-                    <StackPanel x:Name="CreatePanel">
-                        <TextBlock Text="رقم الدفتر" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <TextBox x:Name="NewBookNumber" Style="{StaticResource ModernTextBox}" Height="36" Margin="0,0,0,10"/>
-
-                        <TextBlock Text="من إيصال رقم" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <TextBox x:Name="NewStartReceipt" Style="{StaticResource ModernTextBox}" Height="36" Margin="0,0,0,10"/>
-
-                        <TextBlock Text="إلى إيصال رقم" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <TextBox x:Name="NewEndReceipt" Style="{StaticResource ModernTextBox}" Height="36" Margin="0,0,0,10"/>
-
-                        <TextBlock Text="ملاحظات" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <TextBox x:Name="NewBookNotes" Style="{StaticResource ModernTextBox}" Height="50" TextWrapping="Wrap" Margin="0,0,0,14"/>
-
-                        <Button x:Name="CreateBtn" Content="إنشاء الدفتر" Style="{StaticResource PrimaryButton}"
-                                Click="Create_Click" Padding="16,8" FontSize="13"/>
-                    </StackPanel>
-
-                    <!-- Assign Book Form -->
-                    <StackPanel x:Name="AssignPanel" Visibility="Collapsed">
-                        <TextBlock x:Name="AssignBookLabel" Text="اختر دفتر من القائمة" FontSize="13"
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"/>
-
-                        <TextBlock Text="السائق" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <ComboBox x:Name="AssignDriverCombo" Height="36" Margin="0,0,0,10"
-                                  DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
-
-                        <TextBlock Text="تاريخ التعيين" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <DatePicker x:Name="AssignDate" Height="36" Margin="0,0,0,14"/>
-
-                        <Button x:Name="AssignBtn" Content="تعيين الدفتر" Style="{StaticResource PrimaryButton}"
-                                Click="Assign_Click" Padding="16,8" FontSize="13" IsEnabled="False"/>
-
-                        <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,16"/>
-
-                        <!-- Edit / Deactivate (visible when book selected) -->
-                        <StackPanel x:Name="EditPanel" Visibility="Collapsed">
-                            <TextBlock Text="تعديل الدفتر المحدد" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <TextBlock Text="ملاحظات" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <TextBox x:Name="EditNotes" Style="{StaticResource ModernTextBox}" Height="50" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="حفظ التعديل" Style="{StaticResource PrimaryButton}"
-                                        Click="UpdateBook_Click" Padding="14,6" FontSize="12" Margin="0,0,8,0"/>
-                                <Button Content="إلغاء التفعيل" Style="{StaticResource SecondaryButton}"
-                                        Click="Deactivate_Click" Padding="14,6" FontSize="12"
-                                        Foreground="{StaticResource AccentDangerBrush}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </StackPanel>
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
-
-        <!-- ═══ LOW-STOCK ALERTS ═══ -->
-        <Border x:Name="LowStockSection" Grid.Row="1" Grid.ColumnSpan="2"
-                Background="#33EF4444" CornerRadius="12" Padding="16,12" Margin="24,12,24,20"
-                BorderBrush="{StaticResource AccentDangerBrush}" BorderThickness="1" Visibility="Collapsed">
+        <!-- ═══ BOOK ACTIONS PANEL ═══ -->
+        <Border x:Name="BookActionsPanel" Grid.Row="3" Background="{StaticResource BgCardBrush}"
+                CornerRadius="12" Margin="24,12,24,20" Padding="20,14" Visibility="Collapsed">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                               Foreground="{StaticResource AccentDangerBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="دفاتر على وشك النفاد (≤10 إيصالات متبقية)" FontSize="13" FontWeight="Bold"
-                               Foreground="{StaticResource AccentDangerBrush}"/>
+                <TextBlock x:Name="BookActionTitle" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                <StackPanel Orientation="Horizontal">
+                    <!-- Assign -->
+                    <StackPanel x:Name="AssignSection" Orientation="Horizontal" Margin="0,0,16,0">
+                        <ComboBox x:Name="AssignDriverCombo" Width="180" Height="34"
+                                  DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+                        <DatePicker x:Name="AssignDate" Width="140" Height="34" Margin="8,0,0,0"/>
+                        <Button x:Name="AssignBtn" Content="📋 تسليم للسائق"
+                                Style="{StaticResource PrimaryButton}" Padding="12,6" FontSize="12"
+                                Margin="8,0,0,0" Click="Assign_Click"/>
+                    </StackPanel>
+
+                    <!-- Return -->
+                    <Button x:Name="ReturnBtn" Content="↩️ إرجاع الدفتر"
+                            Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
+                            Margin="0,0,8,0" Click="Return_Click" Visibility="Collapsed"/>
+
+                    <!-- Verify -->
+                    <Button x:Name="VerifyBtn" Content="✓ تحقق"
+                            Style="{StaticResource PrimaryButton}" Padding="12,6" FontSize="12"
+                            Margin="0,0,8,0" Click="Verify_Click" Visibility="Collapsed"/>
                 </StackPanel>
-                <TextBlock x:Name="LowStockText" TextWrapping="Wrap" FontSize="12"/>
             </StackPanel>
         </Border>
 
+        <!-- ═══ CREATE SERIES DIALOG ═══ -->
+        <Border x:Name="CreateSeriesDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="32,24"
+                    MaxWidth="450" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2">
+                <StackPanel>
+                    <TextBlock Text="📚 إنشاء دورة دفاتر جديدة" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="رمز الدورة (مثال: A, B, C):" FontSize="13" Margin="0,0,0,6"/>
+                    <TextBox x:Name="NewSeriesCode" Style="{StaticResource ModernTextBox}" Height="38" FontSize="15"
+                             MaxLength="10" FlowDirection="LeftToRight" TextAlignment="Center"/>
+
+                    <TextBlock Text="عدد الدفاتر:" FontSize="13" Margin="0,12,0,6"/>
+                    <TextBox x:Name="NewSeriesTotalBooks" Style="{StaticResource ModernTextBox}" Height="38"
+                             Text="500" FlowDirection="LeftToRight" TextAlignment="Center"/>
+
+                    <TextBlock Text="عدد الإيصالات لكل دفتر:" FontSize="13" Margin="0,12,0,6"/>
+                    <TextBox x:Name="NewSeriesReceiptsPerBook" Style="{StaticResource ModernTextBox}" Height="38"
+                             Text="50" FlowDirection="LeftToRight" TextAlignment="Center"/>
+
+                    <TextBlock Text="رقم بداية الإيصالات:" FontSize="13" Margin="0,12,0,6"/>
+                    <TextBox x:Name="NewSeriesStartNumber" Style="{StaticResource ModernTextBox}" Height="38"
+                             Text="1" FlowDirection="LeftToRight" TextAlignment="Center"/>
+
+                    <TextBlock Text="ملاحظات (اختياري):" FontSize="13" Margin="0,12,0,6"/>
+                    <TextBox x:Name="NewSeriesNotes" Style="{StaticResource ModernTextBox}" Height="50"
+                             TextWrapping="Wrap" AcceptsReturn="True"/>
+
+                    <!-- Summary -->
+                    <Border Background="{StaticResource BgInputBrush}" CornerRadius="6" Padding="12,8" Margin="0,14,0,0">
+                        <TextBlock x:Name="SeriesSummary" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap" TextAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                        <Button x:Name="CreateSeriesConfirmBtn" Content="إنشاء الدورة"
+                                Style="{StaticResource PrimaryButton}" Padding="20,8"
+                                Click="CreateSeriesConfirm_Click" Margin="0,0,8,0"/>
+                        <Button Content="إلغاء" Style="{StaticResource SecondaryButton}" Padding="16,8"
+                                Click="CreateSeriesCancel_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
         <!-- Loading -->
-        <Border x:Name="LoadingOverlay" Grid.RowSpan="2" Grid.ColumnSpan="2" Background="#88000000" Visibility="Collapsed">
+        <Border x:Name="LoadingOverlay" Grid.RowSpan="4" Background="#88000000" Visibility="Collapsed">
             <TextBlock Text="⏳ جاري التحميل..." FontSize="16" Foreground="White"
                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>

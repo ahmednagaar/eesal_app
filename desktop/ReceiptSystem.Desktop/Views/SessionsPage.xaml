@@ -246,6 +246,40 @@
             </Border>
         </Border>
 
+        <!-- ═══ EDIT RECEIPT DIALOG ═══ -->
+        <Border x:Name="EditReceiptDialog" Grid.RowSpan="3" Background="#CC000000" Visibility="Collapsed">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="32,24"
+                    MaxWidth="460" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2">
+                <StackPanel>
+                    <TextBlock x:Name="EditReceiptTitle" Text="✏️ تعديل الإيصال" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="المبلغ:" FontSize="13" Margin="0,0,0,6"/>
+                    <TextBox x:Name="EditAmountBox" Style="{StaticResource ModernTextBox}" Height="38" FontSize="14"
+                             FlowDirection="LeftToRight" TextAlignment="Right"/>
+
+                    <TextBlock Text="التاجر:" FontSize="13" Margin="0,12,0,6"/>
+                    <ComboBox x:Name="EditMerchantCombo" Height="38" Width="396"
+                              DisplayMemberPath="merchantName" SelectedValuePath="merchantId"
+                              IsEditable="True" IsTextSearchEnabled="True"/>
+
+                    <CheckBox x:Name="EditPartialCheck" Content="دفعة جزئية" FontSize="13" Margin="0,12,0,0"/>
+
+                    <TextBlock Text="ملاحظات:" FontSize="13" Margin="0,12,0,6"/>
+                    <TextBox x:Name="EditNotesBox" Style="{StaticResource ModernTextBox}" Height="60"
+                             TextWrapping="Wrap" AcceptsReturn="True"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                        <Button Content="حفظ التعديلات" Style="{StaticResource PrimaryButton}" Padding="20,8"
+                                Click="EditReceiptConfirm_Click" Margin="0,0,8,0"/>
+                        <Button Content="إلغاء" Style="{StaticResource SecondaryButton}" Padding="16,8"
+                                Click="EditReceiptCancel_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
         <!-- Loading -->
         <Border x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#88000000" Visibility="Collapsed">
             <TextBlock Text="⏳ جاري التحميل..." FontSize="16" Foreground="White"

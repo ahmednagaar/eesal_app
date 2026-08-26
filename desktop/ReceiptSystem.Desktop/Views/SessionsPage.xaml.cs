@@ -360,27 +360,92 @@ public partial class SessionsPage : UserControl
     }
 
     // ── Edit Receipt ──
+    private int _editingReceiptId;
+    private bool _merchantsLoadedForEdit = false;
+
     private async void EditReceipt_Click(object sender, RoutedEventArgs e)
     {
         var btn = (Button)sender;
         dynamic? row = ((FrameworkElement)btn).DataContext;
         if (row == null) return;
 
-        int receiptId = (int)row.receiptId;
-        // For now, allow editing notes inline — open a simple InputBox
-        string currentNotes = (string)row.notes;
-        var dlg = new System.Windows.Controls.TextBox { Text = currentNotes, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 80 };
-        var result = MessageBox.Show($"تعديل ملاحظات الإيصال {row.receiptNumber}?\n\nاستخدم الحقل في النافذة التالية.",
-            "تعديل", MessageBoxButton.OKCancel, MessageBoxImage.Question);
-        if (result != MessageBoxResult.OK) return;
+        _editingReceiptId = (int)row.receiptId;
+        EditReceiptTitle.Text = $"✏️ تعديل الإيصال {row.receiptNumber}";
 
-        btn.IsEnabled = false;
+        // Load merchants list (once)
+        if (!_merchantsLoadedForEdit)
+        {
+            try
+            {
+                var merchantsJson = await _api.SearchMerchantsJsonAsync("");
+                if (merchantsJson != null)
+                {
+                    var merchants = JArray.Parse(merchantsJson);
+                    EditMerchantCombo.ItemsSource = merchants.Select(m => new
+                    {
+                        merchantId = m["merchantId"]?.Value<int>() ?? 0,
+                        merchantName = m["merchantName"]?.ToString() ?? ""
+                    }).ToList();
+                    _merchantsLoadedForEdit = true;
+                }
+            }
+            catch { }
+        }
+
+        // Pre-populate fields with current values
+        EditAmountBox.Text = ((string)row.amount).Replace(",", "");
+        EditPartialCheck.IsChecked = ((string)row.partial) == "✓";
+        EditNotesBox.Text = (string)row.notes;
+
+        // Try to select current merchant
+        string currentMerchant = (string)row.merchantName;
+        if (EditMerchantCombo.ItemsSource != null)
+        {
+            foreach (var item in EditMerchantCombo.ItemsSource)
+            {
+                dynamic m = item;
+                if ((string)m.merchantName == currentMerchant)
+                {
+                    EditMerchantCombo.SelectedItem = item;
+                    break;
+                }
+            }
+        }
+
+        EditReceiptDialog.Visibility = Visibility.Visible;
+        EditAmountBox.Focus();
+        EditAmountBox.SelectAll();
+    }
+
+    private async void EditReceiptConfirm_Click(object sender, RoutedEventArgs e)
+    {
+        if (!decimal.TryParse(EditAmountBox.Text, out decimal amount) || amount < 0)
+        {
+            ToastHelper.ShowError(RootGrid, "المبلغ غير صحيح");
+            return;
+        }
+
+        int? merchantId = EditMerchantCombo.SelectedValue as int?;
+        if (merchantId == null || merchantId <= 0)
+        {
+            ToastHelper.ShowError(RootGrid, "اختر التاجر");
+            return;
+        }
+
+        var btn = (Button)sender; btn.IsEnabled = false;
         try
         {
-            bool ok = await _api.UpdateReceiptAsync(receiptId, new { notes = currentNotes });
+            bool ok = await _api.UpdateReceiptAsync(_editingReceiptId, new
+            {
+                amount = amount,
+                merchantId = merchantId,
+                isPartialPayment = EditPartialCheck.IsChecked == true,
+                notes = EditNotesBox.Text.Trim()
+            });
             if (ok)
             {
                 ToastHelper.ShowSuccess(RootGrid, "✓ تم تحديث الإيصال");
+                EditReceiptDialog.Visibility = Visibility.Collapsed;
                 // Refresh detail
                 ReceiptsDetail.Visibility = Visibility.Collapsed;
                 ViewDetails_Click(sender, e);
@@ -389,6 +454,9 @@ public partial class SessionsPage : UserControl
         catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
         finally { btn.IsEnabled = true; }
     }
+
+    private void EditReceiptCancel_Click(object sender, RoutedEventArgs e)
+        => EditReceiptDialog.Visibility = Visibility.Collapsed;
 
     // ── Delete Receipt (Admin-only — backend returns 403 for non-Admin) ──
     private async void DeleteReceipt_Click(object sender, RoutedEventArgs e)
