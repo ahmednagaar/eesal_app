@@ -47,7 +47,11 @@ public class BookSeriesController : ControllerBase
                 Notes = s.Notes,
                 AvailableBooks = s.Books.Count(b => b.Status == "Available"),
                 AssignedBooks = s.Books.Count(b => b.Status == "Assigned" || b.Status == "InProgress"),
-                CompletedBooks = s.Books.Count(b => b.Status == "Completed" || b.Status == "Returned")
+                CompletedBooks = s.Books.Count(b => b.Status == "Completed"),
+                ReturnedBooks = s.Books.Count(b => b.Status == "Returned"),
+                UsagePercent = s.TotalBooks > 0
+                    ? Math.Round((double)s.Books.Count(b => b.Status != "Available" && b.Status != "Deactivated") / s.TotalBooks * 100, 1)
+                    : 0
             })
             .ToListAsync();
 
@@ -193,6 +197,77 @@ public class BookSeriesController : ControllerBase
         await _audit.LogAsync(UserId, "إغلاق دورة دفاتر", "BookSeries", id);
 
         return Ok(new { message = "تم إغلاق الدورة بنجاح" });
+    }
+
+    /// <summary>
+    /// Delete a series and all its books (only if no books have been assigned)
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var series = await _db.BookSeries.Include(s => s.Books).FirstOrDefaultAsync(s => s.SeriesId == id);
+        if (series == null) return NotFound(new { message = "الدورة غير موجودة" });
+
+        var nonAvailable = series.Books.Count(b => b.Status != "Available");
+        if (nonAvailable > 0)
+            return BadRequest(new { message = $"لا يمكن حذف الدورة — يوجد {nonAvailable} دفتر تم تسليمه أو استخدامه" });
+
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            _db.ReceiptBooks.RemoveRange(series.Books);
+            _db.BookSeries.Remove(series);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            await _audit.LogAsync(UserId, "حذف دورة دفاتر", "BookSeries", id,
+                newValues: new { series.SeriesCode, series.TotalBooks });
+
+            return Ok(new { message = $"تم حذف الدورة '{series.SeriesCode}' وجميع دفاترها بنجاح" });
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Auto-assign the next available book (lowest BookNumber) in this series to a driver
+    /// </summary>
+    [HttpPost("{id}/assign-next")]
+    public async Task<IActionResult> AssignNext(int id, [FromBody] AssignBookDto dto)
+    {
+        var series = await _db.BookSeries
+            .Include(s => s.Books)
+            .FirstOrDefaultAsync(s => s.SeriesId == id);
+
+        if (series == null) return NotFound(new { message = "الدورة غير موجودة" });
+        if (series.Status != "Active")
+            return BadRequest(new { message = "الدورة مغلقة — لا يمكن تسليم دفاتر منها" });
+
+        var nextBook = series.Books
+            .Where(b => b.Status == "Available")
+            .OrderBy(b => b.BookNumber)
+            .FirstOrDefault();
+
+        if (nextBook == null)
+            return BadRequest(new { message = "لا يوجد دفاتر متاحة في هذه الدورة" });
+
+        nextBook.AssignedToDriverId = dto.DriverId;
+        nextBook.AssignedDate = dto.AssignedDate ?? DateTime.Today;
+        nextBook.AssignedByUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        nextBook.Status = "Assigned";
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(UserId, "تسليم دفتر تالي (تلقائي)", "ReceiptBook", nextBook.BookId,
+            newValues: new { dto.DriverId, nextBook.BookNumber, SeriesCode = series.SeriesCode });
+
+        return Ok(new
+        {
+            message = $"تم تسليم دفتر {series.SeriesCode}-{nextBook.BookNumber} للسائق بنجاح",
+            bookId = nextBook.BookId,
+            bookNumber = nextBook.BookNumber,
+            displayName = $"{series.SeriesCode}-{nextBook.BookNumber}"
+        });
     }
 
     /// <summary>

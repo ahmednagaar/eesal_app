@@ -36,12 +36,12 @@ public partial class SessionsPage : UserControl
             var json = await _api.GetDriversJsonAsync();
             if (json == null) return;
             var drivers = JArray.Parse(json);
-            var list = drivers.Select(d => new
+            var list = drivers.Select(d => new DriverComboItem
             {
                 driverId = d["driverId"]?.Value<int>() ?? 0,
                 fullName = d["fullName"]?.ToString() ?? ""
             }).ToList();
-            list.Insert(0, new { driverId = 0, fullName = "— الكل —" });
+            list.Insert(0, new DriverComboItem { driverId = 0, fullName = "— الكل —" });
             FilterDriver.ItemsSource = list;
             FilterDriver.SelectedIndex = 0;
         }
@@ -381,7 +381,7 @@ public partial class SessionsPage : UserControl
                 if (merchantsJson != null)
                 {
                     var merchants = JArray.Parse(merchantsJson);
-                    EditMerchantCombo.ItemsSource = merchants.Select(m => new
+                    EditMerchantCombo.ItemsSource = merchants.Select(m => new MerchantComboItem
                     {
                         merchantId = m["merchantId"]?.Value<int>() ?? 0,
                         merchantName = m["merchantName"]?.ToString() ?? ""

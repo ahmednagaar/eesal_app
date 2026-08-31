@@ -93,6 +93,8 @@ public class BookSeriesDto
     public int AvailableBooks { get; set; }
     public int AssignedBooks { get; set; }
     public int CompletedBooks { get; set; }
+    public int ReturnedBooks { get; set; }
+    public double UsagePercent { get; set; } // (Assigned+Completed+Returned) / Total * 100
 }
 
 public class CreateBookSeriesDto
@@ -130,15 +132,6 @@ public class BookDto
     public DateTime? VerifiedAt { get; set; }
 }
 
-public class CreateBookDto
-{
-    [Required] public int BookNumber { get; set; }
-    [Required] public int StartReceiptNumber { get; set; }
-    [Required] public int EndReceiptNumber { get; set; }
-    public int? SeriesId { get; set; }
-    public string? Notes { get; set; }
-}
-
 public class EditBookDto
 {
     public string? Notes { get; set; }
@@ -154,6 +147,13 @@ public class AssignBookDto
 public class ReturnBookDto
 {
     public string? Notes { get; set; }
+}
+
+public class AssignBatchDto
+{
+    [Required] public int[] BookIds { get; set; } = Array.Empty<int>();
+    [Required] public int DriverId { get; set; }
+    public DateTime? AssignedDate { get; set; }
 }
 
 // ── User Management ──

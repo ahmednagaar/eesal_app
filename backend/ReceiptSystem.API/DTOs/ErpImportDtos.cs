@@ -19,6 +19,7 @@ public class ErpImportPreviewRowDto
     public string MerchantNameRaw { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public int? MatchedMerchantId { get; set; }
+    
     public string? MatchedMerchantName { get; set; }
     public bool IsNewMerchant { get; set; }
 

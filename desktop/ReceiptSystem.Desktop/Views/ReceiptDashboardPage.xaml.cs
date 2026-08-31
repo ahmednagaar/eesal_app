@@ -94,20 +94,29 @@ public partial class ReceiptDashboardPage : UserControl
                 MissingDriversBanner.Visibility = Visibility.Collapsed;
             }
 
-            // Load low-stock books
+            // Load low-stock alerts (from book-series alerts)
             try
             {
-                var lowStockJson = await _api.GetLowStockBooksJsonAsync();
-                if (lowStockJson != null)
+                var alertsJson = await _api.GetSeriesAlertsJsonAsync();
+                if (alertsJson != null)
                 {
-                    var lowStock = JArray.Parse(lowStockJson);
-                    if (lowStock.Count > 0)
+                    var alertsObj = JObject.Parse(alertsJson);
+                    var alerts = alertsObj["alerts"] as JArray;
+                    if (alerts != null && alerts.Count > 0)
                     {
-                        var items = lowStock.Select(b =>
-                            $"دفتر {b["bookNumber"]} — متبقي {b["remaining"]} إيصال" +
-                            (b["driverName"] != null ? $" ({b["driverName"]})" : "")).ToList();
-                        LowStockText.Text = string.Join("  •  ", items);
-                        LowStockBanner.Visibility = Visibility.Visible;
+                        var bookAlerts = alerts
+                            .Where(a => a["type"]?.ToString() == "book_low" || a["type"]?.ToString() == "book_finished")
+                            .Select(a => a["message"]?.ToString() ?? "")
+                            .ToList();
+                        if (bookAlerts.Count > 0)
+                        {
+                            LowStockText.Text = string.Join("  •  ", bookAlerts);
+                            LowStockBanner.Visibility = Visibility.Visible;
+                        }
+                        else
+                        {
+                            LowStockBanner.Visibility = Visibility.Collapsed;
+                        }
                     }
                     else
                     {

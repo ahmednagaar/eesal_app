@@ -47,7 +47,7 @@ public partial class NewSessionPage : UserControl
             if (driversJson != null)
             {
                 var drivers = JArray.Parse(driversJson);
-                var driverList = drivers.Select(d => new
+                var driverList = drivers.Select(d => new DriverComboItem
                 {
                     driverId = d["driverId"]?.Value<int>() ?? 0,
                     fullName = d["fullName"]?.ToString() ?? ""
@@ -60,7 +60,7 @@ public partial class NewSessionPage : UserControl
             if (booksJson != null)
             {
                 var books = JArray.Parse(booksJson);
-                var bookList = books.Select(b => new
+                var bookList = books.Select(b => new BookComboItem
                 {
                     bookId = b["bookId"]?.Value<int>() ?? 0,
                     display = $"دفتر {b["bookNumber"]} ({b["startReceiptNumber"]}–{b["endReceiptNumber"]})"

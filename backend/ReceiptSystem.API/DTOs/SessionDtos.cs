@@ -156,15 +156,6 @@ public class MissingDriverDto
     public DateTime? LastSessionDate { get; set; }
 }
 
-// ── Low Stock Book ──
-public class LowStockBookDto
-{
-    public int BookId { get; set; }
-    public int BookNumber { get; set; }
-    public string? DriverName { get; set; }
-    public int Remaining { get; set; }
-    public int EndReceiptNumber { get; set; }
-}
 
 // ── Dashboard ──
 public class DashboardDto

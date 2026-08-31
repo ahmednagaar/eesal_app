@@ -25,27 +25,7 @@ public class ReceiptBooksController : ControllerBase
 
     private int UserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        var books = await _db.ReceiptBooks
-            .Include(b => b.AssignedToDriver)
-            .OrderBy(b => b.BookNumber)
-            .Select(b => new BookDto
-            {
-                BookId = b.BookId,
-                BookNumber = b.BookNumber,
-                StartReceiptNumber = b.StartReceiptNumber,
-                EndReceiptNumber = b.EndReceiptNumber,
-                AssignedToDriverId = b.AssignedToDriverId,
-                DriverName = b.AssignedToDriver != null ? b.AssignedToDriver.FullName : null,
-                AssignedDate = b.AssignedDate,
-                Status = b.Status,
-                Notes = b.Notes
-            })
-            .ToListAsync();
-        return Ok(books);
-    }
+
 
     [HttpGet("available")]
     public async Task<IActionResult> GetAvailable()
@@ -65,75 +45,62 @@ public class ReceiptBooksController : ControllerBase
         return Ok(books);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateBookDto dto)
-    {
-        if (dto.StartReceiptNumber >= dto.EndReceiptNumber)
-            return BadRequest(new { message = "رقم البداية يجب أن يكون أقل من رقم النهاية" });
 
-        if (await _db.ReceiptBooks.AnyAsync(b => b.BookNumber == dto.BookNumber))
-            return BadRequest(new { message = "رقم الدفتر موجود بالفعل" });
-
-        var book = new ReceiptBook
-        {
-            BookNumber = dto.BookNumber,
-            StartReceiptNumber = dto.StartReceiptNumber,
-            EndReceiptNumber = dto.EndReceiptNumber,
-            Notes = dto.Notes,
-            Status = "Available"
-        };
-        _db.ReceiptBooks.Add(book);
-        await _db.SaveChangesAsync();
-        await _audit.LogAsync(UserId, "إضافة", "ReceiptBook", book.BookId, newValues: dto);
-        return Ok(new BookDto
-        {
-            BookId = book.BookId,
-            BookNumber = book.BookNumber,
-            StartReceiptNumber = book.StartReceiptNumber,
-            EndReceiptNumber = book.EndReceiptNumber,
-            Status = book.Status,
-            Notes = book.Notes
-        });
-    }
 
     [HttpPut("{id}/assign")]
     public async Task<IActionResult> Assign(int id, [FromBody] AssignBookDto dto)
     {
         var book = await _db.ReceiptBooks.FindAsync(id);
         if (book == null) return NotFound(new { message = "الدفتر غير موجود" });
+
+        if (book.Status != "Available" && book.Status != "Returned")
+            return BadRequest(new { message = $"لا يمكن تسليم دفتر بحالة '{book.Status}' — يجب أن يكون متاح أو مُرجع" });
+
         book.AssignedToDriverId = dto.DriverId;
         book.AssignedDate = dto.AssignedDate ?? DateTime.Today;
         book.AssignedByUserId = UserId;
         book.Status = "Assigned";
+        book.IsVerified = false;
+        book.VerifiedAt = null;
+        book.VerifiedByUserId = null;
+        book.ReturnedDate = null;
         await _db.SaveChangesAsync();
         await _audit.LogAsync(UserId, "تسليم دفتر", "ReceiptBook", id, newValues: dto);
         return Ok(new { message = "تم تسليم الدفتر للسائق بنجاح" });
     }
 
-    [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock()
+    /// <summary>
+    /// Bulk assign multiple books to a single driver
+    /// </summary>
+    [HttpPost("assign-batch")]
+    public async Task<IActionResult> AssignBatch([FromBody] AssignBatchDto dto)
     {
+        if (dto.BookIds == null || dto.BookIds.Length == 0)
+            return BadRequest(new { message = "اختر دفتر واحد على الأقل" });
+
         var books = await _db.ReceiptBooks
-            .Include(b => b.AssignedToDriver)
-            .Include(b => b.Receipts)
-            .Where(b => b.Status != "Completed")
+            .Where(b => dto.BookIds.Contains(b.BookId))
             .ToListAsync();
 
-        var lowStock = books
-            .Select(b => new LowStockBookDto
-            {
-                BookId = b.BookId,
-                BookNumber = b.BookNumber,
-                DriverName = b.AssignedToDriver?.FullName,
-                Remaining = (b.EndReceiptNumber - b.StartReceiptNumber + 1) - b.Receipts.Count,
-                EndReceiptNumber = b.EndReceiptNumber
-            })
-            .Where(b => b.Remaining <= 10)
-            .OrderBy(b => b.Remaining)
-            .ToList();
+        var unavailable = books.Where(b => b.Status != "Available").ToList();
+        if (unavailable.Count > 0)
+            return BadRequest(new { message = $"يوجد {unavailable.Count} دفتر غير متاح للتسليم" });
 
-        return Ok(lowStock);
+        var assignDate = dto.AssignedDate ?? DateTime.Today;
+        foreach (var book in books)
+        {
+            book.AssignedToDriverId = dto.DriverId;
+            book.AssignedDate = assignDate;
+            book.AssignedByUserId = UserId;
+            book.Status = "Assigned";
+        }
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(UserId, "تسليم دفاتر (جماعي)", "ReceiptBook", 0,
+            newValues: new { dto.BookIds, dto.DriverId, Count = books.Count });
+
+        return Ok(new { message = $"تم تسليم {books.Count} دفتر للسائق بنجاح", assignedCount = books.Count });
     }
+
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] EditBookDto dto)
@@ -207,5 +174,31 @@ public class ReceiptBooksController : ControllerBase
         await _audit.LogAsync(UserId, "تحقق من دفتر", "ReceiptBook", id);
 
         return Ok(new { message = "تم التحقق من الدفتر بنجاح ✓" });
+    }
+
+    /// <summary>
+    /// Get activity history for a specific book from audit log
+    /// </summary>
+    [HttpGet("{id}/history")]
+    public async Task<IActionResult> GetHistory(int id)
+    {
+        var book = await _db.ReceiptBooks.FindAsync(id);
+        if (book == null) return NotFound(new { message = "الدفتر غير موجود" });
+
+        var logs = await _db.AuditLogs
+            .Where(l => l.EntityType == "ReceiptBook" && l.EntityId == id)
+            .OrderByDescending(l => l.CreatedAt)
+            .Include(l => l.User)
+            .Take(50)
+            .Select(l => new
+            {
+                action = l.Action,
+                userName = l.User.FullName,
+                date = l.CreatedAt,
+                details = l.NewValues
+            })
+            .ToListAsync();
+
+        return Ok(logs);
     }
 }

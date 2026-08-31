@@ -18,6 +18,7 @@ public partial class ReceiptBooksPage : UserControl
     private int _selectedBookId;
     private string _selectedBookStatus = "";
     private List<dynamic> _seriesData = new();
+    private List<dynamic> _allBooks = new();
 
     public ReceiptBooksPage(ApiClient api)
     {
@@ -48,7 +49,7 @@ public partial class ReceiptBooksPage : UserControl
             var json = await _api.GetDriversJsonAsync();
             if (json == null) return;
             var drivers = JArray.Parse(json);
-            AssignDriverCombo.ItemsSource = drivers.Select(d => new
+            AssignDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
             {
                 driverId = d["driverId"]?.Value<int>() ?? 0,
                 fullName = d["fullName"]?.ToString() ?? ""
@@ -100,6 +101,9 @@ public partial class ReceiptBooksPage : UserControl
                     availableBooks = available,
                     assignedBooks = assigned,
                     completedBooks = completed,
+                    returnedBooks = s["returnedBooks"]?.Value<int>() ?? 0,
+                    usagePercent = s["usagePercent"]?.Value<double>() ?? 0,
+                    progressText = $"{s["usagePercent"]?.Value<double>() ?? 0:F0}% مستخدم",
                     notes = s["notes"]?.ToString() ?? ""
                 };
             }).ToList();
@@ -150,11 +154,24 @@ public partial class ReceiptBooksPage : UserControl
             BooksTitle.Text = $"دورة {series.seriesCode}";
             BooksSubtitle.Text = $"{series.totalBooks} دفتر";
             BooksEmpty.Visibility = Visibility.Collapsed;
+            FilterBar.Visibility = Visibility.Visible;
 
-            // Show/hide complete button
+            // Reset filters
+            FilterStatus.SelectedIndex = 0;
+            FilterBookNumber.Text = "";
+            FilterDriverName.Text = "";
+
+            // Show/hide complete & delete buttons
             bool isActive = ((string)series.status) == "Active";
             bool isAdmin = _api.CurrentUserRole?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
             CompleteSeriesBtn.Visibility = isActive && isAdmin ? Visibility.Visible : Visibility.Collapsed;
+
+            // Delete only allowed if ALL books are still available (none assigned/returned)
+            bool canDelete = isActive && isAdmin && ((int)series.assignedBooks == 0) && ((int)series.completedBooks == 0);
+            DeleteSeriesBtn.Visibility = canDelete ? Visibility.Visible : Visibility.Collapsed;
+
+            // Show Quick Assign Next button for active series
+            AssignNextBtn.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
 
             // Reset book selection
             BookActionsPanel.Visibility = Visibility.Collapsed;
@@ -213,12 +230,65 @@ public partial class ReceiptBooksPage : UserControl
                 };
             }).OrderBy(b => b.bookNumber).ToList();
 
-            BooksGrid.ItemsSource = rows;
+            _allBooks = rows.Cast<dynamic>().ToList();
+            ApplyFilters();
+            FilterBar.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
         {
             ToastHelper.ShowError(RootGrid, ErrorMessageHelper.GetArabicMessage(ex));
         }
+    }
+
+    // ══════════════════════════════════════
+    // Filters
+    // ══════════════════════════════════════
+
+    private void Filter_Changed(object sender, SelectionChangedEventArgs e) => ApplyFilters();
+    private void Filter_TextChanged(object sender, TextChangedEventArgs e) => ApplyFilters();
+
+    private void ApplyFilters()
+    {
+        if (!IsLoaded || BooksGrid == null) return;
+        if (_allBooks == null || _allBooks.Count == 0) { BooksGrid.ItemsSource = null; return; }
+
+        var filtered = _allBooks.AsEnumerable();
+
+        // Status filter
+        int statusIndex = FilterStatus?.SelectedIndex ?? 0;
+        if (statusIndex > 0)
+        {
+            string statusFilter = statusIndex switch
+            {
+                1 => "Available",
+                2 => "Assigned",
+                3 => "Returned",
+                4 => "Verified",
+                5 => "Deactivated",
+                _ => ""
+            };
+            if (statusFilter == "Verified")
+                filtered = filtered.Where(b => (bool)b.isVerified);
+            else if (!string.IsNullOrEmpty(statusFilter))
+                filtered = filtered.Where(b => (string)b.rawStatus == statusFilter);
+        }
+
+        // Book number filter
+        string bookNumText = FilterBookNumber?.Text?.Trim() ?? "";
+        if (!string.IsNullOrEmpty(bookNumText))
+        {
+            if (int.TryParse(bookNumText, out int bookNum))
+                filtered = filtered.Where(b => (int)b.bookNumber == bookNum);
+            else
+                filtered = filtered.Where(b => ((int)b.bookNumber).ToString().Contains(bookNumText));
+        }
+
+        // Driver name filter
+        string driverText = FilterDriverName?.Text?.Trim() ?? "";
+        if (!string.IsNullOrEmpty(driverText))
+            filtered = filtered.Where(b => ((string)b.driverName).Contains(driverText, StringComparison.OrdinalIgnoreCase));
+
+        BooksGrid.ItemsSource = filtered.ToList();
     }
 
     // ══════════════════════════════════════
@@ -229,20 +299,40 @@ public partial class ReceiptBooksPage : UserControl
     {
         if (BooksGrid.SelectedItem == null) { BookActionsPanel.Visibility = Visibility.Collapsed; return; }
 
+        var selectedItems = BooksGrid.SelectedItems;
+        int count = selectedItems.Count;
+
+        // Show/hide action buttons based on selection
+        bool isAdmin = _api.CurrentUserRole?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+        bool isTreasury = _api.CurrentUserRole?.Equals("Treasury", StringComparison.OrdinalIgnoreCase) == true;
+        bool canManageBooks = isAdmin || isTreasury;
+
+        if (count > 1)
+        {
+            // Multi-select: show bulk actions only
+            var allAvailable = selectedItems.Cast<dynamic>().All(b => (string)b.rawStatus == "Available");
+            BookActionTitle.Text = $"تم تحديد {count} دفتر";
+            BookActionsPanel.Visibility = Visibility.Visible;
+            AssignSection.Visibility = allAvailable && canManageBooks ? Visibility.Visible : Visibility.Collapsed;
+            AssignBtn.Visibility = Visibility.Collapsed;
+            AssignBatchBtn.Visibility = allAvailable && canManageBooks ? Visibility.Visible : Visibility.Collapsed;
+            ReturnBtn.Visibility = Visibility.Collapsed;
+            VerifyBtn.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        // Single select
         dynamic row = BooksGrid.SelectedItem;
         _selectedBookId = (int)row.bookId;
         _selectedBookStatus = (string)row.rawStatus;
         BookActionTitle.Text = $"دفتر {row.displayName} ({row.range})";
         BookActionsPanel.Visibility = Visibility.Visible;
 
-        // Show/hide action buttons based on book status
-        bool isAdmin = _api.CurrentUserRole?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
-        bool isTreasury = _api.CurrentUserRole?.Equals("Treasury", StringComparison.OrdinalIgnoreCase) == true;
-        bool canManageBooks = isAdmin || isTreasury;
-
-        // Assign: only for "Available" books
-        AssignSection.Visibility = _selectedBookStatus == "Available" && canManageBooks
-            ? Visibility.Visible : Visibility.Collapsed;
+        // Assign: for "Available" or "Returned" books (reassign)
+        bool canAssign = (_selectedBookStatus == "Available" || _selectedBookStatus == "Returned") && canManageBooks;
+        AssignSection.Visibility = canAssign ? Visibility.Visible : Visibility.Collapsed;
+        AssignBtn.Visibility = canAssign ? Visibility.Visible : Visibility.Collapsed;
+        AssignBatchBtn.Visibility = Visibility.Collapsed;
 
         // Return: only for "Assigned" or "InProgress" books
         ReturnBtn.Visibility = (_selectedBookStatus == "Assigned" || _selectedBookStatus == "InProgress") && canManageBooks
@@ -270,6 +360,28 @@ public partial class ReceiptBooksPage : UserControl
             if (ok)
             {
                 ToastHelper.ShowSuccess(RootGrid, "✓ تم تسليم الدفتر للسائق");
+                await LoadBooksForSeriesAsync(_selectedSeriesId);
+                await LoadSeriesAsync();
+            }
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+        finally { btn.IsEnabled = true; }
+    }
+
+    private async void AssignBatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (BooksGrid.SelectedItems.Count <= 1) { ToastHelper.ShowError(RootGrid, "اختر أكثر من دفتر"); return; }
+        if (AssignDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        { ToastHelper.ShowError(RootGrid, "اختر السائق"); return; }
+
+        var bookIds = BooksGrid.SelectedItems.Cast<dynamic>().Select(b => (int)b.bookId).ToArray();
+        var btn = (Button)sender; btn.IsEnabled = false;
+        try
+        {
+            var result = await _api.AssignBooksBatchAsync(bookIds, driverId, AssignDate.SelectedDate);
+            if (result != null)
+            {
+                ToastHelper.ShowSuccess(RootGrid, $"✓ تم تسليم {bookIds.Length} دفتر للسائق");
                 await LoadBooksForSeriesAsync(_selectedSeriesId);
                 await LoadSeriesAsync();
             }
@@ -318,6 +430,34 @@ public partial class ReceiptBooksPage : UserControl
         finally { btn.IsEnabled = true; }
     }
 
+    private async void ShowHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedBookId <= 0) return;
+
+        // Toggle visibility
+        if (HistoryList.Visibility == Visibility.Visible)
+        {
+            HistoryList.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        try
+        {
+            var json = await _api.GetBookHistoryJsonAsync(_selectedBookId);
+            if (json == null) { ToastHelper.ShowError(RootGrid, "لا يوجد سجل"); return; }
+
+            var logs = JArray.Parse(json);
+            HistoryList.ItemsSource = logs.Select(l => new
+            {
+                action = l["action"]?.ToString() ?? "",
+                userName = l["userName"]?.ToString() ?? "",
+                dateDisplay = l["date"]?.ToString()?.Substring(0, Math.Min(16, l["date"]?.ToString()?.Length ?? 0)) ?? ""
+            }).ToList();
+            HistoryList.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+    }
+
     // ══════════════════════════════════════
     // Complete Series
     // ══════════════════════════════════════
@@ -342,6 +482,80 @@ public partial class ReceiptBooksPage : UserControl
         }
         catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
         finally { btn.IsEnabled = true; }
+    }
+    // ══════════════════════════════════════
+    // Delete Series
+    // ══════════════════════════════════════
+
+    private async void DeleteSeries_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedSeriesId <= 0) return;
+        var confirm = MessageBox.Show("هل أنت متأكد من حذف هذه الدورة وجميع دفاترها؟\nلا يمكن التراجع عن هذا الإجراء.",
+            "تأكيد حذف الدورة", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        var btn = (Button)sender; btn.IsEnabled = false;
+        try
+        {
+            bool ok = await _api.DeleteSeriesAsync(_selectedSeriesId);
+            if (ok)
+            {
+                ToastHelper.ShowSuccess(RootGrid, "✓ تم حذف الدورة وجميع دفاترها");
+                _selectedSeriesId = 0;
+                DeleteSeriesBtn.Visibility = Visibility.Collapsed;
+                CompleteSeriesBtn.Visibility = Visibility.Collapsed;
+                BooksGrid.ItemsSource = null;
+                BooksTitle.Text = "اختر دورة لعرض الدفاتر";
+                BooksSubtitle.Text = "";
+                BooksEmpty.Visibility = Visibility.Visible;
+                BookActionsPanel.Visibility = Visibility.Collapsed;
+                await LoadSeriesAsync();
+            }
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+        finally { btn.IsEnabled = true; }
+    }
+
+    // ══════════════════════════════════════
+    // Quick Assign Next
+    // ══════════════════════════════════════
+
+    private void AssignNext_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedSeriesId <= 0) { ToastHelper.ShowError(RootGrid, "اختر دورة أولاً"); return; }
+
+        // Find selected series info
+        var series = _seriesData.FirstOrDefault(s => (int)s.seriesId == _selectedSeriesId);
+        if (series != null)
+            AssignNextSeriesLabel.Text = $"الدورة: {series.seriesCode} — متاح: {series.availableBooks} دفتر";
+
+        AssignNextDriverCombo.ItemsSource = AssignDriverCombo.ItemsSource;
+        AssignNextDriverCombo.SelectedIndex = -1;
+        AssignNextDialog.Visibility = Visibility.Visible;
+    }
+
+    private void AssignNextCancel_Click(object sender, RoutedEventArgs e) => AssignNextDialog.Visibility = Visibility.Collapsed;
+
+    private async void AssignNextConfirm_Click(object sender, RoutedEventArgs e)
+    {
+        if (AssignNextDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        { ToastHelper.ShowError(RootGrid, "اختر السائق"); return; }
+
+        AssignNextConfirmBtn.IsEnabled = false;
+        try
+        {
+            var result = await _api.AssignNextBookAsync(_selectedSeriesId, driverId);
+            if (result != null)
+            {
+                string msg = result["message"]?.ToString() ?? "✓ تم التسليم";
+                ToastHelper.ShowSuccess(RootGrid, msg);
+                AssignNextDialog.Visibility = Visibility.Collapsed;
+                await LoadBooksForSeriesAsync(_selectedSeriesId);
+                await LoadSeriesAsync();
+            }
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+        finally { AssignNextConfirmBtn.IsEnabled = true; }
     }
 
     // ══════════════════════════════════════

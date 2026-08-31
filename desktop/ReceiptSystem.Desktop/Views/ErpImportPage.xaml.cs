@@ -180,7 +180,7 @@ public partial class ErpImportPage : UserControl
             var json = await _api.GetErpBatchesJsonAsync();
             if (json == null) return;
             var batches = JArray.Parse(json);
-            var list = batches.Select(b => new
+            var list = batches.Select(b => new BatchComboItem
             {
                 batchId = b["batchId"]?.Value<int>() ?? 0,
                 display = $"دُفعة {b["batchId"]} — {b["importDate"]?.ToString()?.Substring(0, 10)} ({b["status"]})"
@@ -193,7 +193,7 @@ public partial class ErpImportPage : UserControl
             if (driversJson != null)
             {
                 var drivers = JArray.Parse(driversJson);
-                BlockDriverCombo.ItemsSource = drivers.Select(d => new
+                BlockDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
                 {
                     driverId = d["driverId"]?.Value<int>() ?? 0,
                     fullName = d["fullName"]?.ToString() ?? ""

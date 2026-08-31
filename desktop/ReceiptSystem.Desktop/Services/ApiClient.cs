@@ -440,24 +440,23 @@ public class ApiClient
     // Receipt Books (Module 1)
     // ══════════════════════════════════════
 
-    public async Task<string?> GetBooksJsonAsync()
-    {
-        return await GetAsync("books");
-    }
+
 
     public async Task<string?> GetAvailableBooksJsonAsync()
     {
         return await GetAsync("books/available");
     }
 
-    public async Task<dynamic?> CreateBookAsync(int bookNumber, int startReceiptNumber, int endReceiptNumber, string? notes = null)
-    {
-        return await PostAsync("books", new { BookNumber = bookNumber, StartReceiptNumber = startReceiptNumber, EndReceiptNumber = endReceiptNumber, Notes = notes });
-    }
+
 
     public async Task<bool> AssignBookAsync(int bookId, int driverId, DateTime? assignedDate = null)
     {
         return await PutAsync($"books/{bookId}/assign", new { DriverId = driverId, AssignedDate = assignedDate?.ToString("yyyy-MM-dd") });
+    }
+
+    public async Task<dynamic?> AssignBooksBatchAsync(int[] bookIds, int driverId, DateTime? assignedDate = null)
+    {
+        return await PostAsync("books/assign-batch", new { BookIds = bookIds, DriverId = driverId, AssignedDate = assignedDate?.ToString("yyyy-MM-dd") });
     }
 
     public async Task<bool> UpdateBookAsync(int bookId, int? bookNumber = null, string? notes = null)
@@ -470,10 +469,7 @@ public class ApiClient
         return await DeleteAsync($"books/{bookId}");
     }
 
-    public async Task<string?> GetLowStockBooksJsonAsync()
-    {
-        return await GetAsync("books/low-stock");
-    }
+
 
     // ══════════════════════════════════════
     // Book Series
@@ -511,6 +507,16 @@ public class ApiClient
         return await GetAsync("book-series/alerts");
     }
 
+    public async Task<bool> DeleteSeriesAsync(int seriesId)
+    {
+        return await DeleteAsync($"book-series/{seriesId}");
+    }
+
+    public async Task<dynamic?> AssignNextBookAsync(int seriesId, int driverId, DateTime? assignedDate = null)
+    {
+        return await PostAsync($"book-series/{seriesId}/assign-next", new { DriverId = driverId, AssignedDate = assignedDate?.ToString("yyyy-MM-dd") });
+    }
+
     // ── Book Lifecycle (Return & Verify) ──
 
     public async Task<bool> ReturnBookAsync(int bookId, string? notes = null)
@@ -521,6 +527,11 @@ public class ApiClient
     public async Task<bool> VerifyBookAsync(int bookId)
     {
         return await PutAsync($"books/{bookId}/verify", new { });
+    }
+
+    public async Task<string?> GetBookHistoryJsonAsync(int bookId)
+    {
+        return await GetAsync($"books/{bookId}/history");
     }
 
     // ══════════════════════════════════════
