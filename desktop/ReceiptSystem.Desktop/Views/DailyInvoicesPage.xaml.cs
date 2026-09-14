@@ -442,4 +442,33 @@ public partial class DailyInvoicesPage : UserControl
     {
         await PrintHelper.PrintSheetAsync(_api, _deliveryDayId, "delivery");
     }
+
+    private async void ConfirmDay_Click(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            "هل أنت متأكد من تأكيد يوم التسليم؟\nبعد التأكيد لن يمكن التعديل إلا بإذن المسؤول.",
+            "تأكيد يوم التسليم", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes) return;
+
+        try
+        {
+            bool ok = await _api.ConfirmDeliveryDayAsync(_deliveryDayId);
+            if (ok)
+            {
+                ConfirmDayBtn.IsEnabled = false;
+                ConfirmDayBtn.Content = "✅  تم التأكيد";
+                ToastHelper.ShowSuccess((Grid)Content, "تم تأكيد يوم التسليم بنجاح");
+            }
+            else
+            {
+                ToastHelper.ShowError((Grid)Content, "فشل تأكيد يوم التسليم");
+            }
+        }
+        catch (Exception ex)
+        {
+            var msg = ErrorMessageHelper.GetArabicMessage(ex);
+            ToastHelper.ShowError((Grid)Content, msg);
+        }
+    }
 }

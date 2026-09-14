@@ -44,6 +44,7 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8">
                     <StackPanel Margin="0,16,0,0">
 
+                        <StackPanel x:Name="NavReceiptSection">
                         <!-- ═══ SECTION: RECEIPT SYSTEM ═══ -->
                         <TextBlock Text="نظام الإيصالات" FontSize="11" FontWeight="Bold"
                                    Foreground="{StaticResource TextMutedBrush}" Margin="24,8,24,4"/>
@@ -282,6 +283,7 @@
 
                         <!-- Separator -->
                         <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="16,8"/>
+                        </StackPanel>
 
                         <!-- ═══ SECTION: ROUTE SYSTEM ═══ -->
                         <TextBlock Text="نظام الخطوط" FontSize="11" FontWeight="Bold"
@@ -408,6 +410,263 @@
                                 </ControlTemplate>
                             </RadioButton.Template>
                         </RadioButton>
+
+                        <!-- Separator -->
+                        <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="16,8"/>
+
+                        <!-- ═══ SECTION: AJAL (دفتر الآجل) ═══ -->
+                        <TextBlock Text="دفتر الآجل" FontSize="11" FontWeight="Bold"
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="24,8,24,4"/>
+
+                        <!-- Ajal Daily Register -->
+                        <RadioButton GroupName="Nav" Tag="AjalDaily"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📋" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="السجل اليومي" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Ajal Entry -->
+                        <RadioButton GroupName="Nav" Tag="AjalEntry"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="✏️" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="إدخال فواتير" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Ajal Search -->
+                        <RadioButton GroupName="Nav" Tag="AjalSearch"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔍" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="بحث الآجل" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Ajal Employee Performance -->
+                        <RadioButton GroupName="Nav" Tag="AjalEmployeePerf"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="👥" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="أداء الموظفين" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Ajal Merchant History -->
+                        <RadioButton GroupName="Nav" Tag="AjalMerchantHistory"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📊" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="كشف حساب تاجر" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Ajal Excel Import -->
+                        <RadioButton GroupName="Nav" Tag="AjalExcelImport"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📥" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="استيراد إكسل" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Ajal Settings (Prefix) -->
+                        <RadioButton GroupName="Nav" Tag="AjalSettings"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚙️" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="إعدادات البادئة" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Separator -->
+                        <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="16,8"/>
+
+                        <StackPanel x:Name="NavAdminSection">
+                        <!-- ═══ SECTION: ADMIN ═══ -->
+                        <TextBlock Text="الإدارة" FontSize="11" FontWeight="Bold"
+                                   Foreground="{StaticResource TextMutedBrush}" Margin="24,8,24,4"/>
+
+                        <!-- User Management -->
+                        <RadioButton GroupName="Nav" Tag="UserManagement"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="👤" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="المستخدمون" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Audit Log -->
+                        <RadioButton GroupName="Nav" Tag="AuditLog"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📜" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="سجل التدقيق" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        <!-- Change Password -->
+                        <RadioButton GroupName="Nav" Tag="ChangePassword"
+                                     Checked="Nav_Click" Style="{x:Null}" Cursor="Hand">
+                            <RadioButton.Template>
+                                <ControlTemplate TargetType="RadioButton">
+                                    <Border x:Name="navBorder" Padding="16,14" Margin="8,2"
+                                            CornerRadius="10" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔐" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="تغيير كلمة المرور" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavSelectedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource NavHoverBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </RadioButton.Template>
+                        </RadioButton>
+
+                        </StackPanel>
 
                         <!-- Separator -->
                         <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="16,8"/>

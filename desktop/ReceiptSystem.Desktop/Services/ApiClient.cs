@@ -322,6 +322,21 @@ public class ApiClient
         return await PutAsync($"delivery-days/{dayId}/reorder", reorders);
     }
 
+    public async Task<bool> ConfirmDeliveryDayAsync(int dayId)
+    {
+        return await PutAsync($"delivery-days/{dayId}/confirm", new { });
+    }
+
+    public async Task<bool> MarkDeliveryDayPrintedAsync(int dayId)
+    {
+        return await PutAsync($"delivery-days/{dayId}/mark-printed", new { });
+    }
+
+    public async Task<dynamic?> UnlockDeliveryDayAsync(int dayId, string reason)
+    {
+        return await PutWithResponseAsync($"delivery-days/{dayId}/unlock", new { Reason = reason });
+    }
+
     // ══════════════════════════════════════
     // Print Sheets
     // ══════════════════════════════════════
@@ -653,6 +668,200 @@ public class ApiClient
         if (!string.IsNullOrEmpty(to)) q.Add($"to={to}");
         var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
         return await GetAsync($"search/merchants/{merchantId}/payment-history{qs}");
+    }
+
+
+    // ══════════════════════════════════════
+    // Ajal (دفتر الآجل)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetAjalDailyJsonAsync(DateTime date)
+    {
+        return await GetAsync($"ajal/daily?date={date:yyyy-MM-dd}");
+    }
+
+    public async Task<dynamic?> CreateAjalInvoicesAsync(DateTime sessionDate, int? routeId, object invoices)
+    {
+        return await PostAsync("ajal/invoices", new { SessionDate = sessionDate.ToString("yyyy-MM-dd"), RouteId = routeId, Invoices = invoices });
+    }
+
+    public async Task<dynamic?> EditAjalInvoiceAsync(int id, decimal amount, string? employeeName, string? invoiceStatus, string? modNote, int? routeId, string? notes)
+    {
+        return await PutWithResponseAsync($"ajal/invoices/{id}", new
+        {
+            Amount = amount,
+            CallCenterEmployeeName = employeeName,
+            InvoiceStatus = invoiceStatus,
+            ModificationNote = modNote,
+            RouteId = routeId,
+            Notes = notes
+        });
+    }
+
+    public async Task<dynamic?> CancelAjalInvoiceAsync(int id, string reason)
+    {
+        return await PutWithResponseAsync($"ajal/invoices/{id}/cancel", new { Reason = reason });
+    }
+
+    public async Task<string?> GetAjalMerchantHistoryJsonAsync(int merchantId, string? from = null, string? to = null)
+    {
+        var q = new List<string>();
+        if (!string.IsNullOrEmpty(from)) q.Add($"from={from}");
+        if (!string.IsNullOrEmpty(to)) q.Add($"to={to}");
+        var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
+        return await GetAsync($"ajal/merchants/{merchantId}/history{qs}");
+    }
+
+    public async Task<string?> GetAjalEmployeePerformanceJsonAsync(DateTime from, DateTime to)
+    {
+        return await GetAsync($"ajal/employees/performance?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
+    }
+
+    public async Task<string?> SearchAjalJsonAsync(string? merchantName = null, string? invoiceNumber = null,
+        int? routeId = null, string? employeeName = null, string? dateFrom = null,
+        string? dateTo = null, string? status = null, int page = 1, int pageSize = 50)
+    {
+        var q = new List<string>();
+        if (!string.IsNullOrEmpty(merchantName)) q.Add($"merchantName={Uri.EscapeDataString(merchantName)}");
+        if (!string.IsNullOrEmpty(invoiceNumber)) q.Add($"invoiceNumber={Uri.EscapeDataString(invoiceNumber)}");
+        if (routeId.HasValue) q.Add($"routeId={routeId}");
+        if (!string.IsNullOrEmpty(employeeName)) q.Add($"employeeName={Uri.EscapeDataString(employeeName)}");
+        if (!string.IsNullOrEmpty(dateFrom)) q.Add($"dateFrom={dateFrom}");
+        if (!string.IsNullOrEmpty(dateTo)) q.Add($"dateTo={dateTo}");
+        if (!string.IsNullOrEmpty(status)) q.Add($"status={status}");
+        q.Add($"page={page}");
+        q.Add($"pageSize={pageSize}");
+        return await GetAsync($"ajal/search?{string.Join("&", q)}");
+    }
+
+    public async Task<byte[]?> ExportAjalSearchAsync(string? merchantName = null, string? invoiceNumber = null,
+        int? routeId = null, string? employeeName = null, string? dateFrom = null,
+        string? dateTo = null, string? status = null)
+    {
+        var q = new List<string>();
+        if (!string.IsNullOrEmpty(merchantName)) q.Add($"merchantName={Uri.EscapeDataString(merchantName)}");
+        if (!string.IsNullOrEmpty(invoiceNumber)) q.Add($"invoiceNumber={Uri.EscapeDataString(invoiceNumber)}");
+        if (routeId.HasValue) q.Add($"routeId={routeId}");
+        if (!string.IsNullOrEmpty(employeeName)) q.Add($"employeeName={Uri.EscapeDataString(employeeName)}");
+        if (!string.IsNullOrEmpty(dateFrom)) q.Add($"dateFrom={dateFrom}");
+        if (!string.IsNullOrEmpty(dateTo)) q.Add($"dateTo={dateTo}");
+        if (!string.IsNullOrEmpty(status)) q.Add($"status={status}");
+        var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
+        return await GetBytesAsync($"ajal/search/export{qs}");
+    }
+
+    public async Task<byte[]?> ExportAjalDailyAsync(DateTime date)
+    {
+        return await GetBytesAsync($"ajal/daily/export?date={date:yyyy-MM-dd}");
+    }
+
+    public async Task<byte[]?> ExportAjalEmployeesAsync(DateTime from, DateTime to)
+    {
+        return await GetBytesAsync($"ajal/employees/export?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
+    }
+
+    public async Task<dynamic?> PreviewAjalExcelAsync(string filePath)
+    {
+        return await PostMultipartAsync("ajal/excel/preview", filePath);
+    }
+
+    public async Task<dynamic?> SaveAjalExcelAsync(DateTime sessionDate, int? routeId, object rows)
+    {
+        return await PostAsync("ajal/excel/save", new { SessionDate = sessionDate.ToString("yyyy-MM-dd"), RouteId = routeId, Rows = rows });
+    }
+
+    public async Task<string?> GetAjalPrefixSettingsJsonAsync()
+    {
+        return await GetAsync("ajal/settings/invoice-prefix");
+    }
+
+    public async Task<bool> UpdateAjalPrefixAsync(string newPrefix)
+    {
+        return await PutAsync("ajal/settings/invoice-prefix", new { NewPrefix = newPrefix });
+    }
+
+    public async Task<string?> GetAjalDashboardSummaryJsonAsync()
+    {
+        return await GetAsync("ajal/dashboard/today-summary");
+    }
+
+    public async Task<string?> GetAjalEmployeeNamesJsonAsync()
+    {
+        return await GetAsync("ajal/employee-names");
+    }
+
+    // ══════════════════════════════════════
+    // User Management (Admin)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetUsersJsonAsync()
+    {
+        return await GetAsync("users");
+    }
+
+    public async Task<dynamic?> CreateUserAsync(string username, string fullName, string role, string password)
+    {
+        return await PostAsync("users", new { Username = username, FullName = fullName, Role = role, Password = password });
+    }
+
+    public async Task<bool> UpdateUserAsync(int id, string fullName, string role, bool isActive)
+    {
+        return await PutAsync($"users/{id}", new { FullName = fullName, Role = role, IsActive = isActive });
+    }
+
+    public async Task<bool> ResetUserPasswordAsync(int id, string newPassword)
+    {
+        return await PutAsync($"users/{id}/reset-password", new { NewPassword = newPassword });
+    }
+
+    public async Task<bool> DeactivateUserAsync(int id)
+    {
+        return await DeleteAsync($"users/{id}");
+    }
+
+    // ══════════════════════════════════════
+    // Change Own Password
+    // ══════════════════════════════════════
+
+    public async Task<bool> ChangePasswordAsync(string currentPassword, string newPassword, string confirmPassword)
+    {
+        return await PutAsync("auth/change-password", new
+        {
+            CurrentPassword = currentPassword,
+            NewPassword = newPassword,
+            ConfirmPassword = confirmPassword
+        });
+    }
+
+    // ══════════════════════════════════════
+    // Receipt Excel Import (Module 1)
+    // ══════════════════════════════════════
+
+    public async Task<dynamic?> PreviewReceiptExcelAsync(string filePath)
+    {
+        return await PostMultipartAsync("sessions/excel/preview", filePath);
+    }
+
+    public async Task<dynamic?> SaveReceiptExcelAsync(object dto)
+    {
+        return await PostAsync("sessions/excel/save", dto);
+    }
+
+    // ══════════════════════════════════════
+    // Audit Log (Admin)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetAuditLogsJsonAsync(int? userId = null, string? entityType = null,
+        string? action = null, string? dateFrom = null, string? dateTo = null,
+        int page = 1, int pageSize = 50)
+    {
+        var q = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+        if (userId.HasValue) q.Add($"userId={userId}");
+        if (!string.IsNullOrEmpty(entityType)) q.Add($"entityType={Uri.EscapeDataString(entityType)}");
+        if (!string.IsNullOrEmpty(action)) q.Add($"action={Uri.EscapeDataString(action)}");
+        if (!string.IsNullOrEmpty(dateFrom)) q.Add($"dateFrom={dateFrom}");
+        if (!string.IsNullOrEmpty(dateTo)) q.Add($"dateTo={dateTo}");
+        return await GetAsync($"audit?{string.Join("&", q)}");
     }
 
     // ══════════════════════════════════════

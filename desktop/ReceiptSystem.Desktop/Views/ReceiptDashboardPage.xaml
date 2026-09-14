@@ -82,9 +82,13 @@
                     <StackPanel>
                         <!-- Header -->
                         <Grid Margin="0,0,0,12">
-                            <TextBlock Text="جلسات اليوم" FontSize="16" FontWeight="Bold"/>
-                            <Button x:Name="RefreshBtn" Content="⟳  تحديث" Style="{StaticResource SecondaryButton}"
-                                    HorizontalAlignment="Left" Click="Refresh_Click" Padding="12,6" FontSize="12"/>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="جلسات اليوم" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" x:Name="RefreshBtn" Content="⟳  تحديث" Style="{StaticResource SecondaryButton}"
+                                    Click="Refresh_Click" Padding="12,6" FontSize="12" VerticalAlignment="Center"/>
                         </Grid>
 
                         <!-- DataGrid -->

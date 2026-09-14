@@ -141,3 +141,8 @@ public class SheetLineDto
     public decimal? Amount { get; set; }
     public string? Notes { get; set; }
 }
+
+public class UnlockDayDto
+{
+    public string Reason { get; set; } = string.Empty;
+}

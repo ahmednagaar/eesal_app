@@ -144,6 +144,32 @@ public class SessionsController : ControllerBase
         return Ok(new { message = "تم فتح قفل الجلسة بنجاح" });
     }
 
+    /// <summary>
+    /// Add a receipt to an existing (unconfirmed) session.
+    /// Useful when cash reconciliation reveals a missing entry.
+    /// </summary>
+    [HttpPost("{id}/receipts")]
+    public async Task<IActionResult> AddReceipt(int id, [FromBody] CreateReceiptDto dto)
+    {
+        try
+        {
+            var (receipt, gaps) = await _sessionService.AddReceiptToSessionAsync(id, dto, UserId);
+            await _audit.LogAsync(UserId, "AddReceiptToSession", "Receipt", receipt.ReceiptId,
+                newValues: new { SessionId = id, dto.ReceiptNumber, dto.Amount });
+            return Ok(new
+            {
+                receipt,
+                gaps,
+                hasGaps = gaps.Any(),
+                message = "تم إضافة الإيصال للجلسة بنجاح"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPut("{id}/reconcile")]
     public async Task<IActionResult> Reconcile(int id, [FromBody] ReconcileSessionDto dto)
     {

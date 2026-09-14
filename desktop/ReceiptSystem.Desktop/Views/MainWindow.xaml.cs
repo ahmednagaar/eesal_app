@@ -30,6 +30,19 @@ public partial class MainWindow : Window
     private ReceiptSearchPage? _receiptSearchPage;
     private DriverPerformancePage? _driverPerformancePage;
 
+    // Cached Module 3: Ajal pages
+    private AjalDailyPage? _ajalDailyPage;
+    private AjalEntryPage? _ajalEntryPage;
+    private AjalSearchPage? _ajalSearchPage;
+    private AjalEmployeePerfPage? _ajalEmployeePerfPage;
+    private AjalMerchantHistoryPage? _ajalMerchantHistoryPage;
+    private AjalExcelImportPage? _ajalExcelImportPage;
+    private AjalSettingsPage? _ajalSettingsPage;
+
+    // Cached Admin pages
+    private UserManagementPage? _userManagementPage;
+    private AuditLogPage? _auditLogPage;
+
     // Timers
     private DispatcherTimer? _connectionTimer;
 
@@ -42,8 +55,9 @@ public partial class MainWindow : Window
         _isLoaded = true;
         UserNameText.Text = $"مرحباً، {_api.CurrentUserName}";
 
-        // Load the default page
-        LoadPage("ReceiptDashboard");
+        // Load the default page based on role
+        ApplyRoleBasedVisibility();
+        LoadPage(GetDefaultPageForRole());
 
         // Start connection check timer (every 60s)
         _connectionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
@@ -51,6 +65,33 @@ public partial class MainWindow : Window
         _connectionTimer.Start();
 
         // Token refresh is now handled inside ApiClient (check-after-call, not flat timer)
+    }
+
+    private void ApplyRoleBasedVisibility()
+    {
+        var role = _api.CurrentUserRole ?? "";
+
+        // CallCenter: hide receipt system (cash collection is not their business)
+        if (role == "CallCenter")
+        {
+            NavReceiptSection.Visibility = Visibility.Collapsed;
+        }
+
+        // Non-Admin: hide admin section (user management)
+        if (role != "Admin")
+        {
+            NavAdminSection.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private string GetDefaultPageForRole()
+    {
+        var role = _api.CurrentUserRole ?? "";
+        return role switch
+        {
+            "CallCenter" => "AjalDaily",
+            _ => "ReceiptDashboard"
+        };
     }
 
     // ══════════════════════════════════════
@@ -195,6 +236,61 @@ public partial class MainWindow : Window
                 PageContent.Content = _merchantsPage;
                 PageTitle.Text = "🏪 التجار";
                 break;
+
+            // ── Module 3: Ajal ──
+            case "AjalDaily":
+                _ajalDailyPage ??= new AjalDailyPage(_api);
+                PageContent.Content = _ajalDailyPage;
+                PageTitle.Text = "📋 السجل اليومي";
+                break;
+            case "AjalEntry":
+                _ajalEntryPage ??= new AjalEntryPage(_api);
+                PageContent.Content = _ajalEntryPage;
+                PageTitle.Text = "✏️ إدخال فواتير";
+                break;
+            case "AjalSearch":
+                _ajalSearchPage ??= new AjalSearchPage(_api);
+                PageContent.Content = _ajalSearchPage;
+                PageTitle.Text = "🔍 بحث الآجل";
+                break;
+            case "AjalEmployeePerf":
+                _ajalEmployeePerfPage ??= new AjalEmployeePerfPage(_api);
+                PageContent.Content = _ajalEmployeePerfPage;
+                PageTitle.Text = "👥 أداء الموظفين";
+                break;
+            case "AjalMerchantHistory":
+                _ajalMerchantHistoryPage ??= new AjalMerchantHistoryPage(_api);
+                PageContent.Content = _ajalMerchantHistoryPage;
+                PageTitle.Text = "📊 كشف حساب تاجر";
+                break;
+            case "AjalExcelImport":
+                _ajalExcelImportPage ??= new AjalExcelImportPage(_api);
+                PageContent.Content = _ajalExcelImportPage;
+                PageTitle.Text = "📥 استيراد إكسل";
+                break;
+            case "AjalSettings":
+                _ajalSettingsPage ??= new AjalSettingsPage(_api);
+                PageContent.Content = _ajalSettingsPage;
+                PageTitle.Text = "⚙️ إعدادات البادئة";
+                break;
+
+            // ── Admin ──
+            case "UserManagement":
+                _userManagementPage ??= new UserManagementPage(_api);
+                PageContent.Content = _userManagementPage;
+                PageTitle.Text = "👤 المستخدمون";
+                break;
+            case "AuditLog":
+                _auditLogPage ??= new AuditLogPage(_api);
+                PageContent.Content = _auditLogPage;
+                PageTitle.Text = "📜 سجل التدقيق";
+                break;
+            case "ChangePassword":
+                var changePwdWindow = new ChangePasswordWindow(_api);
+                changePwdWindow.Owner = Window.GetWindow(this);
+                changePwdWindow.ShowDialog();
+                LoadPage(_currentPage);
+                return;
         }
     }
 

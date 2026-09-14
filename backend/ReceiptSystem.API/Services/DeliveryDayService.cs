@@ -182,6 +182,22 @@ public class DeliveryDayService
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Reopen a confirmed delivery day (Admin override).
+    /// </summary>
+    public async Task UnlockDayAsync(int deliveryDayId)
+    {
+        var day = await _db.DeliveryDays.FindAsync(deliveryDayId)
+            ?? throw new InvalidOperationException("يوم التسليم غير موجود");
+
+        if (day.Status != "Confirmed")
+            throw new InvalidOperationException("يوم التسليم غير مؤكد — لا حاجة لفتح القفل");
+
+        day.Status = "Draft";
+        day.ConfirmedAt = null;
+        await _db.SaveChangesAsync();
+    }
+
     public async Task MarkPrintedAsync(int deliveryDayId)
     {
         var day = await _db.DeliveryDays.FindAsync(deliveryDayId)

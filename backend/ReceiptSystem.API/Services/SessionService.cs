@@ -229,4 +229,120 @@ public class SessionService
             })
             .FirstOrDefaultAsync();
     }
+
+    /// <summary>
+    /// Recalculate session aggregate fields from its receipts.
+    /// Call after any receipt is added, edited, or deleted.
+    /// </summary>
+    public async Task RecalculateSessionTotalsAsync(int sessionId)
+    {
+        var session = await _db.CollectionSessions
+            .Include(s => s.Receipts)
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+
+        if (session == null) return;
+
+        var receipts = session.Receipts.OrderBy(r => r.ReceiptNumber).ToList();
+
+        if (receipts.Count == 0)
+        {
+            session.TotalReceiptsCount = 0;
+            session.TotalAmountCollected = 0;
+            session.FirstReceiptNumber = 0;
+            session.LastReceiptNumber = 0;
+        }
+        else
+        {
+            session.TotalReceiptsCount = receipts.Count;
+            session.TotalAmountCollected = receipts.Sum(r => r.Amount);
+            session.FirstReceiptNumber = receipts.First().ReceiptNumber;
+            session.LastReceiptNumber = receipts.Last().ReceiptNumber;
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Add a receipt to an existing (unconfirmed) session, then re-run gap detection.
+    /// </summary>
+    public async Task<(ReceiptDto Receipt, List<int> UpdatedGaps)> AddReceiptToSessionAsync(
+        int sessionId, CreateReceiptDto dto, int userId)
+    {
+        var session = await _db.CollectionSessions.FindAsync(sessionId)
+            ?? throw new InvalidOperationException("الجلسة غير موجودة");
+
+        if (session.IsConfirmed)
+            throw new InvalidOperationException("الجلسة مقفلة — لا يمكن إضافة إيصالات");
+
+        // Check duplicate receipt number
+        var exists = await _db.Receipts.AnyAsync(r => r.ReceiptNumber == dto.ReceiptNumber);
+        if (exists)
+            throw new InvalidOperationException($"رقم الإيصال {dto.ReceiptNumber} مسجل بالفعل");
+
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            var receipt = new Receipt
+            {
+                ReceiptNumber = dto.ReceiptNumber,
+                BookId = dto.BookId,
+                SessionId = sessionId,
+                DriverId = session.DriverId,
+                MerchantId = dto.MerchantId,
+                CollectionDate = session.SessionDate,
+                Amount = dto.Amount,
+                IsPartialPayment = dto.IsPartialPayment,
+                Notes = dto.Notes,
+                EnteredByUserId = userId,
+                EnteredAt = DateTime.UtcNow
+            };
+
+            _db.Receipts.Add(receipt);
+            await _db.SaveChangesAsync();
+
+            // Recalculate session totals
+            await RecalculateSessionTotalsAsync(sessionId);
+
+            // Re-run gap detection — may resolve existing gaps
+            var gaps = await _gapService.DetectAndSaveGapsAsync(sessionId);
+
+            // Check if this receipt resolves an existing gap
+            var resolvedGap = await _db.ReceiptGaps
+                .FirstOrDefaultAsync(g => g.DriverId == session.DriverId
+                    && g.MissingReceiptNumber == dto.ReceiptNumber
+                    && (g.Status == "Open" || g.Status == "UnderInvestigation"));
+
+            if (resolvedGap != null)
+            {
+                resolvedGap.Status = "Resolved";
+                resolvedGap.Resolution = "تم إضافة الإيصال المفقود إلى الجلسة";
+                resolvedGap.ResolvedAt = DateTime.UtcNow;
+                resolvedGap.ResolvedByUserId = userId;
+                await _db.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
+
+            var merchant = await _db.Merchants.FindAsync(dto.MerchantId);
+            var receiptDto = new ReceiptDto
+            {
+                ReceiptId = receipt.ReceiptId,
+                ReceiptNumber = receipt.ReceiptNumber,
+                BookId = receipt.BookId,
+                MerchantId = receipt.MerchantId,
+                MerchantName = merchant?.MerchantName ?? "",
+                CollectionDate = receipt.CollectionDate,
+                Amount = receipt.Amount,
+                IsPartialPayment = receipt.IsPartialPayment,
+                Notes = receipt.Notes
+            };
+
+            return (receiptDto, gaps);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 }

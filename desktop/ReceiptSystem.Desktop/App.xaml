@@ -339,6 +339,88 @@
                 <Setter Property="CalendarStyle" Value="{StaticResource DarkCalendarStyle}" />
             </Style>
 
+            <!-- Dark CalendarItem (the main calendar panel with header/navigation) -->
+            <Style x:Key="DarkCalendarItemStyle" TargetType="Primitives:CalendarItem"
+                   xmlns:Primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework">
+                <Setter Property="Background" Value="{StaticResource BgCardBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Primitives:CalendarItem"
+                                         xmlns:Primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework">
+                            <ControlTemplate.Resources>
+                                <DataTemplate x:Key="{x:Static CalendarItem.DayTitleTemplateResourceKey}">
+                                    <TextBlock Text="{Binding}" FontSize="11" FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Margin="0,6,0,6" />
+                                </DataTemplate>
+                            </ControlTemplate.Resources>
+                            <Grid x:Name="PART_Root">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{StaticResource BorderSubtleBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="4">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+                                        <!-- Navigation header -->
+                                        <Grid Grid.Row="0" Margin="4,4,4,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="PART_PreviousButton" Grid.Column="0"
+                                                    Content="◀" Background="Transparent" BorderThickness="0"
+                                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                                    FontSize="12" Cursor="Hand" Padding="8,4"
+                                                    HorizontalAlignment="Left" />
+                                            <Button x:Name="PART_HeaderButton" Grid.Column="1"
+                                                    Background="Transparent" BorderThickness="0"
+                                                    Foreground="{StaticResource TextPrimaryBrush}"
+                                                    FontWeight="Bold" FontSize="14" Cursor="Hand"
+                                                    HorizontalAlignment="Center" />
+                                            <Button x:Name="PART_NextButton" Grid.Column="2"
+                                                    Content="▶" Background="Transparent" BorderThickness="0"
+                                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                                    FontSize="12" Cursor="Hand" Padding="8,4"
+                                                    HorizontalAlignment="Right" />
+                                        </Grid>
+                                        <!-- Day/Month/Year grid -->
+                                        <Grid x:Name="PART_MonthView" Grid.Row="1" Visibility="Visible">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
+                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
+                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                        </Grid>
+                                        <Grid x:Name="PART_YearView" Grid.Row="1" Visibility="Hidden">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- Dark Calendar -->
             <Style x:Key="DarkCalendarStyle" TargetType="Calendar">
                 <Setter Property="Background" Value="{StaticResource BgCardBrush}" />
@@ -347,6 +429,7 @@
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CalendarDayButtonStyle" Value="{StaticResource DarkCalendarDayButton}" />
                 <Setter Property="CalendarButtonStyle" Value="{StaticResource DarkCalendarButton}" />
+                <Setter Property="CalendarItemStyle" Value="{StaticResource DarkCalendarItemStyle}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Calendar">
@@ -355,7 +438,7 @@
                                               Background="{StaticResource BgCardBrush}"
                                               BorderBrush="{StaticResource BorderSubtleBrush}"
                                               BorderThickness="1"
-                                              Style="{TemplateBinding CalendarItemStyle}" />
+                                              Style="{StaticResource DarkCalendarItemStyle}" />
                             </StackPanel>
                         </ControlTemplate>
                     </Setter.Value>
@@ -465,87 +548,7 @@
                 </Setter>
             </Style>
 
-            <!-- Dark CalendarItem (the main calendar panel with header/navigation) -->
-            <Style TargetType="Primitives:CalendarItem"
-                   xmlns:Primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework">
-                <Setter Property="Background" Value="{StaticResource BgCardBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Primitives:CalendarItem"
-                                         xmlns:Primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework">
-                            <ControlTemplate.Resources>
-                                <DataTemplate x:Key="{x:Static CalendarItem.DayTitleTemplateResourceKey}">
-                                    <TextBlock Text="{Binding}" FontSize="11" FontWeight="Bold"
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Margin="0,6,0,6" />
-                                </DataTemplate>
-                            </ControlTemplate.Resources>
-                            <Grid x:Name="PART_Root">
-                                <Border Background="{TemplateBinding Background}"
-                                        BorderBrush="{StaticResource BorderSubtleBrush}"
-                                        BorderThickness="1" CornerRadius="8" Padding="4">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="*" />
-                                        </Grid.RowDefinitions>
-                                        <!-- Navigation header -->
-                                        <Grid Grid.Row="0" Margin="4,4,4,8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button x:Name="PART_PreviousButton" Grid.Column="0"
-                                                    Content="◀" Background="Transparent" BorderThickness="0"
-                                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                                    FontSize="12" Cursor="Hand" Padding="8,4"
-                                                    HorizontalAlignment="Left" />
-                                            <Button x:Name="PART_HeaderButton" Grid.Column="1"
-                                                    Background="Transparent" BorderThickness="0"
-                                                    Foreground="{StaticResource TextPrimaryBrush}"
-                                                    FontWeight="Bold" FontSize="14" Cursor="Hand"
-                                                    HorizontalAlignment="Center" />
-                                            <Button x:Name="PART_NextButton" Grid.Column="2"
-                                                    Content="▶" Background="Transparent" BorderThickness="0"
-                                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                                    FontSize="12" Cursor="Hand" Padding="8,4"
-                                                    HorizontalAlignment="Right" />
-                                        </Grid>
-                                        <!-- Day/Month/Year grid -->
-                                        <Grid x:Name="PART_MonthView" Grid.Row="1" Visibility="Visible">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
-                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
-                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
-                                                <RowDefinition Height="*" />
-                                            </Grid.RowDefinitions>
-                                        </Grid>
-                                        <Grid x:Name="PART_YearView" Grid.Row="1" Visibility="Hidden">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="*" /><RowDefinition Height="*" />
-                                                <RowDefinition Height="*" />
-                                            </Grid.RowDefinitions>
-                                        </Grid>
-                                    </Grid>
-                                </Border>
-                            </Grid>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
+
 
             <!-- Dark CheckBox -->
             <Style TargetType="CheckBox">

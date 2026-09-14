@@ -1,0 +1,77 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.AjalDailyPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
+    <Grid x:Name="RootGrid" Background="{StaticResource BgSurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ DATE + ACTION BAR ═══ -->
+        <Border Grid.Row="0" Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="16,12" Margin="24,20,24,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="التاريخ:" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <DatePicker x:Name="ReportDate" Height="36" Width="160" SelectedDateChanged="ReportDate_Changed"/>
+                    <Button Content="⟳  عرض" Style="{StaticResource PrimaryButton}" Padding="16,6" FontSize="13"
+                            Click="Load_Click" Margin="12,0,0,0" Height="36"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="ExportBtn" Content="📥  تصدير Excel" Style="{StaticResource SecondaryButton}"
+                            Padding="12,6" FontSize="12" Click="Export_Click" Height="36" IsEnabled="False" Margin="0,0,8,0"/>
+                    <Button x:Name="PrintBtn" Content="🖨️  طباعة" Style="{StaticResource SecondaryButton}"
+                            Padding="12,6" FontSize="12" Click="Print_Click" Height="36" IsEnabled="False"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ SUMMARY CARDS ═══ -->
+        <UniformGrid Grid.Row="1" Columns="4" Margin="24,12,24,0">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,10,0">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="إجمالي الفواتير" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StatTotal" Text="—" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,10,0">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="فواتير نشطة" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StatActive" Text="—" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource AccentSuccessBrush}" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,10,0">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="إجمالي المبلغ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StatAmount" Text="—" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource AccentPrimaryBrush}" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="ملغاة" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StatCancelled" Text="—" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource AccentDangerBrush}" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- ═══ ROUTE-GROUPED INVOICES ═══ -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="24,12,24,20">
+            <StackPanel x:Name="RouteSections"/>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <Border x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#88000000" Visibility="Collapsed">
+            <TextBlock Text="⏳ جاري التحميل..." FontSize="16" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

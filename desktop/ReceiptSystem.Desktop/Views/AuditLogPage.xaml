@@ -1,0 +1,113 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.AuditLogPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
+
+    <Grid Background="{StaticResource BgSurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ FILTERS ═══ -->
+        <Border Grid.Row="0" Background="{StaticResource BgDeepBrush}" Padding="20,16"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <TextBlock Text="🔍 فلترة سجل التدقيق" FontSize="16" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                <WrapPanel>
+                    <!-- Date From -->
+                    <StackPanel Margin="0,0,16,8">
+                        <TextBlock Text="من تاريخ" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <DatePicker x:Name="DateFrom" Width="160" FlowDirection="LeftToRight"/>
+                    </StackPanel>
+                    <!-- Date To -->
+                    <StackPanel Margin="0,0,16,8">
+                        <TextBlock Text="إلى تاريخ" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <DatePicker x:Name="DateTo" Width="160" FlowDirection="LeftToRight"/>
+                    </StackPanel>
+                    <!-- Entity Type -->
+                    <StackPanel Margin="0,0,16,8">
+                        <TextBlock Text="نوع الكيان" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <ComboBox x:Name="EntityTypeCombo" Width="180" SelectedIndex="0">
+                            <ComboBoxItem Content="الكل"/>
+                            <ComboBoxItem Content="CollectionSession" Tag="CollectionSession"/>
+                            <ComboBoxItem Content="Receipt" Tag="Receipt"/>
+                            <ComboBoxItem Content="ReceiptGap" Tag="ReceiptGap"/>
+                            <ComboBoxItem Content="DeliveryDay" Tag="DeliveryDay"/>
+                            <ComboBoxItem Content="ReceiptBook" Tag="ReceiptBook"/>
+                            <ComboBoxItem Content="AjalInvoice" Tag="AjalInvoice"/>
+                            <ComboBoxItem Content="User" Tag="User"/>
+                            <ComboBoxItem Content="ErpImportBatch" Tag="ErpImportBatch"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <!-- Action -->
+                    <StackPanel Margin="0,0,16,8">
+                        <TextBlock Text="الإجراء" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="ActionFilter" Style="{StaticResource ModernTextBox}" Width="180"/>
+                    </StackPanel>
+                    <!-- Search Button -->
+                    <Button Content="🔍  بحث" Style="{StaticResource PrimaryButton}"
+                            Click="Search_Click" Padding="20,8" Margin="0,18,10,8"
+                            FontSize="13" Height="36" VerticalAlignment="Bottom"/>
+                    <Button Content="↩  مسح" Style="{StaticResource SecondaryButton}"
+                            Click="Clear_Click" Padding="16,8" Margin="0,18,0,8"
+                            FontSize="13" Height="36" VerticalAlignment="Bottom"/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ RESULTS GRID ═══ -->
+        <DataGrid x:Name="AuditGrid" Grid.Row="1" Margin="16"
+                  AutoGenerateColumns="False" IsReadOnly="True"
+                  Background="Transparent"
+                  BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                  RowBackground="{StaticResource BgCardBrush}"
+                  AlternatingRowBackground="{StaticResource BgDeepBrush}"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                  CanUserReorderColumns="False"
+                  CanUserResizeRows="False"
+                  SelectionMode="Single"
+                  FontFamily="Segoe UI"
+                  FontSize="13">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="التاريخ" Binding="{Binding CreatedAt}" Width="160"/>
+                <DataGridTextColumn Header="المستخدم" Binding="{Binding UserName}" Width="140"/>
+                <DataGridTextColumn Header="الإجراء" Binding="{Binding Action}" Width="180"/>
+                <DataGridTextColumn Header="نوع الكيان" Binding="{Binding EntityType}" Width="140"/>
+                <DataGridTextColumn Header="رقم الكيان" Binding="{Binding EntityId}" Width="80"/>
+                <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="120"/>
+                <DataGridTextColumn Header="التفاصيل" Binding="{Binding NewValues}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- ═══ PAGINATION ═══ -->
+        <Border Grid.Row="2" Background="{StaticResource BgDeepBrush}" Padding="20,12"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
+            <Grid>
+                <TextBlock x:Name="PageInfoText" Text="صفحة 1" FontSize="13"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button x:Name="PrevBtn" Content="→ السابقة"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="PrevPage_Click" Padding="16,6" FontSize="12"
+                            Margin="0,0,8,0"/>
+                    <Button x:Name="NextBtn" Content="التالية ←"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="NextPage_Click" Padding="16,6" FontSize="12"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <Border x:Name="LoadingOverlay" Grid.Row="0" Grid.RowSpan="3"
+                Background="#80000000" Visibility="Collapsed">
+            <TextBlock Text="⏳ جاري التحميل..." FontSize="20" FontWeight="Bold"
+                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

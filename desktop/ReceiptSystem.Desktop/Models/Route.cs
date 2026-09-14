@@ -19,6 +19,7 @@ public class Route
     [JsonProperty("merchantCount")]
     public int MerchantCount { get; set; }
 
-    // Display helper for ComboBox
     public string DisplayText => $"{RouteName} ({MerchantCount} تاجر)";
+
+    public override string ToString() => RouteName;
 }

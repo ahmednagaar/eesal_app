@@ -31,10 +31,10 @@ public partial class ReceiptDashboardPage : UserControl
             if (dashJson != null)
             {
                 var dash = JObject.Parse(dashJson);
-                StatTotalAmount.Text = (dash["totalAmount"]?.Value<decimal>() ?? 0).ToString("N0");
-                StatDrivers.Text = (dash["totalDrivers"]?.Value<int>() ?? 0).ToString();
-                StatReceipts.Text = (dash["totalReceipts"]?.Value<int>() ?? 0).ToString();
-                StatOpenGaps.Text = (dash["openGaps"]?.Value<int>() ?? 0).ToString();
+                StatTotalAmount.Text = (dash["totalAmountToday"]?.Value<decimal>() ?? 0).ToString("N0");
+                StatDrivers.Text = (dash["driversToday"]?.Value<int>() ?? 0).ToString();
+                StatReceipts.Text = (dash["receiptsToday"]?.Value<int>() ?? 0).ToString();
+                StatOpenGaps.Text = (dash["openGapsCount"]?.Value<int>() ?? 0).ToString();
 
                 // Load today's sessions
                 var sessions = dash["todaySessions"] as JArray;
@@ -157,10 +157,12 @@ public partial class ReceiptDashboardPage : UserControl
         dynamic row = SessionsGrid.SelectedItem;
         try
         {
+            // Navigate to Sessions page via MainWindow
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            // Show info since we can't directly navigate from a UserControl without coupling
             int sessionId = (int)row.sessionId;
-            // Navigate to Sessions page — this will be wired when SessionsPage exists
-            // For now, show the session ID in a toast
-            ToastHelper.ShowInfo((Grid)Content, $"جلسة رقم {sessionId} — سيتم فتحها قريباً");
+            string driverName = (string)row.driverName;
+            ToastHelper.ShowInfo((Grid)Content, $"جلسة {driverName} — رقم {sessionId}");
         }
         catch { }
     }

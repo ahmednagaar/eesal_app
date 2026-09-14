@@ -83,6 +83,26 @@ public class DeliveryDaysController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Admin override: unlock a confirmed delivery day so it can be edited again.
+    /// </summary>
+    [HttpPut("{id}/unlock")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Unlock(int id, [FromBody] UnlockSessionDto dto)
+    {
+        try
+        {
+            await _deliveryService.UnlockDayAsync(id);
+            await _audit.LogAsync(UserId, "فتح قفل يوم تسليم", "DeliveryDay", id,
+                newValues: new { Reason = dto.Reason });
+            return Ok(new { message = "تم فتح قفل يوم التسليم بنجاح" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     // ── Day Invoices ──
 
     [HttpPost("{id}/invoices")]
@@ -183,5 +203,22 @@ public class DeliveryDaysController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
+    }
+
+    // ── Status Management ──
+
+    [HttpPut("{id}/mark-printed")]
+    public async Task<IActionResult> MarkPrinted(int id)
+    {
+        var day = await _db.DeliveryDays.FindAsync(id);
+        if (day == null) return NotFound(new { message = "يوم التسليم غير موجود" });
+
+        day.Status = "Printed";
+        await _db.SaveChangesAsync();
+
+        await _audit.LogAsync(UserId, "MarkPrinted", "DeliveryDay", id,
+            $"تم تسجيل طباعة يوم التسليم — خط {day.RouteId}");
+
+        return Ok(new { message = "تم تسجيل الطباعة بنجاح" });
     }
 }

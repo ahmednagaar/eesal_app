@@ -380,6 +380,10 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button x:Name="ConfirmDayBtn" Content="✅  تأكيد اليوم"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="ConfirmDay_Click" Margin="0,0,10,0"
+                            Padding="20,10" FontSize="13"/>
                     <Button Content="🚚  طباعة قائمة التسليم"
                             Style="{StaticResource SecondaryButton}"
                             Click="PrintDelivery_Click" Margin="0,0,10,0"

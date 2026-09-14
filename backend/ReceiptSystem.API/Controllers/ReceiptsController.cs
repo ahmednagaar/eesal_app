@@ -15,11 +15,13 @@ public class ReceiptsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly AuditService _audit;
+    private readonly SessionService _sessionService;
 
-    public ReceiptsController(AppDbContext db, AuditService audit)
+    public ReceiptsController(AppDbContext db, AuditService audit, SessionService sessionService)
     {
         _db = db;
         _audit = audit;
+        _sessionService = sessionService;
     }
 
     private int UserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -69,6 +71,9 @@ public class ReceiptsController : ControllerBase
         receipt.IsPartialPayment = dto.IsPartialPayment;
         receipt.Notes = dto.Notes;
         await _db.SaveChangesAsync();
+
+        // Recalculate session totals so cash reconciliation stays accurate
+        await _sessionService.RecalculateSessionTotalsAsync(receipt.SessionId);
         await _audit.LogAsync(UserId, "UpdateReceipt", "Receipt", id, oldValues: old, newValues: dto);
 
         return Ok(new { message = "تم تحديث الإيصال بنجاح" });
@@ -83,8 +88,12 @@ public class ReceiptsController : ControllerBase
         if (receipt.Session.IsConfirmed)
             return StatusCode(403, new { message = "الجلسة مقفلة ولا يمكن تعديلها" });
 
+        var sessionId = receipt.SessionId;
         _db.Receipts.Remove(receipt);
         await _db.SaveChangesAsync();
+
+        // Recalculate session totals after deletion
+        await _sessionService.RecalculateSessionTotalsAsync(sessionId);
         await _audit.LogAsync(UserId, "DeleteReceipt", "Receipt", id);
 
         return Ok(new { message = "تم حذف الإيصال بنجاح" });

@@ -46,7 +46,7 @@ public partial class DailyReportPage : UserControl
             StatMissing.Text = (_reportData["missingReceiptsCount"]?.Value<int>() ?? 0).ToString();
 
             // Per-driver sections
-            var drivers = _reportData["drivers"] as JArray;
+            var drivers = _reportData["driverReports"] as JArray;
             if (drivers != null)
             {
                 foreach (var driver in drivers)

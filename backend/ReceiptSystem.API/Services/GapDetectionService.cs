@@ -63,6 +63,18 @@ public class GapDetectionService
 
         var newMissing = missing.Where(m => !existingGapNumbers.Contains(m)).ToList();
 
+        // Cross-session check: don't flag a number as missing if the receipt
+        // actually exists in another session for this driver (e.g. entered in
+        // the wrong session, or added later to a different one).
+        var existingReceiptNumbers = await _db.Receipts
+            .Where(r => r.DriverId == session.DriverId && missing.Contains(r.ReceiptNumber))
+            .Select(r => r.ReceiptNumber)
+            .ToListAsync();
+
+        // Remove receipts that exist elsewhere from the new-missing and overall missing lists
+        newMissing = newMissing.Where(m => !existingReceiptNumbers.Contains(m)).ToList();
+        var actuallyMissing = missing.Where(m => !existingReceiptNumbers.Contains(m)).ToList();
+
         // Save gaps
         foreach (var num in newMissing)
         {
@@ -76,13 +88,13 @@ public class GapDetectionService
             });
         }
 
-        if (missing.Any())
+        if (actuallyMissing.Any())
         {
             session.HasGaps = true;
         }
 
         await _db.SaveChangesAsync();
 
-        return missing; // All missing (including previously tracked) for alert
+        return actuallyMissing; // Only truly missing numbers (excluding cross-session hits)
     }
 }

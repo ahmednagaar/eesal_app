@@ -1,0 +1,103 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.AjalEntryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
+    <Grid x:Name="RootGrid" Background="{StaticResource BgSurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ SESSION HEADER ═══ -->
+        <Border Grid.Row="0" Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="16,12" Margin="24,20,24,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="التاريخ:" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <DatePicker x:Name="SessionDate" Height="36" Width="150"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="الخط:" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="RouteCombo" Height="36" Width="200" DisplayMemberPath="RouteName" SelectedValuePath="RouteId"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="البادئة:" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="PrefixDisplay" Text="—" FontSize="16" FontWeight="Bold"
+                               Foreground="{StaticResource AccentPrimaryBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ COLUMN HEADERS ═══ -->
+        <Border Grid.Row="1" Background="{StaticResource BgDeepBrush}" CornerRadius="8" Padding="12,8" Margin="24,12,24,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="40"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="#" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Grid.Column="1" Text="رقم الفاتورة" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Grid.Column="2" Text="التاجر" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Grid.Column="3" Text="المبلغ" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Grid.Column="4" Text="الموظف" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock Grid.Column="5" Text="ملاحظات" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+            </Grid>
+        </Border>
+
+        <!-- ═══ ENTRY ROWS ═══ -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="24,4,24,0">
+            <StackPanel x:Name="EntryRows"/>
+        </ScrollViewer>
+
+        <!-- ═══ BOTTOM BAR ═══ -->
+        <Border Grid.Row="3" Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="16,12" Margin="24,12,24,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" Content="➕ إضافة سطر" Style="{StaticResource SecondaryButton}"
+                        Padding="12,8" FontSize="13" Click="AddRow_Click" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Content="➕➕ إضافة 5 أسطر" Style="{StaticResource SecondaryButton}"
+                        Padding="12,8" FontSize="13" Click="AddFiveRows_Click"/>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="عدد الفواتير:" FontSize="13" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="InvoiceCountText" Text="0" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{StaticResource AccentPrimaryBrush}" Margin="0,0,16,0"/>
+                    <TextBlock Text="الإجمالي:" FontSize="13" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TotalAmountText" Text="0.00" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{StaticResource AccentPrimaryBrush}"/>
+                </StackPanel>
+
+                <Button Grid.Column="4" x:Name="SaveBtn" Content="💾 حفظ الفواتير" Style="{StaticResource PrimaryButton}"
+                        Padding="20,10" FontSize="14" FontWeight="Bold" Click="Save_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <Border x:Name="LoadingOverlay" Grid.RowSpan="4" Background="#88000000" Visibility="Collapsed">
+            <TextBlock Text="⏳ جاري الحفظ..." FontSize="16" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>
