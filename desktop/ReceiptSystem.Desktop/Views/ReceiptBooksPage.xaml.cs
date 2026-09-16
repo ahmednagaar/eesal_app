@@ -204,7 +204,9 @@ public partial class ReceiptBooksPage : UserControl
                 {
                     bookId = b["bookId"]?.Value<int>() ?? 0,
                     bookNumber = b["bookNumber"]?.Value<int>() ?? 0,
-                    displayName = $"{detail["seriesCode"]}-{b["bookNumber"]}",
+                    displayName = string.IsNullOrEmpty(detail["seriesCode"]?.ToString()) 
+                                    ? b["bookNumber"]?.ToString() 
+                                    : $"{detail["seriesCode"]} {b["bookNumber"]}",
                     range = $"{start}–{end}",
                     startReceipt = start,
                     endReceipt = end,

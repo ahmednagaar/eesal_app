@@ -160,9 +160,47 @@
 
             <!-- Global TextBox defaults — ensures text is always visible on dark backgrounds -->
             <Style TargetType="TextBox">
+                <Setter Property="Background" Value="{StaticResource BgInputBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                 <Setter Property="CaretBrush" Value="{StaticResource AccentPrimaryBrush}" />
                 <Setter Property="SelectionBrush" Value="{StaticResource AccentPrimaryBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="FontFamily" Value="Segoe UI" />
+            </Style>
+
+            <!-- DatePickerTextBox — the inner textbox inside DatePicker -->
+            <Style TargetType="DatePickerTextBox">
+                <Setter Property="Background" Value="{StaticResource BgInputBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="CaretBrush" Value="{StaticResource AccentPrimaryBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="FontFamily" Value="Segoe UI" />
+                <Setter Property="IsReadOnly" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="DatePickerTextBox">
+                            <Grid>
+                                <Border Background="{TemplateBinding Background}" 
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ScrollViewer x:Name="PART_ContentHost"
+                                                  HorizontalScrollBarVisibility="Hidden"
+                                                  VerticalScrollBarVisibility="Hidden" />
+                                </Border>
+                                <!-- Watermark for empty state -->
+                                <TextBlock x:Name="PART_Watermark"
+                                           Text="اختر تاريخ"
+                                           Foreground="{StaticResource TextMutedBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="4,0,0,0"
+                                           Visibility="Collapsed"
+                                           IsHitTestVisible="False" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <!-- Modern TextBox — no custom template, uses default WPF template for reliable text rendering -->
@@ -270,6 +308,18 @@
                                                   Margin="14,8,32,8"
                                                   VerticalAlignment="Center"
                                                   HorizontalAlignment="Right"/>
+                                <TextBox x:Name="PART_EditableTextBox"
+                                         Style="{x:Null}"
+                                         Background="Transparent"
+                                         Foreground="{StaticResource TextPrimaryBrush}"
+                                         CaretBrush="{StaticResource AccentPrimaryBrush}"
+                                         BorderThickness="0"
+                                         Margin="4,0,32,0"
+                                         Padding="10,0"
+                                         VerticalAlignment="Center"
+                                         VerticalContentAlignment="Center"
+                                         HorizontalAlignment="Stretch"
+                                         Visibility="Hidden" />
                                 <Popup x:Name="Popup" Placement="Bottom"
                                        IsOpen="{TemplateBinding IsDropDownOpen}"
                                        AllowsTransparency="True" Focusable="False"
@@ -293,6 +343,11 @@
                             </Grid>
                         </ControlTemplate>
                     </Setter.Value>
+                    <Style.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter Property="IsTabStop" Value="False" />
+                        </Trigger>
+                    </Style.Triggers>
                 </Setter>
             </Style>
 

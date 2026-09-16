@@ -22,7 +22,7 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
                     <TextBlock Text="التاريخ:" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <DatePicker x:Name="SessionDate" Height="36" Width="150"/>
+                    <DatePicker x:Name="SessionDate" Height="36" Width="150" FlowDirection="LeftToRight"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,20,0">

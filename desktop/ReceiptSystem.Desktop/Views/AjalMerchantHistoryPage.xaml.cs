@@ -1,7 +1,10 @@
 using System;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using Newtonsoft.Json.Linq;
 using ReceiptSystem.Desktop.Helpers;
@@ -13,66 +16,56 @@ public partial class AjalMerchantHistoryPage : UserControl
 {
     private readonly ApiClient _api;
 
+    private ICollectionView? _merchantsView;
+
     public AjalMerchantHistoryPage(ApiClient api)
     {
         _api = api;
         InitializeComponent();
+        Loaded += async (_, _) => await LoadMerchantsAsync();
     }
 
-    private void MerchantSearch_KeyDown(object sender, KeyEventArgs e)
+    private async Task LoadMerchantsAsync()
     {
-        if (e.Key == Key.Enter) SearchMerchant_Click(sender, e);
-    }
-
-    private async void SearchMerchant_Click(object sender, RoutedEventArgs e)
-    {
-        string query = MerchantSearchBox.Text.Trim();
-        if (query.Length < 2) { ToastHelper.ShowError(RootGrid, "اكتب حرفين على الأقل"); return; }
-
-        LoadingOverlay.Visibility = Visibility.Visible;
-        MerchantInfoPanel.Visibility = Visibility.Collapsed;
-        InvoicesPanel.Visibility = Visibility.Collapsed;
-        MerchantPickerPanel.Visibility = Visibility.Collapsed;
-
         try
         {
-            var results = await _api.SearchMerchantsForRouteAsync(query);
-            if (results.Count == 0)
-            {
-                ToastHelper.ShowError(RootGrid, "لم يتم العثور على تاجر بهذا الاسم");
-                return;
-            }
+            var json = await _api.GetMerchantsJsonAsync(1, 10000);
+            if (json == null) return;
+            var obj = JObject.Parse(json);
+            var merchants = obj["data"] as JArray;
+            if (merchants == null) return;
 
-            if (results.Count == 1)
+            var list = merchants.Select(m => new MerchantComboItem
             {
-                await LoadMerchantHistory(results[0].MerchantId);
-            }
-            else
+                merchantId = m["merchantId"]?.Value<int>() ?? 0,
+                merchantName = m["merchantName"]?.ToString() ?? ""
+            }).ToList();
+            
+            _merchantsView = CollectionViewSource.GetDefaultView(list);
+            _merchantsView.Filter = (obj) =>
             {
-                // Show picker
-                MerchantPickerList.Items.Clear();
-                foreach (var m in results)
-                {
-                    MerchantPickerList.Items.Add(new ListBoxItem
-                    {
-                        Content = m.MerchantName,
-                        Tag = m.MerchantId
-                    });
-                }
-                MerchantPickerPanel.Visibility = Visibility.Visible;
-            }
+                if (string.IsNullOrWhiteSpace(MerchantComboBox.Text)) return true;
+                return ((MerchantComboItem)obj).merchantName.Contains(MerchantComboBox.Text, StringComparison.OrdinalIgnoreCase);
+            };
+            
+            MerchantComboBox.ItemsSource = _merchantsView;
         }
-        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ErrorMessageHelper.GetArabicMessage(ex)); }
-        finally { LoadingOverlay.Visibility = Visibility.Collapsed; }
+        catch { }
     }
 
-    private async void MerchantPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void MerchantComboBox_KeyUp(object sender, KeyEventArgs e)
     {
-        if (MerchantPickerList.SelectedItem is ListBoxItem item && item.Tag is int merchantId)
+        if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape) return;
+        _merchantsView?.Refresh();
+        MerchantComboBox.IsDropDownOpen = true;
+    }
+
+    private async void MerchantComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MerchantComboBox.SelectedItem is MerchantComboItem item)
         {
-            MerchantPickerPanel.Visibility = Visibility.Collapsed;
             LoadingOverlay.Visibility = Visibility.Visible;
-            try { await LoadMerchantHistory(merchantId); }
+            try { await LoadMerchantHistory(item.merchantId); }
             catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
             finally { LoadingOverlay.Visibility = Visibility.Collapsed; }
         }

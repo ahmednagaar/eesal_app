@@ -263,7 +263,7 @@
                     <StackPanel x:Name="AssignSection" Orientation="Horizontal" Margin="0,0,16,0">
                         <ComboBox x:Name="AssignDriverCombo" Width="180" Height="34"
                                   DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
-                        <DatePicker x:Name="AssignDate" Width="140" Height="34" Margin="8,0,0,0"/>
+                        <DatePicker x:Name="AssignDate" Width="140" Height="34" FlowDirection="LeftToRight" Margin="8,0,0,0"/>
                         <Button x:Name="AssignBtn" Content="📋 تسليم للسائق"
                                 Style="{StaticResource PrimaryButton}" Padding="12,6" FontSize="12"
                                 Margin="8,0,0,0" Click="Assign_Click"/>

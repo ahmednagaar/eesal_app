@@ -1,8 +1,12 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 using ReceiptSystem.Desktop.Helpers;
@@ -16,11 +20,48 @@ public partial class AjalSearchPage : UserControl
     private int _currentPage = 1;
     private int _totalCount = 0;
     private const int PAGE_SIZE = 50;
+    private ICollectionView? _merchantsView;
 
     public AjalSearchPage(ApiClient api)
     {
         _api = api;
         InitializeComponent();
+        Loaded += async (_, _) => await LoadMerchantsAsync();
+    }
+
+    private async Task LoadMerchantsAsync()
+    {
+        try
+        {
+            var json = await _api.GetMerchantsJsonAsync(1, 10000);
+            if (json == null) return;
+            var obj = JObject.Parse(json);
+            var merchants = obj["data"] as JArray;
+            if (merchants == null) return;
+
+            var list = merchants.Select(m => new MerchantComboItem
+            {
+                merchantId = m["merchantId"]?.Value<int>() ?? 0,
+                merchantName = m["merchantName"]?.ToString() ?? ""
+            }).ToList();
+            
+            _merchantsView = CollectionViewSource.GetDefaultView(list);
+            _merchantsView.Filter = (obj) =>
+            {
+                if (string.IsNullOrWhiteSpace(FilterMerchant.Text)) return true;
+                return ((MerchantComboItem)obj).merchantName.Contains(FilterMerchant.Text, StringComparison.OrdinalIgnoreCase);
+            };
+            
+            FilterMerchant.ItemsSource = _merchantsView;
+        }
+        catch { }
+    }
+
+    private void FilterMerchant_KeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape) return;
+        _merchantsView?.Refresh();
+        FilterMerchant.IsDropDownOpen = true;
     }
 
     private async void Search_Click(object sender, RoutedEventArgs e)
@@ -31,7 +72,10 @@ public partial class AjalSearchPage : UserControl
 
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
-        FilterMerchant.Text = ""; FilterInvoiceNum.Text = "";
+        FilterMerchant.Text = "";
+        _merchantsView?.Refresh();
+        
+        FilterInvoiceNum.Text = "";
         FilterEmployee.Text = ""; FilterStatus.SelectedIndex = 0;
         FilterDateFrom.SelectedDate = null; FilterDateTo.SelectedDate = null;
         ResultsGrid.ItemsSource = null; ResultSummary.Text = "";

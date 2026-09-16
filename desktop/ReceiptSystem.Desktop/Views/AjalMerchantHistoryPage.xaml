@@ -13,10 +13,11 @@
         <Border Grid.Row="0" Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="16,12" Margin="24,20,24,0">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="بحث عن تاجر:" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBox x:Name="MerchantSearchBox" Width="250" Height="36" FontSize="13" Padding="8,6"
-                         KeyDown="MerchantSearch_KeyDown"/>
-                <Button Content="🔍 بحث" Style="{StaticResource PrimaryButton}" Padding="14,6" FontSize="13"
-                        Click="SearchMerchant_Click" Margin="8,0,0,0" Height="36"/>
+                <ComboBox x:Name="MerchantComboBox" Height="36" Width="250" FontSize="13" Padding="8,0"
+                          IsEditable="True" StaysOpenOnEdit="True"
+                          DisplayMemberPath="merchantName" SelectedValuePath="merchantId"
+                          KeyUp="MerchantComboBox_KeyUp"
+                          SelectionChanged="MerchantComboBox_SelectionChanged"/>
             </StackPanel>
         </Border>
 
@@ -41,17 +42,7 @@
             </Grid>
         </Border>
 
-        <!-- ═══ MERCHANT PICKER (popup-like list) ═══ -->
-        <Border Grid.Row="2" x:Name="MerchantPickerPanel" Background="{StaticResource BgCardBrush}"
-                CornerRadius="12" Padding="16" Margin="24,12,24,20" Visibility="Collapsed">
-            <StackPanel>
-                <TextBlock Text="اختر التاجر:" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
-                <ListBox x:Name="MerchantPickerList" MaxHeight="300" FontSize="13"
-                         Background="Transparent" BorderThickness="0"
-                         Foreground="{StaticResource TextPrimaryBrush}"
-                         SelectionChanged="MerchantPicker_SelectionChanged"/>
-            </StackPanel>
-        </Border>
+
 
         <!-- ═══ INVOICES GRID ═══ -->
         <Border Grid.Row="2" x:Name="InvoicesPanel" Background="{StaticResource BgCardBrush}"

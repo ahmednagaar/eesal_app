@@ -14,7 +14,7 @@
             <StackPanel Orientation="Horizontal">
                 <StackPanel Margin="0,0,16,0">
                     <TextBlock Text="التاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <DatePicker x:Name="FilterDate" Height="36" Width="160" SelectedDateChanged="Filter_Changed"/>
+                    <DatePicker x:Name="FilterDate" Height="36" Width="160" FlowDirection="LeftToRight" SelectedDateChanged="Filter_Changed"/>
                 </StackPanel>
                 <StackPanel Margin="0,0,16,0">
                     <TextBlock Text="السائق" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>

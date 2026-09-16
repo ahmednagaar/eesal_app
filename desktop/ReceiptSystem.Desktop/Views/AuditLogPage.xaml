@@ -65,6 +65,7 @@
                   BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
                   RowBackground="{StaticResource BgCardBrush}"
                   AlternatingRowBackground="{StaticResource BgDeepBrush}"
+                  Foreground="{StaticResource TextPrimaryBrush}"
                   HeadersVisibility="Column"
                   GridLinesVisibility="Horizontal"
                   HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
@@ -73,6 +74,36 @@
                   SelectionMode="Single"
                   FontFamily="Segoe UI"
                   FontSize="13">
+
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="{StaticResource BgDeepBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                    <Setter Property="Padding" Value="10,8"/>
+                    <Setter Property="FontSize" Value="12"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+
+            <DataGrid.CellStyle>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="Padding" Value="10,6"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="DataGridCell">
+                                <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                    <ContentPresenter VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </DataGrid.CellStyle>
+
             <DataGrid.Columns>
                 <DataGridTextColumn Header="التاريخ" Binding="{Binding CreatedAt}" Width="160"/>
                 <DataGridTextColumn Header="المستخدم" Binding="{Binding UserName}" Width="140"/>

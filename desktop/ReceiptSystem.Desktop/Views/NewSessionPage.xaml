@@ -27,7 +27,7 @@
                     </StackPanel>
                     <StackPanel Margin="0,0,12,0">
                         <TextBlock Text="التاريخ" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                        <DatePicker x:Name="SessionDate" Height="40"/>
+                        <DatePicker x:Name="SessionDate" Height="40" FlowDirection="LeftToRight"/>
                     </StackPanel>
                     <StackPanel>
                         <TextBlock Text="المنطقة / الخط" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>

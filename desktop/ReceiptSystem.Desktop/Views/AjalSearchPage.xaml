@@ -15,32 +15,35 @@
             <WrapPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="اسم التاجر:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBox x:Name="FilterMerchant" Width="150" Height="32" FontSize="12" Padding="6,4"/>
+                    <ComboBox x:Name="FilterMerchant" Height="32" Width="150" FontSize="12" Padding="6,0"
+                              IsEditable="True" StaysOpenOnEdit="True"
+                              DisplayMemberPath="merchantName" SelectedValuePath="merchantId"
+                              KeyUp="FilterMerchant_KeyUp"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="رقم الفاتورة:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBox x:Name="FilterInvoiceNum" Width="120" Height="32" FontSize="12" Padding="6,4"/>
+                    <TextBox x:Name="FilterInvoiceNum" Style="{StaticResource ModernTextBox}" Width="120" Height="32" FontSize="12" Padding="6,4"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="الموظف:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBox x:Name="FilterEmployee" Width="120" Height="32" FontSize="12" Padding="6,4"/>
+                    <TextBox x:Name="FilterEmployee" Style="{StaticResource ModernTextBox}" Width="120" Height="32" FontSize="12" Padding="6,4"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="الحالة:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <ComboBox x:Name="FilterStatus" Width="100" Height="32" FontSize="12" SelectedIndex="0">
                         <ComboBoxItem Content="الكل"/>
-                        <ComboBoxItem Content="Active" Tag="Active"/>
-                        <ComboBoxItem Content="Modified" Tag="Modified"/>
-                        <ComboBoxItem Content="Cancelled" Tag="Cancelled"/>
+                        <ComboBoxItem Content="نشطة" Tag="Active"/>
+                        <ComboBoxItem Content="معدلة" Tag="Modified"/>
+                        <ComboBoxItem Content="ملغاة" Tag="Cancelled"/>
                     </ComboBox>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="من:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <DatePicker x:Name="FilterDateFrom" Width="140" Height="32"/>
+                    <DatePicker x:Name="FilterDateFrom" Width="140" Height="32" FlowDirection="LeftToRight"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="إلى:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <DatePicker x:Name="FilterDateTo" Width="140" Height="32"/>
+                    <DatePicker x:Name="FilterDateTo" Width="140" Height="32" FlowDirection="LeftToRight"/>
                 </StackPanel>
                 <Button Content="🔍 بحث" Style="{StaticResource PrimaryButton}" Padding="14,6" FontSize="13"
                         Click="Search_Click" Height="32" Margin="0,0,8,6"/>

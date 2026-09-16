@@ -1,8 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 using ReceiptSystem.Desktop.Helpers;
@@ -10,17 +15,26 @@ using ReceiptSystem.Desktop.Services;
 
 namespace ReceiptSystem.Desktop.Views;
 
+
+
 public partial class ReceiptSearchPage : UserControl
 {
     private readonly ApiClient _api;
     private int _currentPage = 1;
     private const int PageSize = 50;
 
+    private ICollectionView? _driversView;
+    private ICollectionView? _merchantsView;
+
     public ReceiptSearchPage(ApiClient api)
     {
         _api = api;
         InitializeComponent();
-        Loaded += async (_, _) => await LoadDriversAsync();
+        Loaded += async (_, _) =>
+        {
+            await LoadDriversAsync();
+            await LoadMerchantsAsync();
+        };
     }
 
     private async Task LoadDriversAsync()
@@ -36,10 +50,60 @@ public partial class ReceiptSearchPage : UserControl
                 fullName = d["fullName"]?.ToString() ?? ""
             }).ToList();
             list.Insert(0, new DriverComboItem { driverId = 0, fullName = "— الكل —" });
-            FilterDriver.ItemsSource = list;
+            
+            _driversView = CollectionViewSource.GetDefaultView(list);
+            _driversView.Filter = (obj) =>
+            {
+                if (string.IsNullOrWhiteSpace(FilterDriver.Text)) return true;
+                return ((DriverComboItem)obj).fullName.Contains(FilterDriver.Text, StringComparison.OrdinalIgnoreCase);
+            };
+            
+            FilterDriver.ItemsSource = _driversView;
             FilterDriver.SelectedIndex = 0;
         }
         catch { }
+    }
+
+    private async Task LoadMerchantsAsync()
+    {
+        try
+        {
+            var json = await _api.GetMerchantsJsonAsync(1, 10000);
+            if (json == null) return;
+            var obj = JObject.Parse(json);
+            var merchants = obj["data"] as JArray;
+            if (merchants == null) return;
+
+            var list = merchants.Select(m => new MerchantComboItem
+            {
+                merchantId = m["merchantId"]?.Value<int>() ?? 0,
+                merchantName = m["merchantName"]?.ToString() ?? ""
+            }).ToList();
+            
+            _merchantsView = CollectionViewSource.GetDefaultView(list);
+            _merchantsView.Filter = (obj) =>
+            {
+                if (string.IsNullOrWhiteSpace(FilterMerchant.Text)) return true;
+                return ((MerchantComboItem)obj).merchantName.Contains(FilterMerchant.Text, StringComparison.OrdinalIgnoreCase);
+            };
+            
+            FilterMerchant.ItemsSource = _merchantsView;
+        }
+        catch { }
+    }
+
+    private void FilterMerchant_KeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape) return;
+        _merchantsView?.Refresh();
+        FilterMerchant.IsDropDownOpen = true;
+    }
+
+    private void FilterDriver_KeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape) return;
+        _driversView?.Refresh();
+        FilterDriver.IsDropDownOpen = true;
     }
 
     private async Task SearchAsync()
@@ -119,7 +183,11 @@ public partial class ReceiptSearchPage : UserControl
     private void ClearFilters_Click(object sender, RoutedEventArgs e)
     {
         FilterMerchant.Text = "";
+        _merchantsView?.Refresh();
+        
         if (FilterDriver.Items.Count > 0) FilterDriver.SelectedIndex = 0;
+        _driversView?.Refresh();
+        
         FilterDateFrom.SelectedDate = null;
         FilterDateTo.SelectedDate = null;
         FilterReceiptNum.Text = "";

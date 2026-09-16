@@ -22,19 +22,23 @@
 
                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
                         <TextBlock Text="التاجر" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <TextBox x:Name="FilterMerchant" Style="{StaticResource ModernTextBox}" Height="34"/>
+                        <ComboBox x:Name="FilterMerchant" Height="34" IsEditable="True" StaysOpenOnEdit="True"
+                                  DisplayMemberPath="merchantName" SelectedValuePath="merchantId"
+                                  KeyUp="FilterMerchant_KeyUp"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Margin="0,0,10,0">
                         <TextBlock Text="السائق" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <ComboBox x:Name="FilterDriver" Height="34" DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+                        <ComboBox x:Name="FilterDriver" Height="34" IsEditable="True" StaysOpenOnEdit="True"
+                                  DisplayMemberPath="fullName" SelectedValuePath="driverId"
+                                  KeyUp="FilterDriver_KeyUp"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Margin="0,0,10,0">
                         <TextBlock Text="من تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <DatePicker x:Name="FilterDateFrom" Height="34"/>
+                        <DatePicker x:Name="FilterDateFrom" Height="34" FlowDirection="LeftToRight"/>
                     </StackPanel>
                     <StackPanel Grid.Column="3">
                         <TextBlock Text="إلى تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <DatePicker x:Name="FilterDateTo" Height="34"/>
+                        <DatePicker x:Name="FilterDateTo" Height="34" FlowDirection="LeftToRight"/>
                     </StackPanel>
                 </Grid>
 

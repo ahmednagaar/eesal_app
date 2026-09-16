@@ -13,11 +13,11 @@
             <StackPanel Orientation="Horizontal">
                 <StackPanel Margin="0,0,12,0">
                     <TextBlock Text="من تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <DatePicker x:Name="DateFrom" Height="34" Width="150"/>
+                    <DatePicker x:Name="DateFrom" Height="34" Width="150" FlowDirection="LeftToRight"/>
                 </StackPanel>
                 <StackPanel Margin="0,0,12,0">
                     <TextBlock Text="إلى تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <DatePicker x:Name="DateTo" Height="34" Width="150"/>
+                    <DatePicker x:Name="DateTo" Height="34" Width="150" FlowDirection="LeftToRight"/>
                 </StackPanel>
                 <Button Content="⟳  عرض الأداء" Style="{StaticResource PrimaryButton}" Padding="16,6" FontSize="13"
                         Click="LoadPerformance_Click" VerticalAlignment="Bottom" Height="34"/>

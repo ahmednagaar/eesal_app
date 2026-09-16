@@ -155,7 +155,7 @@
                                       DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
 
                             <TextBlock Text="تاريخ الجلسة" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <DatePicker x:Name="BlockSessionDate" Height="34" Margin="0,0,0,8"/>
+                            <DatePicker x:Name="BlockSessionDate" Height="34" FlowDirection="LeftToRight" Margin="0,0,0,8"/>
 
                             <TextBlock Text="رقم أول إيصال" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                             <TextBox x:Name="BlockStartReceipt" Style="{StaticResource ModernTextBox}" Height="34" Margin="0,0,0,8"/>

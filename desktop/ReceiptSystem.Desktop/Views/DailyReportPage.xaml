@@ -13,7 +13,7 @@
         <Border Grid.Row="0" Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="16,12" Margin="24,20,24,0">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="التاريخ:" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <DatePicker x:Name="ReportDate" Height="36" Width="160"/>
+                <DatePicker x:Name="ReportDate" Height="36" Width="160" FlowDirection="LeftToRight"/>
                 <Button Content="⟳  عرض التقرير" Style="{StaticResource PrimaryButton}" Padding="16,6" FontSize="13"
                         Click="LoadReport_Click" Margin="12,0,0,0" Height="36"/>
                 <Button x:Name="PrintBtn" Content="🖨️  طباعة" Style="{StaticResource SecondaryButton}" Padding="14,6" FontSize="13"

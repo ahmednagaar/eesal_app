@@ -145,12 +145,20 @@ public partial class MainWindow : Window
         // Guard: don't navigate during InitializeComponent (RadioButton IsChecked fires early)
         if (!_isLoaded) return;
 
-        if (pageName == "ConnectionSettings")
+        if (pageName == "ConnectionSettings" || pageName == "ChangePassword")
         {
-            // Open settings window as dialog
-            var settingsWindow = new ConnectionSettingsWindow(_api);
-            settingsWindow.Owner = this;
-            settingsWindow.ShowDialog();
+            if (pageName == "ConnectionSettings")
+            {
+                var settingsWindow = new ConnectionSettingsWindow(_api);
+                settingsWindow.Owner = this;
+                settingsWindow.ShowDialog();
+            }
+            else if (pageName == "ChangePassword")
+            {
+                var changePwdWindow = new ChangePasswordWindow(_api);
+                changePwdWindow.Owner = Window.GetWindow(this);
+                changePwdWindow.ShowDialog();
+            }
             
             // Re-select the actual current page to avoid leaving the toggle stuck
             LoadPage(_currentPage);
@@ -285,12 +293,6 @@ public partial class MainWindow : Window
                 PageContent.Content = _auditLogPage;
                 PageTitle.Text = "📜 سجل التدقيق";
                 break;
-            case "ChangePassword":
-                var changePwdWindow = new ChangePasswordWindow(_api);
-                changePwdWindow.Owner = Window.GetWindow(this);
-                changePwdWindow.ShowDialog();
-                LoadPage(_currentPage);
-                return;
         }
     }
 
