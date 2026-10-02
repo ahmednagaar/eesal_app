@@ -31,6 +31,9 @@ public class AppDbContext : DbContext
     public DbSet<ExcelImportBatch> ExcelImportBatches => Set<ExcelImportBatch>();
     public DbSet<ExcelImportRow> ExcelImportRows => Set<ExcelImportRow>();
 
+    // Book Movement History
+    public DbSet<BookMovement> BookMovements => Set<BookMovement>();
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         base.OnModelCreating(mb);
@@ -152,10 +155,25 @@ public class AppDbContext : DbContext
             e.HasKey(g => g.GapId);
             e.Property(g => g.Status).HasMaxLength(30).HasDefaultValue("Open");
             e.Property(g => g.Resolution).HasMaxLength(1000);
+            e.Property(g => g.ReasonCategory).HasMaxLength(50);
             e.Property(g => g.DetectedAt).HasDefaultValueSql("GETDATE()");
             e.HasOne(g => g.DetectedInSession).WithMany(s => s.DetectedGaps).HasForeignKey(g => g.DetectedInSessionId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(g => g.Driver).WithMany(d => d.Gaps).HasForeignKey(g => g.DriverId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(g => g.Book).WithMany(b => b.Gaps).HasForeignKey(g => g.BookId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(g => g.ResolvedByUser).WithMany().HasForeignKey(g => g.ResolvedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── BookMovement ──
+        mb.Entity<BookMovement>(e =>
+        {
+            e.HasKey(m => m.MovementId);
+            e.Property(m => m.ActionType).HasMaxLength(30).IsRequired();
+            e.Property(m => m.Notes).HasMaxLength(1000);
+            e.Property(m => m.PerformedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(m => m.Book).WithMany(b => b.Movements).HasForeignKey(m => m.BookId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.FromDriver).WithMany().HasForeignKey(m => m.FromDriverId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(m => m.ToDriver).WithMany().HasForeignKey(m => m.ToDriverId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(m => m.PerformedByUser).WithMany().HasForeignKey(m => m.PerformedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── AuditLog ──

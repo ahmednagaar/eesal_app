@@ -549,6 +549,28 @@ public class ApiClient
         return await GetAsync($"books/{bookId}/history");
     }
 
+    // ── Book Detail & Advanced Features ──
+
+    public async Task<string?> GetBookDetailJsonAsync(int bookId)
+    {
+        return await GetAsync($"books/{bookId}/detail");
+    }
+
+    public async Task<bool> TransferBookAsync(int bookId, int toDriverId, string? notes = null)
+    {
+        return await PutAsync($"books/{bookId}/transfer", new { ToDriverId = toDriverId, Notes = notes });
+    }
+
+    public async Task<string?> GetReturnPreviewJsonAsync(int bookId)
+    {
+        return await GetAsync($"books/{bookId}/return-preview");
+    }
+
+    public async Task<string?> GetDriverPortfolioJsonAsync(int driverId)
+    {
+        return await GetAsync($"books/driver/{driverId}/portfolio");
+    }
+
     // ══════════════════════════════════════
     // ERP Import (Module 1)
     // ══════════════════════════════════════
@@ -582,9 +604,34 @@ public class ApiClient
         return await PostAsync($"erp-import/batches/{batchId}/assign-block", dto);
     }
 
+    public async Task<dynamic?> PreviewErpBlockAsync(int batchId, object dto)
+    {
+        return await PostAsync($"erp-import/batches/{batchId}/preview-block", dto);
+    }
+
+    public async Task<dynamic?> UndoErpBlockAsync(int batchId, int sessionId)
+    {
+        return await DeleteWithResponseAsync($"erp-import/batches/{batchId}/undo-block/{sessionId}");
+    }
+
+    public async Task<string?> GetDriverBooksJsonAsync(int driverId)
+    {
+        return await GetAsync($"erp-import/drivers/{driverId}/books");
+    }
+
     public async Task<dynamic?> AssignErpSingleAsync(int batchId, object dto)
     {
         return await PostAsync($"erp-import/batches/{batchId}/assign-single", dto);
+    }
+
+    public async Task<dynamic?> UndoErpSingleAsync(int batchId, int receiptId)
+    {
+        return await DeleteWithResponseAsync($"erp-import/batches/{batchId}/undo-single/{receiptId}");
+    }
+
+    public async Task<string?> GetSessionSummaryJsonAsync(int sessionId)
+    {
+        return await GetAsync($"erp-import/sessions/{sessionId}/summary");
     }
 
     public async Task<dynamic?> AddErpManualRowAsync(int batchId, object dto)
@@ -901,7 +948,8 @@ public class ApiClient
                 try
                 {
                     var errorObj = JsonConvert.DeserializeObject<dynamic>(result);
-                    string? errorMsg = errorObj?["message"]?.ToString();
+                    string? errorMsg = errorObj?["message"]?.ToString() 
+                        ?? errorObj?["error"]?.ToString();
                     if (!string.IsNullOrEmpty(errorMsg))
                         throw new Exception(errorMsg);
                 }
@@ -936,7 +984,8 @@ public class ApiClient
                 try
                 {
                     var errorObj = JsonConvert.DeserializeObject<dynamic>(result);
-                    string? errorMsg = errorObj?["message"]?.ToString();
+                    string? errorMsg = errorObj?["message"]?.ToString()
+                        ?? errorObj?["error"]?.ToString();
                     if (!string.IsNullOrEmpty(errorMsg))
                         throw new Exception(errorMsg);
                 }
@@ -970,7 +1019,8 @@ public class ApiClient
                 try
                 {
                     var errorObj = JsonConvert.DeserializeObject<dynamic>(result);
-                    string? errorMsg = errorObj?["message"]?.ToString();
+                    string? errorMsg = errorObj?["message"]?.ToString()
+                        ?? errorObj?["error"]?.ToString();
                     if (!string.IsNullOrEmpty(errorMsg))
                         throw new Exception(errorMsg);
                 }
@@ -1050,5 +1100,33 @@ public class ApiClient
         }
         catch (ApiUnauthorizedException) { throw; }
         catch { return false; }
+    }
+
+    private async Task<dynamic?> DeleteWithResponseAsync(string endpoint)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"{BaseUrl}/{endpoint}");
+            var result = await response.Content.ReadAsStringAsync();
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                throw new ApiUnauthorizedException();
+            if (!response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    var errorObj = JsonConvert.DeserializeObject<dynamic>(result);
+                    string? errorMsg = errorObj?["message"]?.ToString()
+                        ?? errorObj?["error"]?.ToString();
+                    if (!string.IsNullOrEmpty(errorMsg))
+                        throw new Exception(errorMsg);
+                }
+                catch (JsonException) { }
+                return null;
+            }
+            CheckTokenExpiryAndRefresh();
+            return JsonConvert.DeserializeObject<dynamic>(result);
+        }
+        catch (ApiUnauthorizedException) { throw; }
+        catch (HttpRequestException ex) { throw new HttpRequestException(ex.Message, ex); }
     }
 }

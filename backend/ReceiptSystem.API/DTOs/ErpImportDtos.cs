@@ -73,7 +73,15 @@ public class AssignBlockDto
     public DateTime SessionDate { get; set; }
     [Required(ErrorMessage = "رقم الإيصال الأول مطلوب")]
     public int StartReceiptNumber { get; set; }
+    [Required(ErrorMessage = "رقم الإيصال الأخير مطلوب")]
+    public int EndReceiptNumber { get; set; }
     public string? RouteArea { get; set; }
+    /// <summary>
+    /// Explicit list of receipt numbers the user has identified as missing/lost.
+    /// These positions are skipped during assignment and recorded as ReceiptGaps.
+    /// Replaces the old dangerous ForceAssign flag.
+    /// </summary>
+    public List<int> SkippedReceiptNumbers { get; set; } = new();
 }
 
 public class AssignBlockResultDto
@@ -84,6 +92,105 @@ public class AssignBlockResultDto
     public int ReceiptsCreated { get; set; }
     public List<int> DetectedGaps { get; set; } = new();
     public bool HasGaps { get; set; }
+    // Book breakdown
+    public List<BookBreakdownDto> BookBreakdown { get; set; } = new();
+    public bool SpansTwoBooks { get; set; }
+}
+
+public class BookBreakdownDto
+{
+    public int BookId { get; set; }
+    public int BookNumber { get; set; }
+    public int FirstReceipt { get; set; }
+    public int LastReceipt { get; set; }
+    public int ReceiptCount { get; set; }
+}
+
+// ── Preview Block (before confirming) ──
+public class PreviewBlockDto
+{
+    [Required] public int BatchId { get; set; }
+    [Required] public List<int> RowIds { get; set; } = new();
+    [Required] public int StartReceiptNumber { get; set; }
+    [Required] public int EndReceiptNumber { get; set; }
+    public int? DriverId { get; set; }  // Optional — for book ownership validation
+}
+
+public class PreviewBlockResultDto
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public bool HasMismatch { get; set; }
+    public int ExpectedCount { get; set; }
+    public int ActualRowCount { get; set; }
+    public string? MismatchMessage { get; set; }
+    public bool SpansTwoBooks { get; set; }
+    public List<BookBreakdownDto> BookBreakdown { get; set; } = new();
+    public List<PreviewReceiptMappingDto> Mappings { get; set; } = new();
+}
+
+public class PreviewReceiptMappingDto
+{
+    public int RowId { get; set; }
+    public int ReceiptNumber { get; set; }
+    public string MerchantName { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public int? BookId { get; set; }
+    public int? BookNumber { get; set; }
+}
+
+// ── Undo Block Assignment ──
+public class UndoBlockResultDto
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public int ReceiptsDeleted { get; set; }
+    public int RowsUnassigned { get; set; }
+}
+
+// ── Undo Single Receipt ──
+public class UndoSingleResultDto
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public int ReceiptId { get; set; }
+    public int RowId { get; set; }
+    public int? ReopenedGapId { get; set; }
+}
+
+// ── Session Summary (for Undo confirmation) ──
+public class SessionSummaryDto
+{
+    public int SessionId { get; set; }
+    public string DriverName { get; set; } = string.Empty;
+    public DateTime SessionDate { get; set; }
+    public string RouteArea { get; set; } = string.Empty;
+    public int FirstReceiptNumber { get; set; }
+    public int LastReceiptNumber { get; set; }
+    public int TotalReceiptsCount { get; set; }
+    public decimal TotalAmountCollected { get; set; }
+    public bool IsConfirmed { get; set; }
+    public bool HasGaps { get; set; }
+    public string ImportSource { get; set; } = string.Empty;
+}
+
+// ── Driver's Current Books ──
+public class DriverBooksDto
+{
+    public int DriverId { get; set; }
+    public string DriverName { get; set; } = string.Empty;
+    public List<DriverBookInfoDto> Books { get; set; } = new();
+}
+
+public class DriverBookInfoDto
+{
+    public int BookId { get; set; }
+    public int BookNumber { get; set; }
+    public int StartReceiptNumber { get; set; }
+    public int EndReceiptNumber { get; set; }
+    public int UsedCount { get; set; }
+    public int RemainingCount { get; set; }
+    public string Status { get; set; } = string.Empty;
 }
 
 // ── Assign Single (orphan) ──

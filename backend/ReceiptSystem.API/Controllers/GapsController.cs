@@ -29,6 +29,7 @@ public class GapsController : ControllerBase
     {
         var query = _db.ReceiptGaps
             .Include(g => g.Driver)
+            .Include(g => g.Book)
             .Include(g => g.ResolvedByUser)
             .AsQueryable();
 
@@ -44,6 +45,9 @@ public class GapsController : ControllerBase
                 DetectedInSessionId = g.DetectedInSessionId,
                 DriverId = g.DriverId,
                 DriverName = g.Driver.FullName,
+                BookId = g.BookId,
+                BookNumber = g.Book != null ? g.Book.BookNumber : null,
+                ReasonCategory = g.ReasonCategory,
                 DetectedAt = g.DetectedAt,
                 Status = g.Status,
                 Resolution = g.Resolution,

@@ -31,4 +31,6 @@ public class ReceiptBook
     public User? ReturnedToUser { get; set; }
     public User? VerifiedByUser { get; set; }
     public ICollection<Receipt> Receipts { get; set; } = new List<Receipt>();
+    public ICollection<BookMovement> Movements { get; set; } = new List<BookMovement>();
+    public ICollection<ReceiptGap> Gaps { get; set; } = new List<ReceiptGap>();
 }

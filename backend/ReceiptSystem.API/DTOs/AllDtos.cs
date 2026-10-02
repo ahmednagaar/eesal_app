@@ -156,6 +156,119 @@ public class AssignBatchDto
     public DateTime? AssignedDate { get; set; }
 }
 
+// ── Book Transfer ──
+public class TransferBookDto
+{
+    [Required] public int ToDriverId { get; set; }
+    public string? Notes { get; set; }
+}
+
+// ── Book Detail (receipt-level drill-down) ──
+public class BookDetailDto
+{
+    public int BookId { get; set; }
+    public int BookNumber { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
+    public int StartReceiptNumber { get; set; }
+    public int EndReceiptNumber { get; set; }
+    public int TotalReceipts { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? DriverName { get; set; }
+    public int? DriverId { get; set; }
+    public DateTime? AssignedDate { get; set; }
+    public DateTime? ReturnedDate { get; set; }
+    public bool IsVerified { get; set; }
+
+    // Usage summary
+    public int UsedReceipts { get; set; }
+    public int RemainingReceipts { get; set; }
+    public double UsagePercent { get; set; }
+
+    // Gap summary
+    public int MissingReceipts { get; set; }
+    public List<BookGapDto> Gaps { get; set; } = new();
+
+    // Receipts in this book
+    public List<BookReceiptDto> Receipts { get; set; } = new();
+
+    // Movement history
+    public List<BookMovementDto> Movements { get; set; } = new();
+}
+
+public class BookGapDto
+{
+    public int GapId { get; set; }
+    public int MissingReceiptNumber { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? ReasonCategory { get; set; }
+    public string? Resolution { get; set; }
+    public DateTime DetectedAt { get; set; }
+}
+
+public class BookReceiptDto
+{
+    public int ReceiptId { get; set; }
+    public int ReceiptNumber { get; set; }
+    public string MerchantName { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime CollectionDate { get; set; }
+    public int SessionId { get; set; }
+}
+
+public class BookMovementDto
+{
+    public int MovementId { get; set; }
+    public string ActionType { get; set; } = string.Empty;
+    public string ActionDisplay { get; set; } = string.Empty;
+    public string? FromDriverName { get; set; }
+    public string? ToDriverName { get; set; }
+    public string PerformedByName { get; set; } = string.Empty;
+    public DateTime PerformedAt { get; set; }
+    public string? Notes { get; set; }
+}
+
+// ── Return Reconciliation ──
+public class ReturnReconciliationDto
+{
+    public int BookId { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
+    public string DriverName { get; set; } = string.Empty;
+    public int TotalReceipts { get; set; }
+    public int UsedReceipts { get; set; }
+    public int UnusedReceipts { get; set; }
+    public int MissingReceipts { get; set; }
+    public List<int> MissingReceiptNumbers { get; set; } = new();
+    public List<int> UnusedReceiptNumbers { get; set; } = new();
+}
+
+// ── Driver Book Portfolio ──
+public class DriverPortfolioDto
+{
+    public int DriverId { get; set; }
+    public string DriverName { get; set; } = string.Empty;
+    public List<DriverPortfolioBookDto> CurrentBooks { get; set; } = new();
+    public List<DriverPortfolioBookDto> ReturnedBooks { get; set; } = new();
+    public int TotalCurrentBooks { get; set; }
+    public int TotalUsedReceipts { get; set; }
+    public int TotalRemainingReceipts { get; set; }
+}
+
+public class DriverPortfolioBookDto
+{
+    public int BookId { get; set; }
+    public int BookNumber { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
+    public int StartReceiptNumber { get; set; }
+    public int EndReceiptNumber { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public int UsedReceipts { get; set; }
+    public int RemainingReceipts { get; set; }
+    public int MissingReceipts { get; set; }
+    public double UsagePercent { get; set; }
+    public DateTime? AssignedDate { get; set; }
+    public DateTime? ReturnedDate { get; set; }
+}
+
 // ── User Management ──
 public class UserListDto
 {

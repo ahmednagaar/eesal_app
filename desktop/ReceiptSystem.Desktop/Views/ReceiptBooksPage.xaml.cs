@@ -336,13 +336,20 @@ public partial class ReceiptBooksPage : UserControl
         AssignBtn.Visibility = canAssign ? Visibility.Visible : Visibility.Collapsed;
         AssignBatchBtn.Visibility = Visibility.Collapsed;
 
+        // Transfer: for assigned/inprogress books
+        bool isWithDriver = _selectedBookStatus == "Assigned" || _selectedBookStatus == "InProgress";
+        TransferBtn.Visibility = isWithDriver && canManageBooks ? Visibility.Visible : Visibility.Collapsed;
+
         // Return: only for "Assigned" or "InProgress" books
-        ReturnBtn.Visibility = (_selectedBookStatus == "Assigned" || _selectedBookStatus == "InProgress") && canManageBooks
+        ReturnBtn.Visibility = isWithDriver && canManageBooks
             ? Visibility.Visible : Visibility.Collapsed;
 
         // Verify: only for "Returned" books, Admin/Treasury only
         VerifyBtn.Visibility = _selectedBookStatus == "Returned" && canManageBooks
             ? Visibility.Visible : Visibility.Collapsed;
+
+        // Portfolio: show if book has a driver
+        PortfolioBtn.Visibility = row.driverName != "—" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // ══════════════════════════════════════
@@ -392,27 +399,66 @@ public partial class ReceiptBooksPage : UserControl
         finally { btn.IsEnabled = true; }
     }
 
+    // ══════════════════════════════════════
+    // Return — with reconciliation preview
+    // ══════════════════════════════════════
+
     private async void Return_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedBookId <= 0) return;
-        var confirm = MessageBox.Show("هل تم إرجاع هذا الدفتر من السائق؟", "تأكيد الإرجاع",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (confirm != MessageBoxResult.Yes) return;
 
-        var btn = (Button)sender; btn.IsEnabled = false;
         try
         {
-            bool ok = await _api.ReturnBookAsync(_selectedBookId);
+            var json = await _api.GetReturnPreviewJsonAsync(_selectedBookId);
+            if (json == null) { ToastHelper.ShowError(RootGrid, "خطأ في تحميل بيانات الإرجاع"); return; }
+
+            var data = JObject.Parse(json);
+            ReturnReconcBookLabel.Text = $"{data["displayName"]} — السائق: {data["driverName"]}";
+            ReconcTotal.Text = data["totalReceipts"]?.ToString() ?? "0";
+            ReconcUsed.Text = data["usedReceipts"]?.ToString() ?? "0";
+            ReconcUnused.Text = data["unusedReceipts"]?.ToString() ?? "0";
+            ReconcMissing.Text = data["missingReceipts"]?.ToString() ?? "0";
+
+            var missingNumbers = data["missingReceiptNumbers"] as JArray;
+            if (missingNumbers != null && missingNumbers.Count > 0)
+            {
+                ReconcMissingPanel.Visibility = Visibility.Visible;
+                ReconcMissingNumbers.Text = string.Join(", ", missingNumbers.Select(n => n.ToString()));
+            }
+            else
+            {
+                ReconcMissingPanel.Visibility = Visibility.Collapsed;
+            }
+
+            ReturnReconcNotes.Text = "";
+            ReturnReconcDialog.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+    }
+
+    private void ReturnReconcCancel_Click(object sender, RoutedEventArgs e) => ReturnReconcDialog.Visibility = Visibility.Collapsed;
+
+    private async void ReturnReconcConfirm_Click(object sender, RoutedEventArgs e)
+    {
+        ReturnReconcConfirmBtn.IsEnabled = false;
+        try
+        {
+            bool ok = await _api.ReturnBookAsync(_selectedBookId, ReturnReconcNotes.Text.Trim());
             if (ok)
             {
                 ToastHelper.ShowSuccess(RootGrid, "✓ تم تسجيل إرجاع الدفتر");
+                ReturnReconcDialog.Visibility = Visibility.Collapsed;
                 await LoadBooksForSeriesAsync(_selectedSeriesId);
                 await LoadSeriesAsync();
             }
         }
         catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
-        finally { btn.IsEnabled = true; }
+        finally { ReturnReconcConfirmBtn.IsEnabled = true; }
     }
+
+    // ══════════════════════════════════════
+    // Verify
+    // ══════════════════════════════════════
 
     private async void Verify_Click(object sender, RoutedEventArgs e)
     {
@@ -431,6 +477,186 @@ public partial class ReceiptBooksPage : UserControl
         catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
         finally { btn.IsEnabled = true; }
     }
+
+    // ══════════════════════════════════════
+    // Transfer
+    // ══════════════════════════════════════
+
+    private void Transfer_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedBookId <= 0) return;
+        dynamic row = BooksGrid.SelectedItem;
+        TransferBookLabel.Text = $"دفتر {row.displayName} — حالياً مع: {row.driverName}";
+        TransferDriverCombo.ItemsSource = AssignDriverCombo.ItemsSource;
+        TransferDriverCombo.SelectedIndex = -1;
+        TransferNotes.Text = "";
+        TransferDialog.Visibility = Visibility.Visible;
+    }
+
+    private void TransferCancel_Click(object sender, RoutedEventArgs e) => TransferDialog.Visibility = Visibility.Collapsed;
+
+    private async void TransferConfirm_Click(object sender, RoutedEventArgs e)
+    {
+        if (TransferDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        { ToastHelper.ShowError(RootGrid, "اختر السائق الجديد"); return; }
+
+        TransferConfirmBtn.IsEnabled = false;
+        try
+        {
+            bool ok = await _api.TransferBookAsync(_selectedBookId, driverId, TransferNotes.Text.Trim());
+            if (ok)
+            {
+                ToastHelper.ShowSuccess(RootGrid, "✓ تم نقل الدفتر بنجاح");
+                TransferDialog.Visibility = Visibility.Collapsed;
+                await LoadBooksForSeriesAsync(_selectedSeriesId);
+                await LoadSeriesAsync();
+            }
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+        finally { TransferConfirmBtn.IsEnabled = true; }
+    }
+
+    // ══════════════════════════════════════
+    // Book Detail
+    // ══════════════════════════════════════
+
+    private async void ShowDetail_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedBookId <= 0) return;
+
+        try
+        {
+            var json = await _api.GetBookDetailJsonAsync(_selectedBookId);
+            if (json == null) { ToastHelper.ShowError(RootGrid, "خطأ في تحميل التفاصيل"); return; }
+
+            var d = JObject.Parse(json);
+            DetailTitle.Text = $"📖 دفتر {d["displayName"]}";
+            DetailSubtitle.Text = $"النطاق: {d["startReceiptNumber"]}–{d["endReceiptNumber"]} | السائق: {d["driverName"] ?? "—"} | الحالة: {d["status"]}";
+
+            DetailTotal.Text = d["totalReceipts"]?.ToString() ?? "0";
+            DetailUsed.Text = d["usedReceipts"]?.ToString() ?? "0";
+            DetailRemaining.Text = d["remainingReceipts"]?.ToString() ?? "0";
+            DetailMissing.Text = d["missingReceipts"]?.ToString() ?? "0";
+            DetailUsagePercent.Text = $"{d["usagePercent"]}%";
+
+            // Receipts tab
+            var receipts = d["receipts"] as JArray;
+            DetailReceiptsGrid.ItemsSource = receipts?.Select(r => new
+            {
+                receiptNumber = r["receiptNumber"]?.Value<int>() ?? 0,
+                merchantName = r["merchantName"]?.ToString() ?? "—",
+                amount = r["amount"]?.Value<decimal>() ?? 0,
+                dateDisplay = r["collectionDate"]?.ToString()?.Substring(0, Math.Min(10, r["collectionDate"]?.ToString()?.Length ?? 0)) ?? "—"
+            }).ToList();
+
+            // Gaps tab
+            var gaps = d["gaps"] as JArray;
+            DetailGapsGrid.ItemsSource = gaps?.Select(g => new
+            {
+                missingReceiptNumber = g["missingReceiptNumber"]?.Value<int>() ?? 0,
+                statusDisplay = g["status"]?.ToString() switch
+                {
+                    "Open" => "مفتوح",
+                    "Resolved" => "تم الحل",
+                    "Explained" => "موضح",
+                    _ => g["status"]?.ToString() ?? "—"
+                },
+                reasonCategory = g["reasonCategory"]?.ToString() ?? "—",
+                detectedDisplay = g["detectedAt"]?.ToString()?.Substring(0, Math.Min(10, g["detectedAt"]?.ToString()?.Length ?? 0)) ?? "—"
+            }).ToList();
+
+            // Movements tab
+            var movements = d["movements"] as JArray;
+            DetailMovementsList.ItemsSource = movements?.Select(m => new
+            {
+                actionDisplay = m["actionDisplay"]?.ToString() ?? m["actionType"]?.ToString() ?? "—",
+                description = m["notes"]?.ToString() ?? "",
+                performedBy = m["performedByName"]?.ToString() ?? "—",
+                dateDisplay = m["performedAt"]?.ToString()?.Substring(0, Math.Min(16, m["performedAt"]?.ToString()?.Length ?? 0)) ?? "—"
+            }).ToList();
+
+            BookDetailDialog.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+    }
+
+    private void CloseDetail_Click(object sender, RoutedEventArgs e) => BookDetailDialog.Visibility = Visibility.Collapsed;
+    private void BookDetailOverlay_Click(object sender, MouseButtonEventArgs e) => BookDetailDialog.Visibility = Visibility.Collapsed;
+    private void BookDetailInner_Click(object sender, MouseButtonEventArgs e) => e.Handled = true;
+
+    // ══════════════════════════════════════
+    // Driver Portfolio
+    // ══════════════════════════════════════
+
+    private async void ShowPortfolio_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedBookId <= 0) return;
+        dynamic row = BooksGrid.SelectedItem;
+
+        // Find driver ID from selected book's data
+        int driverId = 0;
+        if (_allBooks.Count > 0)
+        {
+            // Find from books grid data — search driver by matching the book
+            var book = _allBooks.FirstOrDefault(b => (int)b.bookId == _selectedBookId);
+            if (book == null) return;
+
+            // We need the driver ID — get from the detail endpoint
+            var detailJson = await _api.GetBookDetailJsonAsync(_selectedBookId);
+            if (detailJson == null) return;
+            var detail = JObject.Parse(detailJson);
+            driverId = detail["driverId"]?.Value<int>() ?? 0;
+        }
+        if (driverId <= 0) { ToastHelper.ShowError(RootGrid, "لا يوجد سائق لهذا الدفتر"); return; }
+
+        try
+        {
+            var json = await _api.GetDriverPortfolioJsonAsync(driverId);
+            if (json == null) { ToastHelper.ShowError(RootGrid, "خطأ في تحميل دفاتر السائق"); return; }
+
+            var p = JObject.Parse(json);
+            PortfolioTitle.Text = $"👤 دفاتر السائق: {p["driverName"]}";
+            PortfolioBookCount.Text = p["totalCurrentBooks"]?.ToString() ?? "0";
+            PortfolioUsedCount.Text = p["totalUsedReceipts"]?.ToString() ?? "0";
+            PortfolioRemainingCount.Text = p["totalRemainingReceipts"]?.ToString() ?? "0";
+
+            var currentBooks = p["currentBooks"] as JArray;
+            var returnedBooks = p["returnedBooks"] as JArray;
+            var allBooks = new List<JToken>();
+            if (currentBooks != null) allBooks.AddRange(currentBooks);
+            if (returnedBooks != null) allBooks.AddRange(returnedBooks);
+
+            PortfolioBooksGrid.ItemsSource = allBooks.Select(b => new
+            {
+                displayName = b["displayName"]?.ToString() ?? "—",
+                range = $"{b["startReceiptNumber"]}–{b["endReceiptNumber"]}",
+                statusDisplay = b["status"]?.ToString() switch
+                {
+                    "Assigned" => "مُعيّن",
+                    "InProgress" => "قيد الاستخدام",
+                    "Returned" => "تم الإرجاع",
+                    "Completed" => "مكتمل",
+                    _ => b["status"]?.ToString() ?? "—"
+                },
+                usedReceipts = b["usedReceipts"]?.Value<int>() ?? 0,
+                remainingReceipts = b["remainingReceipts"]?.Value<int>() ?? 0,
+                missingReceipts = b["missingReceipts"]?.Value<int>() ?? 0,
+                usageDisplay = $"{b["usagePercent"]}%",
+                assignedDateDisplay = b["assignedDate"]?.ToString()?.Substring(0, Math.Min(10, b["assignedDate"]?.ToString()?.Length ?? 0)) ?? "—"
+            }).ToList();
+
+            PortfolioDialog.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+    }
+
+    private void ClosePortfolio_Click(object sender, RoutedEventArgs e) => PortfolioDialog.Visibility = Visibility.Collapsed;
+    private void PortfolioOverlay_Click(object sender, MouseButtonEventArgs e) => PortfolioDialog.Visibility = Visibility.Collapsed;
+    private void PortfolioInner_Click(object sender, MouseButtonEventArgs e) => e.Handled = true;
+
+    // ══════════════════════════════════════
+    // History
+    // ══════════════════════════════════════
 
     private async void ShowHistory_Click(object sender, RoutedEventArgs e)
     {

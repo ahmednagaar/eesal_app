@@ -81,6 +81,9 @@ public class GapDto
     public int DetectedInSessionId { get; set; }
     public int DriverId { get; set; }
     public string DriverName { get; set; } = string.Empty;
+    public int? BookId { get; set; }
+    public int? BookNumber { get; set; }
+    public string? ReasonCategory { get; set; }
     public DateTime DetectedAt { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? Resolution { get; set; }

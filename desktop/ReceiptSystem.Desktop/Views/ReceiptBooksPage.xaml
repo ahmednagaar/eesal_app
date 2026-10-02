@@ -272,6 +272,11 @@
                                 Margin="8,0,0,0" Click="AssignBatch_Click" Visibility="Collapsed"/>
                     </StackPanel>
 
+                    <!-- Transfer -->
+                    <Button x:Name="TransferBtn" Content="🔄 نقل لسائق آخر"
+                            Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
+                            Margin="0,0,8,0" Click="Transfer_Click" Visibility="Collapsed"/>
+
                     <!-- Return -->
                     <Button x:Name="ReturnBtn" Content="↩️ إرجاع الدفتر"
                             Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
@@ -282,10 +287,20 @@
                             Style="{StaticResource PrimaryButton}" Padding="12,6" FontSize="12"
                             Margin="0,0,8,0" Click="Verify_Click" Visibility="Collapsed"/>
 
+                    <!-- Detail -->
+                    <Button x:Name="DetailBtn" Content="📖 تفاصيل الدفتر"
+                            Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
+                            Margin="0,0,8,0" Click="ShowDetail_Click"/>
+
                     <!-- History -->
                     <Button x:Name="HistoryBtn" Content="📜 السجل"
                             Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
                             Margin="0,0,8,0" Click="ShowHistory_Click"/>
+
+                    <!-- Driver Portfolio -->
+                    <Button x:Name="PortfolioBtn" Content="👤 دفاتر السائق"
+                            Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
+                            Margin="0,0,8,0" Click="ShowPortfolio_Click" Visibility="Collapsed"/>
                 </StackPanel>
 
                 <!-- History Panel -->
@@ -312,6 +327,348 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
+        </Border>
+
+        <!-- ═══ TRANSFER DIALOG ═══ -->
+        <Border x:Name="TransferDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="32,24"
+                    MaxWidth="450" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="#F59E0B" BorderThickness="2">
+                <StackPanel>
+                    <TextBlock Text="🔄 نقل دفتر لسائق آخر" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="TransferBookLabel" FontSize="13"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="نقل إلى السائق:" FontSize="13" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="TransferDriverCombo" Height="36" FontSize="13"
+                              DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+
+                    <TextBlock Text="سبب النقل (اختياري):" FontSize="13" Margin="0,12,0,6"/>
+                    <TextBox x:Name="TransferNotes" Style="{StaticResource ModernTextBox}" Height="50"
+                             TextWrapping="Wrap" AcceptsReturn="True"
+                             Foreground="White" CaretBrush="White"/>
+
+                    <Border Background="#33F59E0B" CornerRadius="6" Padding="10,6" Margin="0,12,0,0">
+                        <TextBlock Text="⚠️ سيتم نقل ملكية الدفتر للسائق الجديد. الإيصالات المسجلة سابقاً ستبقى مرتبطة بالسائق القديم."
+                                   FontSize="11" Foreground="#F59E0B" TextWrapping="Wrap"/>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                        <Button x:Name="TransferConfirmBtn" Content="نقل الدفتر"
+                                Style="{StaticResource PrimaryButton}" Padding="20,8"
+                                Click="TransferConfirm_Click" Margin="0,0,8,0"/>
+                        <Button Content="إلغاء" Style="{StaticResource SecondaryButton}" Padding="16,8"
+                                Click="TransferCancel_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ═══ RETURN RECONCILIATION DIALOG ═══ -->
+        <Border x:Name="ReturnReconcDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="32,24"
+                    MaxWidth="500" MaxHeight="500" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2">
+                <StackPanel>
+                    <TextBlock Text="↩️ إرجاع دفتر — تسوية الإيصالات" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="ReturnReconcBookLabel" FontSize="13"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center" Margin="0,0,0,16"/>
+
+                    <!-- Summary Cards -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="10,8" Margin="0,0,4,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="ReconcTotal" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <TextBlock Text="إجمالي" FontSize="10" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="10,8" Margin="2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="ReconcUsed" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentSuccessBrush}"/>
+                                <TextBlock Text="مستخدم" FontSize="10" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="10,8" Margin="2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="ReconcUnused" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentWarningBrush}"/>
+                                <TextBlock Text="غير مستخدم" FontSize="10" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="10,8" Margin="4,0,0,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="ReconcMissing" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentDangerBrush}"/>
+                                <TextBlock Text="مفقود" FontSize="10" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Missing receipts warning -->
+                    <Border x:Name="ReconcMissingPanel" Background="#33EF4444" CornerRadius="6"
+                            Padding="10,6" Margin="0,0,0,8" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="⚠️ إيصالات مفقودة:" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource AccentDangerBrush}" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="ReconcMissingNumbers" FontSize="11"
+                                       Foreground="{StaticResource AccentDangerBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="ملاحظات الإرجاع (اختياري):" FontSize="13" Margin="0,4,0,6"/>
+                    <TextBox x:Name="ReturnReconcNotes" Style="{StaticResource ModernTextBox}" Height="50"
+                             TextWrapping="Wrap" AcceptsReturn="True"
+                             Foreground="White" CaretBrush="White"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                        <Button x:Name="ReturnReconcConfirmBtn" Content="تأكيد الإرجاع"
+                                Style="{StaticResource PrimaryButton}" Padding="20,8"
+                                Click="ReturnReconcConfirm_Click" Margin="0,0,8,0"/>
+                        <Button Content="إلغاء" Style="{StaticResource SecondaryButton}" Padding="16,8"
+                                Click="ReturnReconcCancel_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- ═══ BOOK DETAIL DIALOG ═══ -->
+        <Border x:Name="BookDetailDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed"
+                MouseLeftButtonDown="BookDetailOverlay_Click">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="28,20"
+                    MaxWidth="750" MaxHeight="600" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2"
+                    MouseLeftButtonDown="BookDetailInner_Click">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock x:Name="DetailTitle" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock x:Name="DetailSubtitle" FontSize="13"
+                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="✕" Style="{StaticResource SecondaryButton}"
+                                Padding="8,4" FontSize="14" Click="CloseDetail_Click"/>
+                    </Grid>
+
+                    <!-- Stats Row -->
+                    <Grid Grid.Row="1" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="8,6" Margin="0,0,4,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="DetailTotal" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="إجمالي" FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="8,6" Margin="2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="DetailUsed" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentSuccessBrush}"/>
+                                <TextBlock Text="مستخدم" FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="8,6" Margin="2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="DetailRemaining" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentWarningBrush}"/>
+                                <TextBlock Text="متبقي" FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="8,6" Margin="2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="DetailMissing" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentDangerBrush}"/>
+                                <TextBlock Text="مفقود" FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="4" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="8,6" Margin="4,0,0,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="DetailUsagePercent" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentPrimaryBrush}"/>
+                                <TextBlock Text="نسبة" FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Tabs: Receipts / Gaps / Movements -->
+                    <TabControl Grid.Row="2" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimaryBrush}">
+                        <TabItem Header="الإيصالات" Foreground="{StaticResource TextPrimaryBrush}">
+                            <DataGrid x:Name="DetailReceiptsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" Background="Transparent" BorderThickness="0"
+                                      RowBackground="{StaticResource BgCardBrush}"
+                                      AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
+                                      Foreground="{StaticResource TextPrimaryBrush}" FontSize="11"
+                                      GridLinesVisibility="Horizontal"
+                                      HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                                      HeadersVisibility="Column">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding receiptNumber}" Width="90"/>
+                                    <DataGridTextColumn Header="التاجر" Binding="{Binding merchantName}" Width="*"/>
+                                    <DataGridTextColumn Header="المبلغ" Binding="{Binding amount}" Width="90"/>
+                                    <DataGridTextColumn Header="التاريخ" Binding="{Binding dateDisplay}" Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="الإيصالات المفقودة" Foreground="{StaticResource TextPrimaryBrush}">
+                            <DataGrid x:Name="DetailGapsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" Background="Transparent" BorderThickness="0"
+                                      RowBackground="{StaticResource BgCardBrush}"
+                                      AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
+                                      Foreground="{StaticResource TextPrimaryBrush}" FontSize="11"
+                                      GridLinesVisibility="Horizontal"
+                                      HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                                      HeadersVisibility="Column">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding missingReceiptNumber}" Width="100"/>
+                                    <DataGridTextColumn Header="الحالة" Binding="{Binding statusDisplay}" Width="100"/>
+                                    <DataGridTextColumn Header="السبب" Binding="{Binding reasonCategory}" Width="120"/>
+                                    <DataGridTextColumn Header="تاريخ الاكتشاف" Binding="{Binding detectedDisplay}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="سجل الحركات" Foreground="{StaticResource TextPrimaryBrush}">
+                            <ItemsControl x:Name="DetailMovementsList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource BgInputBrush}" CornerRadius="6"
+                                                Padding="12,8" Margin="0,3">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding actionDisplay}" FontSize="12"
+                                                           FontWeight="Bold" Margin="0,0,12,0"/>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding description}" FontSize="11"
+                                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding performedBy}" FontSize="10"
+                                                               Foreground="{StaticResource TextMutedBrush}"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Text="{Binding dateDisplay}" FontSize="10"
+                                                           Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- ═══ DRIVER PORTFOLIO DIALOG ═══ -->
+        <Border x:Name="PortfolioDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed"
+                MouseLeftButtonDown="PortfolioOverlay_Click">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="28,20"
+                    MaxWidth="650" MaxHeight="500" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2"
+                    MouseLeftButtonDown="PortfolioInner_Click">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="PortfolioTitle" FontSize="20" FontWeight="Bold"/>
+                        <Button Grid.Column="1" Content="✕" Style="{StaticResource SecondaryButton}"
+                                Padding="8,4" FontSize="14" Click="ClosePortfolio_Click"/>
+                    </Grid>
+
+                    <!-- Portfolio Summary -->
+                    <Grid Grid.Row="1" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="10,8" Margin="0,0,4,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="PortfolioBookCount" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentPrimaryBrush}"/>
+                                <TextBlock Text="دفاتر حالية" FontSize="10" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="10,8" Margin="2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="PortfolioUsedCount" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentSuccessBrush}"/>
+                                <TextBlock Text="إيصالات مستخدمة" FontSize="10" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="10,8" Margin="4,0,0,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="PortfolioRemainingCount" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource AccentWarningBrush}"/>
+                                <TextBlock Text="إيصالات متبقية" FontSize="10" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Books List -->
+                    <DataGrid x:Name="PortfolioBooksGrid" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True"
+                              CanUserAddRows="False" Background="Transparent" BorderThickness="0"
+                              RowBackground="{StaticResource BgCardBrush}"
+                              AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
+                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                              HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="الدفتر" Binding="{Binding displayName}" Width="90"/>
+                            <DataGridTextColumn Header="النطاق" Binding="{Binding range}" Width="110"/>
+                            <DataGridTextColumn Header="الحالة" Binding="{Binding statusDisplay}" Width="80"/>
+                            <DataGridTextColumn Header="مستخدم" Binding="{Binding usedReceipts}" Width="70"/>
+                            <DataGridTextColumn Header="متبقي" Binding="{Binding remainingReceipts}" Width="70"/>
+                            <DataGridTextColumn Header="مفقود" Binding="{Binding missingReceipts}" Width="60"/>
+                            <DataGridTextColumn Header="نسبة" Binding="{Binding usageDisplay}" Width="60"/>
+                            <DataGridTextColumn Header="تاريخ التسليم" Binding="{Binding assignedDateDisplay}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
         </Border>
 
         <!-- ═══ ASSIGN NEXT DIALOG ═══ -->
@@ -399,3 +756,4 @@
         </Border>
     </Grid>
 </UserControl>
+

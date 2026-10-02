@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ReceiptSystem.API.Data;
 
@@ -11,9 +12,11 @@ using ReceiptSystem.API.Data;
 namespace ReceiptSystem.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260930190151_AddGapBookIdAndReasonCategory")]
+    partial class AddGapBookIdAndReasonCategory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -142,53 +145,6 @@ namespace ReceiptSystem.API.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("ReceiptSystem.API.Models.BookMovement", b =>
-                {
-                    b.Property<int>("MovementId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MovementId"));
-
-                    b.Property<string>("ActionType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<int>("BookId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("FromDriverId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime>("PerformedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<int>("PerformedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ToDriverId")
-                        .HasColumnType("int");
-
-                    b.HasKey("MovementId");
-
-                    b.HasIndex("BookId");
-
-                    b.HasIndex("FromDriverId");
-
-                    b.HasIndex("PerformedByUserId");
-
-                    b.HasIndex("ToDriverId");
-
-                    b.ToTable("BookMovements");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.BookSeries", b =>
@@ -2228,9 +2184,6 @@ namespace ReceiptSystem.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GapId"));
 
-                    b.Property<int?>("BookId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("DetectedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -2244,10 +2197,6 @@ namespace ReceiptSystem.API.Migrations
 
                     b.Property<int>("MissingReceiptNumber")
                         .HasColumnType("int");
-
-                    b.Property<string>("ReasonCategory")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Resolution")
                         .HasMaxLength(1000)
@@ -2267,8 +2216,6 @@ namespace ReceiptSystem.API.Migrations
                         .HasDefaultValue("Open");
 
                     b.HasKey("GapId");
-
-                    b.HasIndex("BookId");
 
                     b.HasIndex("DetectedInSessionId");
 
@@ -2884,7 +2831,7 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "مدير النظام",
                             IsActive = true,
-                            PasswordHash = "$2a$11$QZoGf3mqBy98p.kKCrfcde3lQHMCLDgccn2Mtp6kb3.qmaGvrTeqq",
+                            PasswordHash = "$2a$11$B3bxOdPDuNNKN9doGjh.q.ybUT8RDvMfAk55CY9DQOWL2IKgx3862",
                             Role = "Admin",
                             Username = "admin"
                         },
@@ -2894,7 +2841,7 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "أمين الخزينة",
                             IsActive = true,
-                            PasswordHash = "$2a$11$su8MSc4LKOpzKs/q18vee.GVZrT3YrVeF0IUwFuzghjlKcTQhbKeu",
+                            PasswordHash = "$2a$11$UH9BSr0/IK1I8tVvsNAkBe9.xc.g0fLtq6hQ34Qcm69MuRfaQTZqu",
                             Role = "Treasury",
                             Username = "خزينة"
                         },
@@ -2904,7 +2851,7 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "موظف الكول سنتر",
                             IsActive = true,
-                            PasswordHash = "$2a$11$5Aacu6lZ.MLeXcPgD8aGx.HusHnBmA1OUlYDYXbbhiuBV5aZjI9QO",
+                            PasswordHash = "$2a$11$LxXONltvkIGVAwgEujS2uObTSo/LQaMVVxboTjoywxIRKkt5mghuS",
                             Role = "CallCenter",
                             Username = "callcenter"
                         });
@@ -2945,39 +2892,6 @@ namespace ReceiptSystem.API.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ReceiptSystem.API.Models.BookMovement", b =>
-                {
-                    b.HasOne("ReceiptSystem.API.Models.ReceiptBook", "Book")
-                        .WithMany("Movements")
-                        .HasForeignKey("BookId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ReceiptSystem.API.Models.Driver", "FromDriver")
-                        .WithMany()
-                        .HasForeignKey("FromDriverId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("ReceiptSystem.API.Models.User", "PerformedByUser")
-                        .WithMany()
-                        .HasForeignKey("PerformedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("ReceiptSystem.API.Models.Driver", "ToDriver")
-                        .WithMany()
-                        .HasForeignKey("ToDriverId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Book");
-
-                    b.Navigation("FromDriver");
-
-                    b.Navigation("PerformedByUser");
-
-                    b.Navigation("ToDriver");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.BookSeries", b =>
@@ -3214,11 +3128,6 @@ namespace ReceiptSystem.API.Migrations
 
             modelBuilder.Entity("ReceiptSystem.API.Models.ReceiptGap", b =>
                 {
-                    b.HasOne("ReceiptSystem.API.Models.ReceiptBook", "Book")
-                        .WithMany("Gaps")
-                        .HasForeignKey("BookId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("ReceiptSystem.API.Models.CollectionSession", "DetectedInSession")
                         .WithMany("DetectedGaps")
                         .HasForeignKey("DetectedInSessionId")
@@ -3235,8 +3144,6 @@ namespace ReceiptSystem.API.Migrations
                         .WithMany()
                         .HasForeignKey("ResolvedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Book");
 
                     b.Navigation("DetectedInSession");
 
@@ -3337,10 +3244,6 @@ namespace ReceiptSystem.API.Migrations
 
             modelBuilder.Entity("ReceiptSystem.API.Models.ReceiptBook", b =>
                 {
-                    b.Navigation("Gaps");
-
-                    b.Navigation("Movements");
-
                     b.Navigation("Receipts");
                 });
 

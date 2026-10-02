@@ -343,12 +343,12 @@
                             </Grid>
                         </ControlTemplate>
                     </Setter.Value>
-                    <Style.Triggers>
-                        <Trigger Property="IsEditable" Value="True">
-                            <Setter Property="IsTabStop" Value="False" />
-                        </Trigger>
-                    </Style.Triggers>
                 </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsEditable" Value="True">
+                        <Setter Property="IsTabStop" Value="False" />
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
             <!-- Dark ComboBox Items -->

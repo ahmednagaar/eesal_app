@@ -151,8 +151,22 @@
                                        Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
 
                             <TextBlock Text="السائق" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <ComboBox x:Name="BlockDriverCombo" Height="34" Margin="0,0,0,8"
-                                      DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+                            <ComboBox x:Name="BlockDriverCombo" Height="34" Margin="0,0,0,4"
+                                      IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
+                                      DisplayMemberPath="fullName" SelectedValuePath="driverId"
+                                      SelectionChanged="BlockDriverCombo_SelectionChanged"
+                                      TextBoxBase.TextChanged="SearchableComboBox_TextChanged"/>
+
+                            <!-- Driver's Current Books Display -->
+                            <Border x:Name="DriverBooksPanel" Background="#1A667eea" CornerRadius="6"
+                                    Padding="8,6" Margin="0,0,0,8" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="📖 دفاتر السائق:" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentPrimaryBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock x:Name="DriverBooksText" TextWrapping="Wrap" FontSize="11"
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </Border>
 
                             <TextBlock Text="تاريخ الجلسة" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                             <DatePicker x:Name="BlockSessionDate" Height="34" FlowDirection="LeftToRight" Margin="0,0,0,8"/>
@@ -160,11 +174,39 @@
                             <TextBlock Text="رقم أول إيصال" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                             <TextBox x:Name="BlockStartReceipt" Style="{StaticResource ModernTextBox}" Height="34" Margin="0,0,0,8"/>
 
-                            <TextBlock Text="المنطقة / الخط" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <TextBox x:Name="BlockRouteArea" Style="{StaticResource ModernTextBox}" Height="34" Margin="0,0,0,12"/>
+                            <TextBlock Text="رقم آخر إيصال" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <TextBox x:Name="BlockEndReceipt" Style="{StaticResource ModernTextBox}" Height="34" Margin="0,0,0,8"/>
 
-                            <Button x:Name="AssignBlockBtn" Content="تعيين الكتلة" Style="{StaticResource PrimaryButton}"
+                            <TextBlock Text="المنطقة / الخط" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="BlockRouteArea" Height="34" Margin="0,0,0,8"
+                                      IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
+                                      DisplayMemberPath="RouteName" SelectedValuePath="RouteName"
+                                      TextBoxBase.TextChanged="SearchableComboBox_TextChanged"/>
+
+                            <!-- Count validation display -->
+                            <Border x:Name="CountValidationPanel" Background="#33FBBF24" CornerRadius="6"
+                                    Padding="8,6" Margin="0,0,0,8" Visibility="Collapsed"
+                                    BorderBrush="{StaticResource AccentWarningBrush}" BorderThickness="1">
+                                <TextBlock x:Name="CountValidationText" TextWrapping="Wrap" FontSize="11"
+                                           Foreground="{StaticResource AccentWarningBrush}"/>
+                            </Border>
+
+                            <!-- Preview button -->
+                            <Button x:Name="PreviewBlockBtn" Content="👁 معاينة قبل التأكيد" Style="{StaticResource SecondaryButton}"
+                                    Click="PreviewBlock_Click" Padding="14,6" FontSize="12" Margin="0,0,0,6"/>
+
+                            <Button x:Name="AssignBlockBtn" Content="✓ تعيين الكتلة" Style="{StaticResource PrimaryButton}"
                                     Click="AssignBlock_Click" Padding="16,8" FontSize="13"/>
+
+                            <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,16"/>
+
+                            <!-- Undo Block Assignment -->
+                            <TextBlock Text="تراجع عن تعيين" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock Text="رقم الجلسة" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <TextBox x:Name="UndoSessionIdBox" Style="{StaticResource ModernTextBox}" Height="34" Margin="0,0,0,8"/>
+                            <Button x:Name="UndoBlockBtn" Content="↩ تراجع" Style="{StaticResource SecondaryButton}"
+                                    Click="UndoBlock_Click" Padding="14,6" FontSize="12"
+                                    Foreground="#FF6B6B"/>
 
                             <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,16"/>
 
@@ -176,19 +218,6 @@
                             <TextBox x:Name="SingleReceiptBox" Style="{StaticResource ModernTextBox}" Height="34" Margin="0,0,0,12"/>
                             <Button Content="تعيين فردي" Style="{StaticResource SecondaryButton}"
                                     Click="AssignSingle_Click" Padding="14,6" FontSize="12"/>
-
-                            <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,16"/>
-
-                            <!-- Reconcile -->
-                            <TextBlock Text="تسوية الدُفعة" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <TextBlock Text="إجمالي دفتر الأستاذ" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <TextBox x:Name="LedgerTotalBox" Style="{StaticResource ModernTextBox}" Height="34"
-                                     FlowDirection="LeftToRight" TextAlignment="Right" Margin="0,0,0,8"/>
-                            <TextBlock Text="النقد الفعلي" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <TextBox x:Name="ActualCashTotalBox" Style="{StaticResource ModernTextBox}" Height="34"
-                                     FlowDirection="LeftToRight" TextAlignment="Right" Margin="0,0,0,12"/>
-                            <Button Content="تسوية" Style="{StaticResource SecondaryButton}"
-                                    Click="ReconcileBatch_Click" Padding="14,6" FontSize="12"/>
 
                             <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,16"/>
 

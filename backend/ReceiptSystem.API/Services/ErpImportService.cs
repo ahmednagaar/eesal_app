@@ -285,6 +285,8 @@ public class ErpImportService
 
     // ════════════════════════════════════════════
     // Method 3 — Assign Block (rows → driver + receipt range → session)
+    // Supports: first+last receipt, two-book detection, book linking, count validation,
+    // and explicit skipped receipt numbers (replaces dangerous ForceAssign)
     // ════════════════════════════════════════════
     public async Task<AssignBlockResultDto> AssignBlockAsync(AssignBlockDto dto, int userId)
     {
@@ -293,8 +295,8 @@ public class ErpImportService
             .Where(r => dto.RowIds.Contains(r.RowId) && r.BatchId == dto.BatchId)
             .ToListAsync();
 
-        // Sort in-memory to preserve caller's order (determines receipt number sequence)
-        rows = rows.OrderBy(r => dto.RowIds.IndexOf(r.RowId)).ToList();
+        // Sort by sheet order (rowIndex) — this is the data-correctness requirement
+        rows = rows.OrderBy(r => r.RowIndex).ToList();
 
         if (rows.Count != dto.RowIds.Count)
             return new AssignBlockResultDto { Success = false, Error = "بعض الصفوف المحددة غير موجودة في هذه الدفعة" };
@@ -303,11 +305,104 @@ public class ErpImportService
         if (alreadyAssigned.Any())
             return new AssignBlockResultDto { Success = false, Error = $"الصفوف التالية مسجلة بالفعل: {string.Join(", ", alreadyAssigned)}" };
 
-        // Validate receipt numbers don't conflict
-        int endReceiptNumber = dto.StartReceiptNumber + rows.Count - 1;
-        var rangeNumbers = Enumerable.Range(dto.StartReceiptNumber, rows.Count).ToList();
+        // ╔══════════════════════════════════════════════════╗
+        // ║  Book Ownership Validation                        ║
+        // ║  Driver must own the book(s) for the receipt range ║
+        // ╚══════════════════════════════════════════════════════╝
+        var driverBooks = await _db.ReceiptBooks
+            .Where(b => b.AssignedToDriverId == dto.DriverId)
+            .ToListAsync();
+
+        if (!driverBooks.Any())
+            return new AssignBlockResultDto
+            {
+                Success = false,
+                Error = "لا توجد دفاتر إيصالات مسجلة لهذا السائق. يجب تعيين دفتر للسائق أولاً قبل إدخال الإيصالات."
+            };
+
+        // Check that every receipt number in the range falls within a book owned by this driver
+        var unownedReceipts = new List<int>();
+        for (int receiptNum = dto.StartReceiptNumber; receiptNum <= dto.EndReceiptNumber; receiptNum++)
+        {
+            bool belongsToDriver = driverBooks.Any(b =>
+                receiptNum >= b.StartReceiptNumber && receiptNum <= b.EndReceiptNumber);
+            if (!belongsToDriver)
+                unownedReceipts.Add(receiptNum);
+        }
+
+        if (unownedReceipts.Any())
+        {
+            int minUnowned = unownedReceipts.Min();
+            int maxUnowned = unownedReceipts.Max();
+            var unownedBooks = await _db.ReceiptBooks
+                .Where(b => b.StartReceiptNumber <= maxUnowned && b.EndReceiptNumber >= minUnowned)
+                .ToListAsync();
+
+            string errorDetail;
+            if (unownedBooks.Any())
+            {
+                var bookDescriptions = unownedBooks.Select(b =>
+                {
+                    string owner = b.AssignedToDriverId.HasValue ? $"مسجل لسائق آخر (ID: {b.AssignedToDriverId})" : "غير مسجل لأي سائق";
+                    return $"دفتر #{b.BookNumber} (إيصالات {b.StartReceiptNumber}–{b.EndReceiptNumber}) — {owner}";
+                });
+                errorDetail = $"الإيصالات {unownedReceipts.First()}–{unownedReceipts.Last()} تنتمي لدفاتر غير مسجلة لهذا السائق:\n{string.Join("\n", bookDescriptions)}";
+            }
+            else
+            {
+                errorDetail = $"الإيصالات {unownedReceipts.First()}–{unownedReceipts.Last()} لا تنتمي لأي دفتر مسجل في النظام.";
+            }
+
+            return new AssignBlockResultDto
+            {
+                Success = false,
+                Error = $"⛔ لا يمكن تعيين إيصالات من دفتر غير مسجل للسائق المحدد.\n{errorDetail}"
+            };
+        }
+
+        // ╔══════════════════════════════════════════════════╗
+        // ║  Generate receipt numbers (handles two-book)     ║
+        // ╚══════════════════════════════════════════════════╝
+        var (receiptNumbers, bookBreakdown, spansTwoBooks) = await GenerateReceiptNumbers(
+            dto.StartReceiptNumber, dto.EndReceiptNumber, dto.DriverId);
+
+        // ╔══════════════════════════════════════════════════╗
+        // ║  Handle skipped/missing receipt numbers           ║
+        // ║  Remove skipped positions — preserve merchant     ║
+        // ║  order by NOT shifting merchants                  ║
+        // ╚══════════════════════════════════════════════════╝
+        var skippedSet = new HashSet<int>(dto.SkippedReceiptNumbers ?? new List<int>());
+
+        // Validate skipped numbers are actually within the receipt range
+        var invalidSkipped = skippedSet.Where(s => !receiptNumbers.Contains(s)).ToList();
+        if (invalidSkipped.Any())
+            return new AssignBlockResultDto
+            {
+                Success = false,
+                Error = $"أرقام الإيصالات المفقودة التالية ليست ضمن النطاق المحدد: {string.Join(", ", invalidSkipped)}"
+            };
+
+        // The receipt numbers that will actually be assigned (excluding skipped)
+        var numbersToAssign = receiptNumbers.Where(n => !skippedSet.Contains(n)).ToList();
+
+        // Count validation — after removing skipped numbers, count must match merchant rows
+        int expectedCount = numbersToAssign.Count;
+        int actualCount = rows.Count;
+
+        if (expectedCount != actualCount)
+        {
+            string scenario;
+            if (actualCount < expectedCount)
+                scenario = $"⚠️ بعد استبعاد الإيصالات المفقودة، مطلوب {expectedCount} صف تاجر ولكن تم تحديد {actualCount} صف فقط.";
+            else
+                scenario = $"⚠️ بعد استبعاد الإيصالات المفقودة، مطلوب {expectedCount} صف تاجر ولكن تم تحديد {actualCount} صف — يوجد فائض.";
+
+            return new AssignBlockResultDto { Success = false, Error = scenario };
+        }
+
+        // Validate receipt numbers don't conflict with existing records
         var existingNumbers = await _db.Receipts
-            .Where(r => rangeNumbers.Contains(r.ReceiptNumber))
+            .Where(r => numbersToAssign.Contains(r.ReceiptNumber))
             .Select(r => r.ReceiptNumber)
             .ToListAsync();
 
@@ -322,15 +417,15 @@ public class ErpImportService
         using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
-            // Create session
+            // Create session — uses the full range including skipped positions
             var session = new CollectionSession
             {
                 DriverId = dto.DriverId,
                 SessionDate = dto.SessionDate.Date,
                 RouteArea = dto.RouteArea ?? string.Empty,
                 FirstReceiptNumber = dto.StartReceiptNumber,
-                LastReceiptNumber = endReceiptNumber,
-                TotalReceiptsCount = rows.Count,
+                LastReceiptNumber = dto.EndReceiptNumber,
+                TotalReceiptsCount = numbersToAssign.Count,
                 TotalAmountCollected = rows.Sum(r => r.Amount),
                 EnteredByUserId = userId,
                 EnteredAt = DateTime.UtcNow,
@@ -339,14 +434,20 @@ public class ErpImportService
             _db.CollectionSessions.Add(session);
             await _db.SaveChangesAsync();
 
-            // Create receipts in caller's order
-            for (int i = 0; i < rows.Count; i++)
+            // Create receipts — merchants map to non-skipped positions in order
+            for (int i = 0; i < numbersToAssign.Count; i++)
             {
                 var row = rows[i];
+                var receiptNum = numbersToAssign[i];
+
+                // Find which book this receipt belongs to
+                var book = bookBreakdown.FirstOrDefault(b =>
+                    receiptNum >= b.FirstReceipt && receiptNum <= b.LastReceipt);
+
                 var receipt = new Receipt
                 {
-                    ReceiptNumber = dto.StartReceiptNumber + i,
-                    BookId = null,
+                    ReceiptNumber = receiptNum,
+                    BookId = book?.BookId,
                     SessionId = session.SessionId,
                     DriverId = dto.DriverId,
                     MerchantId = row.MatchedMerchantId!.Value,
@@ -366,12 +467,31 @@ public class ErpImportService
                 row.AssignedAt = DateTime.UtcNow;
             }
 
+            // Create explicit ReceiptGap records for user-specified skipped receipts
+            foreach (var skippedNum in skippedSet.OrderBy(n => n))
+            {
+                // Find which book the skipped receipt belongs to
+                var skippedBook = driverBooks.FirstOrDefault(b =>
+                    skippedNum >= b.StartReceiptNumber && skippedNum <= b.EndReceiptNumber);
+
+                _db.ReceiptGaps.Add(new ReceiptGap
+                {
+                    MissingReceiptNumber = skippedNum,
+                    DetectedInSessionId = session.SessionId,
+                    DriverId = session.DriverId,
+                    BookId = skippedBook?.BookId,
+                    Status = "Open",
+                    ReasonCategory = "Lost",
+                    DetectedAt = DateTime.UtcNow
+                });
+            }
+
             // Update batch counter
             var batch = await _db.ExcelImportBatches.FindAsync(dto.BatchId);
-            batch!.AssignedRowsCount += rows.Count;
+            batch!.AssignedRowsCount += numbersToAssign.Count;
             await _db.SaveChangesAsync();
 
-            // Gap detection — identical to existing Excel import
+            // Additional gap detection (between-session gaps)
             var missingReceipts = await _gapService.DetectAndSaveGapsAsync(session.SessionId);
 
             await transaction.CommitAsync();
@@ -380,9 +500,11 @@ public class ErpImportService
             {
                 Success = true,
                 SessionId = session.SessionId,
-                ReceiptsCreated = rows.Count,
+                ReceiptsCreated = numbersToAssign.Count,
                 DetectedGaps = missingReceipts,
-                HasGaps = missingReceipts.Any()
+                HasGaps = missingReceipts.Any() || skippedSet.Any(),
+                BookBreakdown = bookBreakdown,
+                SpansTwoBooks = spansTwoBooks
             };
         }
         catch
@@ -394,6 +516,7 @@ public class ErpImportService
 
     // ════════════════════════════════════════════
     // Method 4 — Assign Single (orphan row → existing session)
+    // Validates: book ownership, driver consistency, session lock status
     // ════════════════════════════════════════════
     public async Task<AssignSingleResultDto> AssignSingleAsync(AssignSingleDto dto, int userId)
     {
@@ -407,18 +530,54 @@ public class ErpImportService
         if (session == null)
             return new AssignSingleResultDto { Success = false, Error = "الجلسة غير موجودة" };
 
+        // ╔══════════════════════════════════════════════════╗
+        // ║  Session Lock Check — cannot modify confirmed     ║
+        // ╚══════════════════════════════════════════════════╝
+        if (session.IsConfirmed)
+            return new AssignSingleResultDto { Success = false, Error = "⛔ لا يمكن إضافة إيصال لجلسة مؤكدة (مقفلة). يجب فتح القفل أولاً." };
+
         var numberExists = await _db.Receipts.AnyAsync(r => r.ReceiptNumber == dto.ReceiptNumber);
         if (numberExists)
             return new AssignSingleResultDto { Success = false, Error = $"رقم الإيصال {dto.ReceiptNumber} مسجل بالفعل في النظام" };
 
+        // ╔══════════════════════════════════════════════════╗
+        // ║  Book/Driver Ownership Validation                 ║
+        // ║  Receipt must belong to a book owned by the       ║
+        // ║  target session's driver                          ║
+        // ╚══════════════════════════════════════════════════╝
+        var receiptBook = await _db.ReceiptBooks
+            .FirstOrDefaultAsync(b => dto.ReceiptNumber >= b.StartReceiptNumber
+                && dto.ReceiptNumber <= b.EndReceiptNumber);
+
+        if (receiptBook == null)
+            return new AssignSingleResultDto
+            {
+                Success = false,
+                Error = $"⛔ رقم الإيصال {dto.ReceiptNumber} لا ينتمي لأي دفتر مسجل في النظام."
+            };
+
+        if (receiptBook.AssignedToDriverId != session.DriverId)
+        {
+            // Find the driver who owns the book for a helpful error message
+            string bookOwner = receiptBook.AssignedToDriverId.HasValue
+                ? $"مسجل لسائق آخر (ID: {receiptBook.AssignedToDriverId})"
+                : "غير مسجل لأي سائق";
+
+            return new AssignSingleResultDto
+            {
+                Success = false,
+                Error = $"⛔ رقم الإيصال {dto.ReceiptNumber} ينتمي لدفتر #{receiptBook.BookNumber} ({receiptBook.StartReceiptNumber}–{receiptBook.EndReceiptNumber}) — {bookOwner}.\nلا يمكن تعيينه لجلسة سائق مختلف."
+            };
+        }
+
         using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
-            // Create receipt under target session
+            // Create receipt under target session with correct BookId
             var receipt = new Receipt
             {
                 ReceiptNumber = dto.ReceiptNumber,
-                BookId = null,
+                BookId = receiptBook.BookId,
                 SessionId = session.SessionId,
                 DriverId = session.DriverId,
                 MerchantId = row.MatchedMerchantId!.Value,
@@ -484,6 +643,114 @@ public class ErpImportService
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    // ════════════════════════════════════════════
+    // Method 4b — Undo Single Receipt (correct one mistaken individual assignment)
+    // Removes one receipt from a session without destroying the entire session.
+    // ════════════════════════════════════════════
+    public async Task<UndoSingleResultDto> UndoSingleAsync(int batchId, int receiptId, int userId)
+    {
+        var receipt = await _db.Receipts.FindAsync(receiptId);
+        if (receipt == null)
+            return new UndoSingleResultDto { Success = false, Error = "الإيصال غير موجود" };
+
+        var session = await _db.CollectionSessions.FindAsync(receipt.SessionId);
+        if (session == null)
+            return new UndoSingleResultDto { Success = false, Error = "الجلسة غير موجودة" };
+
+        if (session.IsConfirmed)
+            return new UndoSingleResultDto { Success = false, Error = "⛔ لا يمكن حذف إيصال من جلسة مؤكدة (مقفلة). يجب فتح القفل أولاً." };
+
+        // Find the linked Excel row
+        var row = await _db.ExcelImportRows
+            .FirstOrDefaultAsync(r => r.AssignedReceiptId == receiptId && r.BatchId == batchId);
+
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            // Re-open any gap that was auto-resolved when this receipt was assigned
+            int? reopenedGapId = null;
+            var relatedGap = await _db.ReceiptGaps
+                .FirstOrDefaultAsync(g => g.DriverId == receipt.DriverId
+                    && g.MissingReceiptNumber == receipt.ReceiptNumber
+                    && g.Status == "Resolved");
+
+            if (relatedGap != null)
+            {
+                relatedGap.Status = "Open";
+                relatedGap.Resolution = null;
+                relatedGap.ResolvedAt = null;
+                relatedGap.ResolvedByUserId = null;
+                reopenedGapId = relatedGap.GapId;
+            }
+
+            // Update session aggregates
+            session.TotalAmountCollected -= receipt.Amount;
+            session.TotalReceiptsCount -= 1;
+
+            // Unlink the Excel row
+            int rowId = 0;
+            if (row != null)
+            {
+                row.IsAssigned = false;
+                row.AssignedReceiptId = null;
+                row.AssignedAt = null;
+                rowId = row.RowId;
+
+                // Update batch counter
+                var batch = await _db.ExcelImportBatches.FindAsync(batchId);
+                if (batch != null)
+                    batch.AssignedRowsCount = Math.Max(0, batch.AssignedRowsCount - 1);
+            }
+
+            // Delete the receipt
+            _db.Receipts.Remove(receipt);
+            await _db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return new UndoSingleResultDto
+            {
+                Success = true,
+                ReceiptId = receiptId,
+                RowId = rowId,
+                ReopenedGapId = reopenedGapId
+            };
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    // ════════════════════════════════════════════
+    // Method 4c — Get Session Summary (for Undo confirmation UI)
+    // Returns meaningful business info so the user knows what they're undoing
+    // ════════════════════════════════════════════
+    public async Task<SessionSummaryDto?> GetSessionSummaryAsync(int sessionId)
+    {
+        var session = await _db.CollectionSessions
+            .Include(s => s.Driver)
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+
+        if (session == null) return null;
+
+        return new SessionSummaryDto
+        {
+            SessionId = session.SessionId,
+            DriverName = session.Driver.FullName,
+            SessionDate = session.SessionDate,
+            RouteArea = session.RouteArea,
+            FirstReceiptNumber = session.FirstReceiptNumber,
+            LastReceiptNumber = session.LastReceiptNumber,
+            TotalReceiptsCount = session.TotalReceiptsCount,
+            TotalAmountCollected = session.TotalAmountCollected,
+            IsConfirmed = session.IsConfirmed,
+            HasGaps = session.HasGaps,
+            ImportSource = session.ImportSource
+        };
     }
 
     // ════════════════════════════════════════════
@@ -667,6 +934,288 @@ public class ErpImportService
     }
 
     // ════════════════════════════════════════════
+    // TWO-BOOK DETECTION ALGORITHM
+    // Generates correct receipt numbers when a range spans two books
+    // Example: first=996, last=1466 → Book A (996-1000) + Book B (1451-1466)
+    // ════════════════════════════════════════════
+    private async Task<(List<int> receiptNumbers, List<BookBreakdownDto> breakdown, bool spansTwoBooks)> GenerateReceiptNumbers(
+        int firstReceipt, int lastReceipt, int driverId)
+    {
+        // Find books that contain these receipt numbers
+        var bookA = await _db.ReceiptBooks
+            .FirstOrDefaultAsync(b => b.AssignedToDriverId == driverId
+                && firstReceipt >= b.StartReceiptNumber && firstReceipt <= b.EndReceiptNumber);
+
+        var bookB = await _db.ReceiptBooks
+            .FirstOrDefaultAsync(b => b.AssignedToDriverId == driverId
+                && lastReceipt >= b.StartReceiptNumber && lastReceipt <= b.EndReceiptNumber);
+
+        var numbers = new List<int>();
+        var breakdown = new List<BookBreakdownDto>();
+
+        // Case 1: Both receipts in the same book (or no books found — simple sequential)
+        if (bookA == null || bookB == null || bookA.BookId == bookB.BookId)
+        {
+            // Simple sequential range
+            for (int n = firstReceipt; n <= lastReceipt; n++)
+                numbers.Add(n);
+
+            if (bookA != null)
+            {
+                breakdown.Add(new BookBreakdownDto
+                {
+                    BookId = bookA.BookId,
+                    BookNumber = bookA.BookNumber,
+                    FirstReceipt = firstReceipt,
+                    LastReceipt = lastReceipt,
+                    ReceiptCount = numbers.Count
+                });
+            }
+
+            return (numbers, breakdown, false);
+        }
+
+        // Case 2: Two different books — the driver finished one and started another
+        // Book A: from firstReceipt to end of book A
+        int bookALastReceipt = bookA.EndReceiptNumber;
+        for (int n = firstReceipt; n <= bookALastReceipt; n++)
+            numbers.Add(n);
+
+        breakdown.Add(new BookBreakdownDto
+        {
+            BookId = bookA.BookId,
+            BookNumber = bookA.BookNumber,
+            FirstReceipt = firstReceipt,
+            LastReceipt = bookALastReceipt,
+            ReceiptCount = bookALastReceipt - firstReceipt + 1
+        });
+
+        // Book B: from start of book B to lastReceipt
+        int bookBFirstReceipt = bookB.StartReceiptNumber;
+        for (int n = bookBFirstReceipt; n <= lastReceipt; n++)
+            numbers.Add(n);
+
+        breakdown.Add(new BookBreakdownDto
+        {
+            BookId = bookB.BookId,
+            BookNumber = bookB.BookNumber,
+            FirstReceipt = bookBFirstReceipt,
+            LastReceipt = lastReceipt,
+            ReceiptCount = lastReceipt - bookBFirstReceipt + 1
+        });
+
+        return (numbers, breakdown, true);
+    }
+
+    // ════════════════════════════════════════════
+    // PREVIEW BLOCK — Show receipt-to-merchant mapping before confirming
+    // ════════════════════════════════════════════
+    public async Task<PreviewBlockResultDto> PreviewBlockAsync(PreviewBlockDto dto)
+    {
+        var rows = await _db.ExcelImportRows
+            .Include(r => r.MatchedMerchant)
+            .Where(r => dto.RowIds.Contains(r.RowId) && r.BatchId == dto.BatchId)
+            .OrderBy(r => r.RowIndex)
+            .ToListAsync();
+
+        if (rows.Count != dto.RowIds.Count)
+            return new PreviewBlockResultDto { Success = false, Error = "بعض الصفوف المحددة غير موجودة" };
+
+        // Book ownership validation (if DriverId provided)
+        int driverIdForPreview = dto.DriverId ?? 0;
+        if (driverIdForPreview > 0)
+        {
+            var driverBooks = await _db.ReceiptBooks
+                .Where(b => b.AssignedToDriverId == driverIdForPreview)
+                .ToListAsync();
+
+            if (!driverBooks.Any())
+                return new PreviewBlockResultDto
+                {
+                    Success = false,
+                    Error = "لا توجد دفاتر إيصالات مسجلة لهذا السائق. يجب تعيين دفتر للسائق أولاً."
+                };
+
+            var unownedReceipts = new List<int>();
+            for (int rn = dto.StartReceiptNumber; rn <= dto.EndReceiptNumber; rn++)
+            {
+                if (!driverBooks.Any(b => rn >= b.StartReceiptNumber && rn <= b.EndReceiptNumber))
+                    unownedReceipts.Add(rn);
+            }
+
+            if (unownedReceipts.Any())
+                return new PreviewBlockResultDto
+                {
+                    Success = false,
+                    Error = $"⛔ الإيصالات {unownedReceipts.First()}–{unownedReceipts.Last()} لا تنتمي لدفتر مسجل للسائق المحدد. لا يمكن المتابعة."
+                };
+        }
+
+        // Generate receipt numbers (use driver ID if available for proper book detection)
+        var (receiptNumbers, bookBreakdown, spansTwoBooks) = await GenerateReceiptNumbers(
+            dto.StartReceiptNumber, dto.EndReceiptNumber, driverIdForPreview);
+
+        // Try with driver ID from batch rows if possible
+        // We'll recalculate with proper driver ID when the actual assign happens
+
+        int expectedCount = receiptNumbers.Count;
+        int actualCount = rows.Count;
+        bool hasMismatch = expectedCount != actualCount;
+
+        string? mismatchMessage = null;
+        if (hasMismatch)
+        {
+            if (actualCount < expectedCount)
+                mismatchMessage = $"⚠️ مطلوب {expectedCount} إيصال ({dto.StartReceiptNumber}→{dto.EndReceiptNumber}) ولكن تم تحديد {actualCount} صف فقط — قد يكون هناك إيصال مفقود";
+            else
+                mismatchMessage = $"⚠️ مطلوب {expectedCount} إيصال ({dto.StartReceiptNumber}→{dto.EndReceiptNumber}) ولكن تم تحديد {actualCount} صف — قد يكون هناك إيصال زائد";
+        }
+
+        // Create mappings (use smaller count)
+        int mappingCount = Math.Min(expectedCount, actualCount);
+        var mappings = new List<PreviewReceiptMappingDto>();
+        for (int i = 0; i < mappingCount; i++)
+        {
+            var row = rows[i];
+            var receiptNum = receiptNumbers[i];
+            var book = bookBreakdown.FirstOrDefault(b =>
+                receiptNum >= b.FirstReceipt && receiptNum <= b.LastReceipt);
+
+            mappings.Add(new PreviewReceiptMappingDto
+            {
+                RowId = row.RowId,
+                ReceiptNumber = receiptNum,
+                MerchantName = row.MatchedMerchant?.MerchantName ?? row.MerchantNameRaw,
+                Amount = row.Amount,
+                BookId = book?.BookId,
+                BookNumber = book?.BookNumber
+            });
+        }
+
+        return new PreviewBlockResultDto
+        {
+            Success = true,
+            HasMismatch = hasMismatch,
+            ExpectedCount = expectedCount,
+            ActualRowCount = actualCount,
+            MismatchMessage = mismatchMessage,
+            SpansTwoBooks = spansTwoBooks,
+            BookBreakdown = bookBreakdown,
+            Mappings = mappings
+        };
+    }
+
+    // ════════════════════════════════════════════
+    // UNDO BLOCK — Reverse a block assignment (delete session + receipts, unmark rows)
+    // ════════════════════════════════════════════
+    public async Task<UndoBlockResultDto> UndoBlockAsync(int sessionId, int batchId)
+    {
+        var session = await _db.CollectionSessions
+            .Include(s => s.Receipts)
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+
+        if (session == null)
+            return new UndoBlockResultDto { Success = false, Error = "الجلسة غير موجودة" };
+
+        if (session.IsConfirmed)
+            return new UndoBlockResultDto { Success = false, Error = "لا يمكن التراجع — الجلسة مؤكدة ومقفلة" };
+
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            var receiptIds = session.Receipts.Select(r => r.ReceiptId).ToList();
+            int receiptCount = receiptIds.Count;
+
+            // Unmark the ExcelImportRows that were assigned to these receipts
+            var importRows = await _db.ExcelImportRows
+                .Where(r => r.AssignedReceiptId != null && receiptIds.Contains(r.AssignedReceiptId.Value))
+                .ToListAsync();
+
+            foreach (var row in importRows)
+            {
+                row.IsAssigned = false;
+                row.AssignedReceiptId = null;
+                row.AssignedAt = null;
+            }
+
+            // Delete gaps associated with this session
+            var gaps = await _db.ReceiptGaps
+                .Where(g => g.DetectedInSessionId == sessionId)
+                .ToListAsync();
+            _db.ReceiptGaps.RemoveRange(gaps);
+
+            // Delete receipts
+            _db.Receipts.RemoveRange(session.Receipts);
+
+            // Delete session
+            _db.CollectionSessions.Remove(session);
+
+            // Update batch counter
+            var batch = await _db.ExcelImportBatches.FindAsync(batchId);
+            if (batch != null)
+            {
+                batch.AssignedRowsCount = Math.Max(0, batch.AssignedRowsCount - importRows.Count);
+            }
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return new UndoBlockResultDto
+            {
+                Success = true,
+                ReceiptsDeleted = receiptCount,
+                RowsUnassigned = importRows.Count
+            };
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    // ════════════════════════════════════════════
+    // DRIVER'S CURRENT BOOKS — Show which books a driver has
+    // ════════════════════════════════════════════
+    public async Task<DriverBooksDto?> GetDriverBooksAsync(int driverId)
+    {
+        var driver = await _db.Drivers.FindAsync(driverId);
+        if (driver == null) return null;
+
+        var books = await _db.ReceiptBooks
+            .Where(b => b.AssignedToDriverId == driverId
+                && (b.Status == "Assigned" || b.Status == "InProgress"))
+            .OrderBy(b => b.StartReceiptNumber)
+            .ToListAsync();
+
+        var bookInfos = new List<DriverBookInfoDto>();
+        foreach (var book in books)
+        {
+            var usedCount = await _db.Receipts
+                .CountAsync(r => r.BookId == book.BookId);
+
+            int totalReceipts = book.EndReceiptNumber - book.StartReceiptNumber + 1;
+            bookInfos.Add(new DriverBookInfoDto
+            {
+                BookId = book.BookId,
+                BookNumber = book.BookNumber,
+                StartReceiptNumber = book.StartReceiptNumber,
+                EndReceiptNumber = book.EndReceiptNumber,
+                UsedCount = usedCount,
+                RemainingCount = totalReceipts - usedCount,
+                Status = book.Status
+            });
+        }
+
+        return new DriverBooksDto
+        {
+            DriverId = driverId,
+            DriverName = driver.FullName,
+            Books = bookInfos
+        };
+    }
+
+    // ════════════════════════════════════════════
     // Merchant Matching (same logic as ExcelImportService)
     // ════════════════════════════════════════════
     private async Task<Merchant?> FindMatchingMerchant(string nameFromExcel)
@@ -691,3 +1240,4 @@ public class ErpImportService
         return contains;
     }
 }
+

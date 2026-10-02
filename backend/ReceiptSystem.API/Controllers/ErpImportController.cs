@@ -84,7 +84,20 @@ public class ErpImportController : ControllerBase
     }
 
     /// <summary>
-    /// Assign a block of rows to a driver with sequential receipt numbers
+    /// Preview a block assignment — shows receipt-to-merchant mapping BEFORE confirming
+    /// </summary>
+    [HttpPost("batches/{id}/preview-block")]
+    public async Task<IActionResult> PreviewBlock(int id, [FromBody] PreviewBlockDto dto)
+    {
+        dto.BatchId = id;
+        var result = await _erpService.PreviewBlockAsync(dto);
+        if (!result.Success)
+            return BadRequest(result);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Assign a block of rows to a driver with first+last receipt numbers
     /// </summary>
     [HttpPost("batches/{id}/assign-block")]
     public async Task<IActionResult> AssignBlock(int id, [FromBody] AssignBlockDto dto)
@@ -96,8 +109,42 @@ public class ErpImportController : ControllerBase
             return BadRequest(result);
 
         await _audit.LogAsync(UserId, "AssignErpBlock", "CollectionSession", result.SessionId,
-            newValues: new { dto.DriverId, dto.StartReceiptNumber, dto.RowIds.Count, result.ReceiptsCreated });
+            newValues: new { dto.DriverId, dto.StartReceiptNumber, dto.EndReceiptNumber, dto.RowIds.Count, result.ReceiptsCreated, result.SpansTwoBooks });
 
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Undo a block assignment — reverses session, receipts, and row assignments
+    /// </summary>
+    [HttpDelete("batches/{id}/undo-block/{sessionId}")]
+    public async Task<IActionResult> UndoBlock(int id, int sessionId)
+    {
+        try
+        {
+            var result = await _erpService.UndoBlockAsync(sessionId, id);
+            if (!result.Success)
+                return BadRequest(result);
+
+            await _audit.LogAsync(UserId, "UndoErpBlock", "CollectionSession", sessionId,
+                newValues: new { result.ReceiptsDeleted, result.RowsUnassigned });
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get driver's currently assigned books with usage info
+    /// </summary>
+    [HttpGet("drivers/{driverId}/books")]
+    public async Task<IActionResult> GetDriverBooks(int driverId)
+    {
+        var result = await _erpService.GetDriverBooksAsync(driverId);
+        if (result == null) return NotFound(new { message = "السائق غير موجود" });
         return Ok(result);
     }
 
@@ -117,6 +164,40 @@ public class ErpImportController : ControllerBase
             newValues: new { dto.TargetSessionId, dto.ReceiptNumber, result.ResolvedGapId });
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Undo a single receipt assignment without destroying the whole session
+    /// </summary>
+    [HttpDelete("batches/{batchId}/undo-single/{receiptId}")]
+    public async Task<IActionResult> UndoSingle(int batchId, int receiptId)
+    {
+        try
+        {
+            var result = await _erpService.UndoSingleAsync(batchId, receiptId, UserId);
+            if (!result.Success)
+                return BadRequest(result);
+
+            await _audit.LogAsync(UserId, "UndoErpSingle", "Receipt", receiptId,
+                newValues: new { result.RowId, result.ReopenedGapId });
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get a session summary for undo confirmation — shows driver, date, receipt range, etc.
+    /// </summary>
+    [HttpGet("sessions/{sessionId}/summary")]
+    public async Task<IActionResult> GetSessionSummary(int sessionId)
+    {
+        var summary = await _erpService.GetSessionSummaryAsync(sessionId);
+        if (summary == null) return NotFound(new { message = "الجلسة غير موجودة" });
+        return Ok(summary);
     }
 
     /// <summary>
@@ -180,3 +261,4 @@ public class ErpImportController : ControllerBase
         }
     }
 }
+
