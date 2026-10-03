@@ -9,7 +9,7 @@ using ReceiptSystem.Desktop.Services;
 
 namespace ReceiptSystem.Desktop.Views;
 
-public partial class AjalReviewPage : Page
+public partial class AjalReviewPage : UserControl
 {
     private readonly ApiClient _api;
     private List<ReviewEntry> _allEntries = new();

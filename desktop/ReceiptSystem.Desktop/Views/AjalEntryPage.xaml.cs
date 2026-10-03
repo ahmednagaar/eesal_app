@@ -9,7 +9,7 @@ using ReceiptSystem.Desktop.Services;
 
 namespace ReceiptSystem.Desktop.Views;
 
-public partial class AjalEntryPage : Page
+public partial class AjalEntryPage : UserControl
 {
     private readonly ApiClient _api;
     private string _prefix = "441";

@@ -1,8 +1,7 @@
-<Page x:Class="ReceiptSystem.Desktop.Views.AjalEntryPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      Title="إدخال دفتر الآجل"
-      FlowDirection="RightToLeft">
+<UserControl x:Class="ReceiptSystem.Desktop.Views.AjalEntryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft">
 
     <Grid x:Name="RootGrid" Background="{StaticResource BgDeepBrush}">
         <Grid.RowDefinitions>
@@ -131,4 +130,4 @@
             </Grid>
         </Border>
     </Grid>
-</Page>
+</UserControl>

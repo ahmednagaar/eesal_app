@@ -8,7 +8,7 @@ using ReceiptSystem.Desktop.Services;
 
 namespace ReceiptSystem.Desktop.Views;
 
-public partial class AjalDailyPage : Page
+public partial class AjalDailyPage : UserControl
 {
     private readonly ApiClient _api;
 

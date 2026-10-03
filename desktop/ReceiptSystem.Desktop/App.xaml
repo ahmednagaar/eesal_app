@@ -123,6 +123,12 @@
                 </Setter>
             </Style>
 
+            <!-- Alias: PremiumButtonStyle → same as PrimaryButton (backward compat) -->
+            <Style x:Key="PremiumButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButton}" />
+
+            <!-- Alias: PremiumComboBoxStyle → uses default ComboBox template (backward compat) -->
+            <Style x:Key="PremiumComboBoxStyle" TargetType="ComboBox" />
+
             <!-- Secondary (outline) Button -->
             <Style x:Key="SecondaryButton" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
