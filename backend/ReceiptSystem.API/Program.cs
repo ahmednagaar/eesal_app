@@ -20,7 +20,6 @@ builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<RouteService>();
-builder.Services.AddScoped<DeliveryDayService>();
 builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddScoped<SearchService>();
 builder.Services.AddScoped<AjalService>();

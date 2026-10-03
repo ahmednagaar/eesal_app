@@ -1,0 +1,128 @@
+<Page x:Class="ReceiptSystem.Desktop.Views.AjalReviewPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="مراجعة دفتر الآجل"
+      FlowDirection="RightToLeft">
+
+    <Grid x:Name="RootGrid" Background="{StaticResource BgDeepBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ Header ═══ -->
+        <Border Grid.Row="0" Background="{StaticResource BgCardBrush}" CornerRadius="12" Margin="16,16,16,8" Padding="20,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="✅ مراجعة دفتر الآجل" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="التاريخ:" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <DatePicker x:Name="dpDate" SelectedDateFormat="Short" Width="150"
+                                SelectedDateChanged="DpDate_SelectedDateChanged"/>
+                    <Button Content="🔄" Width="36" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Click="BtnRefresh_Click" ToolTip="تحديث"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ Stats + Filters ═══ -->
+        <Border Grid.Row="1" Background="{StaticResource BgCardBrush}" CornerRadius="12" Margin="16,0,16,8" Padding="20,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Stats -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Border Background="#FF1A3A1A" CornerRadius="8" Padding="12,6" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📊 الإجمالي:" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="txtTotal" Text="0" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" FontSize="16"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#FF1A3A1A" CornerRadius="8" Padding="12,6" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="✅ تمت:" Foreground="#FF22C55E" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="txtReviewed" Text="0" Foreground="#FF22C55E" FontWeight="Bold" FontSize="16"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#FF3A1A1A" CornerRadius="8" Padding="12,6" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⏳ متبقي:" Foreground="#FFFBBF24" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="txtPending" Text="0" Foreground="#FFFBBF24" FontWeight="Bold" FontSize="16"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Progress bar -->
+                <Grid Grid.Row="1" Margin="0,0,0,8">
+                    <ProgressBar x:Name="pbProgress" Minimum="0" Maximum="100" Value="0" Height="8"
+                                 Background="#FF333366" Foreground="#FF22C55E"
+                                 Style="{x:Null}"/>
+                    <TextBlock x:Name="txtPercent" HorizontalAlignment="Center" Margin="0,-2,0,0"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                </Grid>
+
+                <!-- Filters -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                    <ComboBox x:Name="cmbFilter" Width="140"  SelectionChanged="CmbFilter_Changed">
+                        <ComboBoxItem Content="الكل" IsSelected="True" Tag="all"/>
+                        <ComboBoxItem Content="غير مُراجع" Tag="pending"/>
+                        <ComboBoxItem Content="مُراجع" Tag="reviewed"/>
+                    </ComboBox>
+                    <ComboBox x:Name="cmbRouteFilter" Width="160" Margin="8,0,0,0" 
+                              DisplayMemberPath="RouteName" SelectedValuePath="RouteId" SelectionChanged="CmbFilter_Changed"/>
+                    <TextBox x:Name="txtSearchInvoice" Width="200" Margin="8,0,0,0"
+                             Style="{StaticResource ModernTextBox}"
+                             Tag="بحث برقم الفاتورة..." TextChanged="TxtSearch_Changed"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ Data Grid ═══ -->
+        <Border Grid.Row="2" Background="{StaticResource BgCardBrush}" CornerRadius="12" Margin="16,0,16,8" Padding="8">
+            <DataGrid x:Name="dgEntries" AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserSortColumns="True" CanUserReorderColumns="False"
+                      SelectionMode="Extended" SelectionUnit="FullRow"
+                      GridLinesVisibility="Horizontal" BorderThickness="0"
+                      Background="Transparent" RowBackground="Transparent"
+                      AlternatingRowBackground="#10FFFFFF"
+                      HeadersVisibility="Column"
+                      KeyDown="DgEntries_KeyDown"
+                      MouseDoubleClick="DgEntries_DoubleClick">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="رقم الفاتورة ↑" Binding="{Binding InvoiceNumber}" Width="130" SortDirection="Ascending"/>
+                    <DataGridTextColumn Header="العميل" Binding="{Binding MerchantName}" Width="*"/>
+                    <DataGridTextColumn Header="المدينة" Binding="{Binding MerchantCity}" Width="100"/>
+                    <DataGridTextColumn Header="الخط" Binding="{Binding RouteName}" Width="100"/>
+                    <DataGridTextColumn Header="السائق" Binding="{Binding DriverName}" Width="100"/>
+                    <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N0}" Width="100"/>
+                    <DataGridTextColumn Header="الحالة" Binding="{Binding ReviewStatusDisplay}" Width="80"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- ═══ Footer ═══ -->
+        <Border Grid.Row="3" Background="{StaticResource BgCardBrush}" CornerRadius="12" Margin="16,0,16,16" Padding="16,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="✅ تأكيد مراجعة المحدد" Style="{StaticResource PrimaryButton}"
+                        MinWidth="180" Click="BtnReviewSelected_Click"/>
+                <Button Content="✅ تأكيد الكل" Style="{StaticResource PrimaryButton}"
+                        MinWidth="130" Margin="8,0,0,0" Click="BtnReviewAll_Click"
+                        Background="#FF1A3A1A"/>
+                <Button Content="📥 تصدير Excel" Style="{StaticResource PrimaryButton}"
+                        MinWidth="130" Margin="8,0,0,0" Click="BtnExport_Click"
+                        Background="Transparent" BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"/>
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="20,0,0,0"
+                           FontSize="12" Text="Space = تأكيد السطر الحالي | Enter = التالي"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Page>

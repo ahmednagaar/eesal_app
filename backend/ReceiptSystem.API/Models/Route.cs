@@ -12,5 +12,5 @@ public class Route
     // Navigation
     public User CreatedByUser { get; set; } = null!;
     public ICollection<RouteMerchant> RouteMerchants { get; set; } = new List<RouteMerchant>();
-    public ICollection<DeliveryDay> DeliveryDays { get; set; } = new List<DeliveryDay>();
+    public ICollection<AjalSession> AjalSessions { get; set; } = new List<AjalSession>();
 }

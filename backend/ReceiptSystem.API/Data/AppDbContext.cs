@@ -17,14 +17,13 @@ public class AppDbContext : DbContext
     public DbSet<ReceiptGap> ReceiptGaps => Set<ReceiptGap>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
-    // Module 2: Route Order & Loading Sheets
+    // Module 2: Route Order
     public DbSet<Models.Route> Routes => Set<Models.Route>();
     public DbSet<RouteMerchant> RouteMerchants => Set<RouteMerchant>();
-    public DbSet<DeliveryDay> DeliveryDays => Set<DeliveryDay>();
-    public DbSet<DayInvoice> DayInvoices => Set<DayInvoice>();
 
-    // Module 3: Ajal Register
-    public DbSet<AjalInvoice> AjalInvoices => Set<AjalInvoice>();
+    // Module 3: Ajal Register (Redesigned)
+    public DbSet<AjalSession> AjalSessions => Set<AjalSession>();
+    public DbSet<AjalEntry> AjalEntries => Set<AjalEntry>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     // ERP Import
@@ -212,52 +211,32 @@ public class AppDbContext : DbContext
             e.HasOne(rm => rm.AddedByUser).WithMany().HasForeignKey(rm => rm.AddedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── Module 2: DeliveryDay ──
-        mb.Entity<DeliveryDay>(e =>
+        // ── Module 3: AjalSession ──
+        mb.Entity<AjalSession>(e =>
         {
-            e.HasKey(dd => dd.DeliveryDayId);
-            e.HasIndex(dd => new { dd.RouteId, dd.DeliveryDate }).IsUnique();
-            e.Property(dd => dd.Status).HasMaxLength(20).HasDefaultValue("Draft");
-            e.Property(dd => dd.AssignedDriver).HasMaxLength(100);
-            e.Property(dd => dd.Notes).HasMaxLength(500);
-            e.Property(dd => dd.CreatedAt).HasDefaultValueSql("GETDATE()");
-            e.HasOne(dd => dd.Route).WithMany(r => r.DeliveryDays).HasForeignKey(dd => dd.RouteId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(dd => dd.CreatedByUser).WithMany().HasForeignKey(dd => dd.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasKey(s => s.SessionId);
+            e.Property(s => s.SessionDate).HasColumnType("date");
+            e.Property(s => s.Notes).HasMaxLength(500);
+            e.Property(s => s.EnteredAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(s => s.Route).WithMany(r => r.AjalSessions).HasForeignKey(s => s.RouteId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(s => s.Driver).WithMany(d => d.AjalSessions).HasForeignKey(s => s.DriverId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(s => s.EnteredByUser).WithMany().HasForeignKey(s => s.EnteredByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── Module 2: DayInvoice ──
-        mb.Entity<DayInvoice>(e =>
+        // ── Module 3: AjalEntry ──
+        mb.Entity<AjalEntry>(e =>
         {
-            e.HasKey(di => di.DayInvoiceId);
-            e.Property(di => di.InvoiceNumber).HasMaxLength(50);
-            e.Property(di => di.Quantity).HasMaxLength(200);
-            e.Property(di => di.Amount).HasColumnType("decimal(18,2)");
-            e.Property(di => di.Notes).HasMaxLength(300);
-            e.Property(di => di.EnteredAt).HasDefaultValueSql("GETDATE()");
-            e.HasOne(di => di.DeliveryDay).WithMany(dd => dd.DayInvoices).HasForeignKey(di => di.DeliveryDayId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(di => di.RouteMerchant).WithMany(rm => rm.DayInvoices).HasForeignKey(di => di.RouteMerchantId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(di => di.Merchant).WithMany(m => m.DayInvoices).HasForeignKey(di => di.MerchantId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(di => di.EnteredByUser).WithMany().HasForeignKey(di => di.EnteredByUserId).OnDelete(DeleteBehavior.Restrict);
-        });
-
-        // ── Module 3: AjalInvoice ──
-        mb.Entity<AjalInvoice>(e =>
-        {
-            e.HasKey(a => a.AjalInvoiceId);
-            e.HasIndex(a => a.InvoiceNumber).IsUnique();
-            e.Property(a => a.InvoiceNumber).HasMaxLength(20).IsRequired();
-            e.Property(a => a.CallCenterEmployeeName).HasMaxLength(100);
-            e.Property(a => a.Amount).HasColumnType("decimal(18,2)");
-            e.Property(a => a.SessionDate).HasColumnType("date");
-            e.Property(a => a.InvoiceStatus).HasMaxLength(20).HasDefaultValue("Active");
-            e.Property(a => a.OriginalAmount).HasColumnType("decimal(18,2)");
-            e.Property(a => a.ModificationNote).HasMaxLength(500);
-            e.Property(a => a.Notes).HasMaxLength(500);
-            e.Property(a => a.ImportSource).HasMaxLength(20).HasDefaultValue("Manual");
-            e.Property(a => a.EnteredAt).HasDefaultValueSql("GETDATE()");
-            e.HasOne(a => a.Merchant).WithMany().HasForeignKey(a => a.MerchantId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(a => a.Route).WithMany().HasForeignKey(a => a.RouteId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(a => a.EnteredByUser).WithMany().HasForeignKey(a => a.EnteredByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasKey(ae => ae.EntryId);
+            e.HasIndex(ae => ae.InvoiceNumber);
+            e.Property(ae => ae.InvoiceNumber).HasMaxLength(20).IsRequired();
+            e.Property(ae => ae.Amount).HasColumnType("decimal(18,2)");
+            e.Property(ae => ae.Notes).HasMaxLength(500);
+            e.Property(ae => ae.IsReviewed).HasDefaultValue(false);
+            e.Property(ae => ae.EnteredAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(ae => ae.Session).WithMany(s => s.Entries).HasForeignKey(ae => ae.SessionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(ae => ae.Merchant).WithMany().HasForeignKey(ae => ae.MerchantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(ae => ae.EnteredByUser).WithMany().HasForeignKey(ae => ae.EnteredByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(ae => ae.ReviewedByUser).WithMany().HasForeignKey(ae => ae.ReviewedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── Module 3: SystemSetting ──
@@ -443,29 +422,74 @@ public class AppDbContext : DbContext
             rmId++;
         }
 
-        // One completed delivery day for yesterday (Route 1, 8 merchants)
+        // Ajal Sessions seed data
         var yesterday = now.AddDays(-1).Date;
-        mb.Entity<DeliveryDay>().HasData(
-            new DeliveryDay { DeliveryDayId = 1, RouteId = 1, DeliveryDate = yesterday, AssignedDriver = "أحمد محمود حسن", Status = "Confirmed", CreatedAt = yesterday, CreatedByUserId = 1, ConfirmedAt = yesterday.AddHours(10) }
+        mb.Entity<AjalSession>().HasData(
+            new AjalSession { SessionId = 1, SessionDate = yesterday, RouteId = 1, DriverId = 1, EnteredByUserId = 1, EnteredAt = yesterday.AddHours(22) },
+            new AjalSession { SessionId = 2, SessionDate = yesterday, RouteId = 2, DriverId = 2, EnteredByUserId = 1, EnteredAt = yesterday.AddHours(22).AddMinutes(30) },
+            new AjalSession { SessionId = 3, SessionDate = yesterday, RouteId = 3, DriverId = 3, EnteredByUserId = 1, EnteredAt = yesterday.AddHours(23) }
         );
 
-        // 8 invoices for the delivery day (merchants at positions 1-8 on Route 1)
+        // Ajal Entries seed data (simulating night employee recording invoices)
+        var entryId = 1;
+        // Session 1: Route المنشية — 8 invoices
         for (int i = 1; i <= 8; i++)
         {
-            mb.Entity<DayInvoice>().HasData(
-                new DayInvoice
+            mb.Entity<AjalEntry>().HasData(
+                new AjalEntry
                 {
-                    DayInvoiceId = i,
-                    DeliveryDayId = 1,
-                    RouteMerchantId = i, // RouteMerchant IDs 1-8 are positions 1-8 on Route 1
+                    EntryId = entryId,
+                    SessionId = 1,
+                    InvoiceNumber = (441100 + (i * 3)).ToString(), // gaps are normal (cash sales)
                     MerchantId = i,
-                    InvoiceNumber = $"INV-{12370 + i}",
-                    Quantity = $"{i + 1} كراتين",
                     Amount = 1500m + (i * 250),
+                    SortOrder = i,
+                    IsReviewed = i <= 5, // first 5 reviewed
+                    ReviewedByUserId = i <= 5 ? 3 : null,
+                    ReviewedAt = i <= 5 ? yesterday.AddDays(1).AddHours(10) : null,
                     EnteredByUserId = 1,
-                    EnteredAt = yesterday.AddHours(8)
+                    EnteredAt = yesterday.AddHours(22)
                 }
             );
+            entryId++;
+        }
+        // Session 2: Route خريط — 6 invoices
+        for (int i = 1; i <= 6; i++)
+        {
+            mb.Entity<AjalEntry>().HasData(
+                new AjalEntry
+                {
+                    EntryId = entryId,
+                    SessionId = 2,
+                    InvoiceNumber = (441130 + (i * 2)).ToString(),
+                    MerchantId = i,
+                    Amount = 2000m + (i * 300),
+                    SortOrder = i,
+                    IsReviewed = false,
+                    EnteredByUserId = 1,
+                    EnteredAt = yesterday.AddHours(22).AddMinutes(30)
+                }
+            );
+            entryId++;
+        }
+        // Session 3: Route أسوان — 5 invoices
+        for (int i = 1; i <= 5; i++)
+        {
+            mb.Entity<AjalEntry>().HasData(
+                new AjalEntry
+                {
+                    EntryId = entryId,
+                    SessionId = 3,
+                    InvoiceNumber = (441160 + (i * 4)).ToString(),
+                    MerchantId = i + 5,
+                    Amount = 3000m + (i * 500),
+                    SortOrder = i,
+                    IsReviewed = false,
+                    EnteredByUserId = 1,
+                    EnteredAt = yesterday.AddHours(23)
+                }
+            );
+            entryId++;
         }
     }
 }

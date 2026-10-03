@@ -87,14 +87,13 @@ public partial class AjalSearchPage : UserControl
         LoadingOverlay.Visibility = Visibility.Visible;
         try
         {
-            string? status = null;
-            if (FilterStatus.SelectedItem is ComboBoxItem si && si.Tag is string st) status = st;
+            string? reviewStatus = null;
+            if (FilterStatus.SelectedItem is ComboBoxItem si && si.Tag is string st) reviewStatus = st;
 
             var json = await _api.SearchAjalJsonAsync(
                 merchantName: string.IsNullOrWhiteSpace(FilterMerchant.Text) ? null : FilterMerchant.Text.Trim(),
                 invoiceNumber: string.IsNullOrWhiteSpace(FilterInvoiceNum.Text) ? null : FilterInvoiceNum.Text.Trim(),
-                employeeName: string.IsNullOrWhiteSpace(FilterEmployee.Text) ? null : FilterEmployee.Text.Trim(),
-                status: status,
+                reviewStatus: reviewStatus,
                 dateFrom: FilterDateFrom.SelectedDate?.ToString("yyyy-MM-dd"),
                 dateTo: FilterDateTo.SelectedDate?.ToString("yyyy-MM-dd"),
                 page: _currentPage,
@@ -147,14 +146,13 @@ public partial class AjalSearchPage : UserControl
     {
         try
         {
-            string? status = null;
-            if (FilterStatus.SelectedItem is ComboBoxItem si && si.Tag is string st) status = st;
+            string? reviewStatus = null;
+            if (FilterStatus.SelectedItem is ComboBoxItem si2 && si2.Tag is string st2) reviewStatus = st2;
 
             var bytes = await _api.ExportAjalSearchAsync(
                 merchantName: string.IsNullOrWhiteSpace(FilterMerchant.Text) ? null : FilterMerchant.Text.Trim(),
                 invoiceNumber: string.IsNullOrWhiteSpace(FilterInvoiceNum.Text) ? null : FilterInvoiceNum.Text.Trim(),
-                employeeName: string.IsNullOrWhiteSpace(FilterEmployee.Text) ? null : FilterEmployee.Text.Trim(),
-                status: status,
+                reviewStatus: reviewStatus,
                 dateFrom: FilterDateFrom.SelectedDate?.ToString("yyyy-MM-dd"),
                 dateTo: FilterDateTo.SelectedDate?.ToString("yyyy-MM-dd")
             );

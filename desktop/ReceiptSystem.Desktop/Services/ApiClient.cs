@@ -719,104 +719,115 @@ public class ApiClient
 
 
     // ══════════════════════════════════════
-    // Ajal (دفتر الآجل)
+    // Ajal (دفتر الآجل) — Redesigned
     // ══════════════════════════════════════
 
+    // ─── Sessions ───
+    public async Task<dynamic?> CreateAjalSessionAsync(object sessionDto)
+    {
+        return await PostAsync("ajal/sessions", sessionDto);
+    }
+
+    public async Task<string?> GetAjalSessionsJsonAsync(DateTime date)
+    {
+        return await GetAsync($"ajal/sessions?date={date:yyyy-MM-dd}");
+    }
+
+    public async Task<string?> GetAjalSessionDetailJsonAsync(int sessionId)
+    {
+        return await GetAsync($"ajal/sessions/{sessionId}");
+    }
+
+    public async Task<bool> UpdateAjalSessionAsync(int sessionId, object dto)
+    {
+        return await PutAsync($"ajal/sessions/{sessionId}", dto);
+    }
+
+    public async Task<bool> DeleteAjalSessionAsync(int sessionId)
+    {
+        return await DeleteAsync($"ajal/sessions/{sessionId}");
+    }
+
+    // ─── Entries ───
+    public async Task<dynamic?> AddAjalEntriesAsync(object entriesDto)
+    {
+        return await PostAsync("ajal/entries", entriesDto);
+    }
+
+    public async Task<bool> UpdateAjalEntryAsync(int entryId, object dto)
+    {
+        return await PutAsync($"ajal/entries/{entryId}", dto);
+    }
+
+    public async Task<bool> DeleteAjalEntryAsync(int entryId)
+    {
+        return await DeleteAsync($"ajal/entries/{entryId}");
+    }
+
+    // ─── Daily View (مراجعة) ───
     public async Task<string?> GetAjalDailyJsonAsync(DateTime date)
     {
         return await GetAsync($"ajal/daily?date={date:yyyy-MM-dd}");
     }
 
-    public async Task<dynamic?> CreateAjalInvoicesAsync(DateTime sessionDate, int? routeId, object invoices)
+    // ─── Review ───
+    public async Task<bool> ReviewAjalEntryAsync(int entryId)
     {
-        return await PostAsync("ajal/invoices", new { SessionDate = sessionDate.ToString("yyyy-MM-dd"), RouteId = routeId, Invoices = invoices });
+        return await PutAsync($"ajal/entries/{entryId}/review", new { });
     }
 
-    public async Task<dynamic?> EditAjalInvoiceAsync(int id, decimal amount, string? employeeName, string? invoiceStatus, string? modNote, int? routeId, string? notes)
+    public async Task<dynamic?> ReviewAjalBatchAsync(List<int> entryIds)
     {
-        return await PutWithResponseAsync($"ajal/invoices/{id}", new
-        {
-            Amount = amount,
-            CallCenterEmployeeName = employeeName,
-            InvoiceStatus = invoiceStatus,
-            ModificationNote = modNote,
-            RouteId = routeId,
-            Notes = notes
-        });
+        return await PutWithResponseAsync("ajal/entries/review-batch", new { EntryIds = entryIds });
     }
 
-    public async Task<dynamic?> CancelAjalInvoiceAsync(int id, string reason)
-    {
-        return await PutWithResponseAsync($"ajal/invoices/{id}/cancel", new { Reason = reason });
-    }
-
-    public async Task<string?> GetAjalMerchantHistoryJsonAsync(int merchantId, string? from = null, string? to = null)
-    {
-        var q = new List<string>();
-        if (!string.IsNullOrEmpty(from)) q.Add($"from={from}");
-        if (!string.IsNullOrEmpty(to)) q.Add($"to={to}");
-        var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
-        return await GetAsync($"ajal/merchants/{merchantId}/history{qs}");
-    }
-
-    public async Task<string?> GetAjalEmployeePerformanceJsonAsync(DateTime from, DateTime to)
-    {
-        return await GetAsync($"ajal/employees/performance?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
-    }
-
+    // ─── Search ───
     public async Task<string?> SearchAjalJsonAsync(string? merchantName = null, string? invoiceNumber = null,
-        int? routeId = null, string? employeeName = null, string? dateFrom = null,
-        string? dateTo = null, string? status = null, int page = 1, int pageSize = 50)
+        int? routeId = null, int? driverId = null, string? dateFrom = null,
+        string? dateTo = null, string? reviewStatus = null, int page = 1, int pageSize = 50)
     {
         var q = new List<string>();
         if (!string.IsNullOrEmpty(merchantName)) q.Add($"merchantName={Uri.EscapeDataString(merchantName)}");
         if (!string.IsNullOrEmpty(invoiceNumber)) q.Add($"invoiceNumber={Uri.EscapeDataString(invoiceNumber)}");
         if (routeId.HasValue) q.Add($"routeId={routeId}");
-        if (!string.IsNullOrEmpty(employeeName)) q.Add($"employeeName={Uri.EscapeDataString(employeeName)}");
+        if (driverId.HasValue) q.Add($"driverId={driverId}");
         if (!string.IsNullOrEmpty(dateFrom)) q.Add($"dateFrom={dateFrom}");
         if (!string.IsNullOrEmpty(dateTo)) q.Add($"dateTo={dateTo}");
-        if (!string.IsNullOrEmpty(status)) q.Add($"status={status}");
+        if (!string.IsNullOrEmpty(reviewStatus)) q.Add($"reviewStatus={reviewStatus}");
         q.Add($"page={page}");
         q.Add($"pageSize={pageSize}");
         return await GetAsync($"ajal/search?{string.Join("&", q)}");
     }
 
     public async Task<byte[]?> ExportAjalSearchAsync(string? merchantName = null, string? invoiceNumber = null,
-        int? routeId = null, string? employeeName = null, string? dateFrom = null,
-        string? dateTo = null, string? status = null)
+        int? routeId = null, int? driverId = null, string? dateFrom = null,
+        string? dateTo = null, string? reviewStatus = null)
     {
         var q = new List<string>();
         if (!string.IsNullOrEmpty(merchantName)) q.Add($"merchantName={Uri.EscapeDataString(merchantName)}");
         if (!string.IsNullOrEmpty(invoiceNumber)) q.Add($"invoiceNumber={Uri.EscapeDataString(invoiceNumber)}");
         if (routeId.HasValue) q.Add($"routeId={routeId}");
-        if (!string.IsNullOrEmpty(employeeName)) q.Add($"employeeName={Uri.EscapeDataString(employeeName)}");
+        if (driverId.HasValue) q.Add($"driverId={driverId}");
         if (!string.IsNullOrEmpty(dateFrom)) q.Add($"dateFrom={dateFrom}");
         if (!string.IsNullOrEmpty(dateTo)) q.Add($"dateTo={dateTo}");
-        if (!string.IsNullOrEmpty(status)) q.Add($"status={status}");
+        if (!string.IsNullOrEmpty(reviewStatus)) q.Add($"reviewStatus={reviewStatus}");
         var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
         return await GetBytesAsync($"ajal/search/export{qs}");
     }
 
+    // ─── Export ───
     public async Task<byte[]?> ExportAjalDailyAsync(DateTime date)
     {
         return await GetBytesAsync($"ajal/daily/export?date={date:yyyy-MM-dd}");
     }
 
-    public async Task<byte[]?> ExportAjalEmployeesAsync(DateTime from, DateTime to)
+    // ─── Duplicate Check ───
+    public async Task<string?> CheckAjalDuplicateJsonAsync(string invoiceNumber)
     {
-        return await GetBytesAsync($"ajal/employees/export?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
+        return await GetAsync($"ajal/check-duplicate?invoiceNumber={Uri.EscapeDataString(invoiceNumber)}");
     }
 
-    public async Task<dynamic?> PreviewAjalExcelAsync(string filePath)
-    {
-        return await PostMultipartAsync("ajal/excel/preview", filePath);
-    }
-
-    public async Task<dynamic?> SaveAjalExcelAsync(DateTime sessionDate, int? routeId, object rows)
-    {
-        return await PostAsync("ajal/excel/save", new { SessionDate = sessionDate.ToString("yyyy-MM-dd"), RouteId = routeId, Rows = rows });
-    }
-
+    // ─── Settings ───
     public async Task<string?> GetAjalPrefixSettingsJsonAsync()
     {
         return await GetAsync("ajal/settings/invoice-prefix");
@@ -825,16 +836,6 @@ public class ApiClient
     public async Task<bool> UpdateAjalPrefixAsync(string newPrefix)
     {
         return await PutAsync("ajal/settings/invoice-prefix", new { NewPrefix = newPrefix });
-    }
-
-    public async Task<string?> GetAjalDashboardSummaryJsonAsync()
-    {
-        return await GetAsync("ajal/dashboard/today-summary");
-    }
-
-    public async Task<string?> GetAjalEmployeeNamesJsonAsync()
-    {
-        return await GetAsync("ajal/employee-names");
     }
 
     // ══════════════════════════════════════

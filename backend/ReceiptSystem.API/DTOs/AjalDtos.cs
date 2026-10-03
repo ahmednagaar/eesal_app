@@ -1,146 +1,152 @@
 namespace ReceiptSystem.API.DTOs;
 
 // ══════════════════════════════════
-// AJAL REGISTER DTOs
+// AJAL REGISTER DTOs (Redesigned)
 // ══════════════════════════════════
 
-// ─── Daily Register ───
-public class AjalDailyResponseDto
+// ─── Create Session with Entries ───
+public class CreateAjalSessionDto
 {
     public DateTime SessionDate { get; set; }
-    public int TotalInvoices { get; set; }
-    public int ActiveInvoices { get; set; }
-    public int CancelledInvoices { get; set; }
-    public decimal TotalAmount { get; set; }
-    public List<AjalRouteGroupDto> Routes { get; set; } = new();
+    public int RouteId { get; set; }
+    public int? DriverId { get; set; }
+    public string? Notes { get; set; }
+    public List<CreateAjalEntryDto> Entries { get; set; } = new();
 }
 
-public class AjalRouteGroupDto
+public class CreateAjalEntryDto
 {
-    public int? RouteId { get; set; }
-    public string RouteName { get; set; } = "غير محدد";
-    public int InvoiceCount { get; set; }
-    public decimal RouteTotal { get; set; }
-    public List<AjalInvoiceDto> Invoices { get; set; } = new();
+    public string InvoiceNumber { get; set; } = string.Empty;
+    public int MerchantId { get; set; }
+    public decimal? Amount { get; set; }
+    public string? Notes { get; set; }
 }
 
-public class AjalInvoiceDto
+public class CreateAjalSessionResponseDto
 {
-    public int AjalInvoiceId { get; set; }
+    public bool Success { get; set; }
+    public int SessionId { get; set; }
+    public int EntriesSaved { get; set; }
+    public List<string> Errors { get; set; } = new();
+    public List<string> Warnings { get; set; } = new();
+}
+
+// ─── Update Session ───
+public class UpdateAjalSessionDto
+{
+    public int? DriverId { get; set; }
+    public string? Notes { get; set; }
+}
+
+// ─── Add Entries to Existing Session ───
+public class AddAjalEntriesDto
+{
+    public int SessionId { get; set; }
+    public List<CreateAjalEntryDto> Entries { get; set; } = new();
+}
+
+// ─── Update Entry ───
+public class UpdateAjalEntryDto
+{
+    public string? InvoiceNumber { get; set; }
+    public int? MerchantId { get; set; }
+    public decimal? Amount { get; set; }
+    public string? Notes { get; set; }
+}
+
+// ─── Review ───
+public class ReviewBatchDto
+{
+    public List<int> EntryIds { get; set; } = new();
+}
+
+// ─── Daily View (All invoices for a day, sorted ascending by InvoiceNumber) ───
+public class AjalDailyViewDto
+{
+    public DateTime SessionDate { get; set; }
+    public int TotalEntries { get; set; }
+    public int ReviewedCount { get; set; }
+    public int PendingCount { get; set; }
+    public int RouteCount { get; set; }
+    public List<AjalDailyEntryDto> Entries { get; set; } = new();
+}
+
+public class AjalDailyEntryDto
+{
+    public int EntryId { get; set; }
+    public int SessionId { get; set; }
     public string InvoiceNumber { get; set; } = string.Empty;
     public int MerchantId { get; set; }
     public string MerchantName { get; set; } = string.Empty;
-    public string? MerchantPhone { get; set; }
     public string? MerchantCity { get; set; }
-    public decimal Amount { get; set; }
-    public decimal? OriginalAmount { get; set; }
-    public string? CallCenterEmployeeName { get; set; }
-    public string InvoiceStatus { get; set; } = "Active";
-    public string? ModificationNote { get; set; }
+    public decimal? Amount { get; set; }
+    public int RouteId { get; set; }
+    public string RouteName { get; set; } = string.Empty;
+    public int? DriverId { get; set; }
+    public string? DriverName { get; set; }
+    public bool IsReviewed { get; set; }
+    public string? ReviewedByUserName { get; set; }
+    public DateTime? ReviewedAt { get; set; }
     public string? Notes { get; set; }
-    public string ImportSource { get; set; } = "Manual";
-    public string EnteredByUserName { get; set; } = string.Empty;
     public DateTime EnteredAt { get; set; }
 }
 
-// ─── Create ───
-public class CreateAjalInvoicesDto
+// ─── Session Detail (Route/Driver grouped view) ───
+public class AjalSessionDetailDto
 {
+    public int SessionId { get; set; }
     public DateTime SessionDate { get; set; }
-    public int? RouteId { get; set; }
-    public List<CreateAjalInvoiceRowDto> Invoices { get; set; } = new();
+    public int RouteId { get; set; }
+    public string RouteName { get; set; } = string.Empty;
+    public int? DriverId { get; set; }
+    public string? DriverName { get; set; }
+    public string? Notes { get; set; }
+    public int EntryCount { get; set; }
+    public int ReviewedCount { get; set; }
+    public decimal TotalAmount { get; set; }
+    public string EnteredByUserName { get; set; } = string.Empty;
+    public DateTime EnteredAt { get; set; }
+    public List<AjalEntryDto> Entries { get; set; } = new();
 }
 
-public class CreateAjalInvoiceRowDto
+public class AjalEntryDto
 {
+    public int EntryId { get; set; }
     public string InvoiceNumber { get; set; } = string.Empty;
-    public int MerchantId { get; set; }
-    public string? CallCenterEmployeeName { get; set; }
-    public decimal Amount { get; set; }
-    public string? Notes { get; set; }
-}
-
-public class CreateAjalResponseDto
-{
-    public bool Success { get; set; }
-    public int Saved { get; set; }
-    public List<string> Errors { get; set; } = new();
-}
-
-// ─── Edit ───
-public class EditAjalInvoiceDto
-{
-    public decimal Amount { get; set; }
-    public string? CallCenterEmployeeName { get; set; }
-    public string? InvoiceStatus { get; set; }
-    public string? ModificationNote { get; set; }
-    public int? RouteId { get; set; }
-    public string? Notes { get; set; }
-}
-
-public class CancelAjalInvoiceDto
-{
-    public string Reason { get; set; } = string.Empty;
-}
-
-// ─── Merchant History ───
-public class AjalMerchantHistoryDto
-{
     public int MerchantId { get; set; }
     public string MerchantName { get; set; } = string.Empty;
-    public string? Phone { get; set; }
-    public string? City { get; set; }
-    public int TotalInvoices { get; set; }
-    public decimal ActiveTotal { get; set; }
-    public List<AjalMerchantHistoryEntryDto> Invoices { get; set; } = new();
+    public string? MerchantCity { get; set; }
+    public decimal? Amount { get; set; }
+    public int SortOrder { get; set; }
+    public bool IsReviewed { get; set; }
+    public string? ReviewedByUserName { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    public string? Notes { get; set; }
+    public DateTime EnteredAt { get; set; }
 }
 
-public class AjalMerchantHistoryEntryDto
+// ─── Sessions List (for a date) ───
+public class AjalSessionSummaryDto
 {
+    public int SessionId { get; set; }
     public DateTime SessionDate { get; set; }
-    public string InvoiceNumber { get; set; } = string.Empty;
-    public decimal Amount { get; set; }
-    public string? RouteName { get; set; }
-    public string? CallCenterEmployeeName { get; set; }
-    public string InvoiceStatus { get; set; } = "Active";
-}
-
-// ─── Employee Performance ───
-public class AjalEmployeePerformanceResponseDto
-{
-    public DateTime From { get; set; }
-    public DateTime To { get; set; }
-    public int GrandTotalInvoices { get; set; }
-    public decimal GrandTotalAmount { get; set; }
-    public List<AjalEmployeeDto> Employees { get; set; } = new();
-}
-
-public class AjalEmployeeDto
-{
-    public string EmployeeName { get; set; } = string.Empty;
-    public int InvoiceCount { get; set; }
+    public string RouteName { get; set; } = string.Empty;
+    public string? DriverName { get; set; }
+    public int EntryCount { get; set; }
+    public int ReviewedCount { get; set; }
     public decimal TotalAmount { get; set; }
-    public decimal AverageInvoice { get; set; }
-    public List<AjalEmployeeDailyDto> DailyBreakdown { get; set; } = new();
-}
-
-public class AjalEmployeeDailyDto
-{
-    public DateTime Date { get; set; }
-    public int Count { get; set; }
-    public decimal Amount { get; set; }
 }
 
 // ─── Search ───
 public class AjalSearchFilterDto
 {
-    public string? MerchantName { get; set; }
     public string? InvoiceNumber { get; set; }
+    public string? MerchantName { get; set; }
     public int? RouteId { get; set; }
-    public string? EmployeeName { get; set; }
+    public int? DriverId { get; set; }
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
-    public string? Status { get; set; }
+    public string? ReviewStatus { get; set; }  // "all" | "reviewed" | "pending"
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 50;
 }
@@ -148,59 +154,8 @@ public class AjalSearchFilterDto
 public class AjalSearchResponseDto
 {
     public int TotalCount { get; set; }
-    public decimal TotalAmount { get; set; }
     public int Page { get; set; }
-    public List<AjalInvoiceDto> Results { get; set; } = new();
-}
-
-// ─── Excel Import ───
-public class AjalExcelPreviewRowDto
-{
-    public int RowIndex { get; set; }
-    public string InvoiceNumber { get; set; } = string.Empty;
-    public string MerchantNameRaw { get; set; } = string.Empty;
-    public decimal Amount { get; set; }
-    public string? CallCenterEmployeeName { get; set; }
-    public int? MatchedMerchantId { get; set; }
-    public string? MatchedMerchantName { get; set; }
-    public bool IsNewMerchant { get; set; }
-    public bool IsDuplicate { get; set; }
-}
-
-public class AjalExcelPreviewResponseDto
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public int RowCount { get; set; }
-    public decimal TotalAmount { get; set; }
-    public int DuplicateCount { get; set; }
-    public List<AjalExcelPreviewRowDto> Rows { get; set; } = new();
-    public List<string> Warnings { get; set; } = new();
-}
-
-public class SaveAjalExcelDto
-{
-    public DateTime SessionDate { get; set; }
-    public int? RouteId { get; set; }
-    public List<SaveAjalExcelRowDto> Rows { get; set; } = new();
-}
-
-public class SaveAjalExcelRowDto
-{
-    public string InvoiceNumber { get; set; } = string.Empty;
-    public int? MerchantId { get; set; }
-    public bool IsNewMerchant { get; set; }
-    public string? NewMerchantName { get; set; }
-    public decimal Amount { get; set; }
-    public string? CallCenterEmployeeName { get; set; }
-}
-
-public class SaveAjalExcelResponseDto
-{
-    public bool Success { get; set; }
-    public int Saved { get; set; }
-    public int Skipped { get; set; }
-    public int NewMerchantsCreated { get; set; }
+    public List<AjalDailyEntryDto> Results { get; set; } = new();
 }
 
 // ─── Settings ───
@@ -217,12 +172,11 @@ public class UpdatePrefixDto
     public string NewPrefix { get; set; } = string.Empty;
 }
 
-// ─── Dashboard ───
-public class AjalDashboardSummaryDto
+// ─── Duplicate Check ───
+public class DuplicateCheckResultDto
 {
-    public DateTime TodaySessionDate { get; set; }
-    public int InvoiceCount { get; set; }
-    public decimal TotalAmount { get; set; }
-    public int RouteCount { get; set; }
-    public int CancelledCount { get; set; }
+    public string InvoiceNumber { get; set; } = string.Empty;
+    public bool IsDuplicate { get; set; }
+    public DateTime? ExistingDate { get; set; }
+    public string? ExistingRoute { get; set; }
 }

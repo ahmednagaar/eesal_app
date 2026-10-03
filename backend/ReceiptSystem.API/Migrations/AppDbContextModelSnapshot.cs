@@ -22,20 +22,16 @@ namespace ReceiptSystem.API.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("ReceiptSystem.API.Models.AjalInvoice", b =>
+            modelBuilder.Entity("ReceiptSystem.API.Models.AjalEntry", b =>
                 {
-                    b.Property<int>("AjalInvoiceId")
+                    b.Property<int>("EntryId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AjalInvoiceId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EntryId"));
 
-                    b.Property<decimal>("Amount")
+                    b.Property<decimal?>("Amount")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("CallCenterEmployeeName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("EnteredAt")
                         .ValueGeneratedOnAdd()
@@ -45,57 +41,357 @@ namespace ReceiptSystem.API.Migrations
                     b.Property<int>("EnteredByUserId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ImportSource")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Manual");
-
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("InvoiceStatus")
-                        .IsRequired()
+                    b.Property<bool>("IsReviewed")
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Active");
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("MerchantId")
                         .HasColumnType("int");
-
-                    b.Property<string>("ModificationNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<decimal?>("OriginalAmount")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<int?>("RouteId")
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SessionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("EntryId");
+
+                    b.HasIndex("EnteredByUserId");
+
+                    b.HasIndex("InvoiceNumber");
+
+                    b.HasIndex("MerchantId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("AjalEntries");
+
+                    b.HasData(
+                        new
+                        {
+                            EntryId = 1,
+                            Amount = 1750m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441103",
+                            IsReviewed = true,
+                            MerchantId = 1,
+                            ReviewedAt = new DateTime(2026, 6, 22, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            ReviewedByUserId = 3,
+                            SessionId = 1,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            EntryId = 2,
+                            Amount = 2000m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441106",
+                            IsReviewed = true,
+                            MerchantId = 2,
+                            ReviewedAt = new DateTime(2026, 6, 22, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            ReviewedByUserId = 3,
+                            SessionId = 1,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            EntryId = 3,
+                            Amount = 2250m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441109",
+                            IsReviewed = true,
+                            MerchantId = 3,
+                            ReviewedAt = new DateTime(2026, 6, 22, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            ReviewedByUserId = 3,
+                            SessionId = 1,
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            EntryId = 4,
+                            Amount = 2500m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441112",
+                            IsReviewed = true,
+                            MerchantId = 4,
+                            ReviewedAt = new DateTime(2026, 6, 22, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            ReviewedByUserId = 3,
+                            SessionId = 1,
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            EntryId = 5,
+                            Amount = 2750m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441115",
+                            IsReviewed = true,
+                            MerchantId = 5,
+                            ReviewedAt = new DateTime(2026, 6, 22, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            ReviewedByUserId = 3,
+                            SessionId = 1,
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            EntryId = 6,
+                            Amount = 3000m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441118",
+                            IsReviewed = false,
+                            MerchantId = 6,
+                            SessionId = 1,
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            EntryId = 7,
+                            Amount = 3250m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441121",
+                            IsReviewed = false,
+                            MerchantId = 7,
+                            SessionId = 1,
+                            SortOrder = 7
+                        },
+                        new
+                        {
+                            EntryId = 8,
+                            Amount = 3500m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441124",
+                            IsReviewed = false,
+                            MerchantId = 8,
+                            SessionId = 1,
+                            SortOrder = 8
+                        },
+                        new
+                        {
+                            EntryId = 9,
+                            Amount = 2300m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 30, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441132",
+                            IsReviewed = false,
+                            MerchantId = 1,
+                            SessionId = 2,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            EntryId = 10,
+                            Amount = 2600m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 30, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441134",
+                            IsReviewed = false,
+                            MerchantId = 2,
+                            SessionId = 2,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            EntryId = 11,
+                            Amount = 2900m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 30, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441136",
+                            IsReviewed = false,
+                            MerchantId = 3,
+                            SessionId = 2,
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            EntryId = 12,
+                            Amount = 3200m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 30, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441138",
+                            IsReviewed = false,
+                            MerchantId = 4,
+                            SessionId = 2,
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            EntryId = 13,
+                            Amount = 3500m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 30, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441140",
+                            IsReviewed = false,
+                            MerchantId = 5,
+                            SessionId = 2,
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            EntryId = 14,
+                            Amount = 3800m,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 30, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441142",
+                            IsReviewed = false,
+                            MerchantId = 6,
+                            SessionId = 2,
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            EntryId = 15,
+                            Amount = 3500m,
+                            EnteredAt = new DateTime(2026, 6, 21, 23, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441164",
+                            IsReviewed = false,
+                            MerchantId = 6,
+                            SessionId = 3,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            EntryId = 16,
+                            Amount = 4000m,
+                            EnteredAt = new DateTime(2026, 6, 21, 23, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441168",
+                            IsReviewed = false,
+                            MerchantId = 7,
+                            SessionId = 3,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            EntryId = 17,
+                            Amount = 4500m,
+                            EnteredAt = new DateTime(2026, 6, 21, 23, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441172",
+                            IsReviewed = false,
+                            MerchantId = 8,
+                            SessionId = 3,
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            EntryId = 18,
+                            Amount = 5000m,
+                            EnteredAt = new DateTime(2026, 6, 21, 23, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441176",
+                            IsReviewed = false,
+                            MerchantId = 9,
+                            SessionId = 3,
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            EntryId = 19,
+                            Amount = 5500m,
+                            EnteredAt = new DateTime(2026, 6, 21, 23, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            InvoiceNumber = "441180",
+                            IsReviewed = false,
+                            MerchantId = 10,
+                            SessionId = 3,
+                            SortOrder = 5
+                        });
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.AjalSession", b =>
+                {
+                    b.Property<int>("SessionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SessionId"));
+
+                    b.Property<int?>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnteredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("EnteredByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RouteId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("SessionDate")
                         .HasColumnType("date");
 
-                    b.HasKey("AjalInvoiceId");
+                    b.HasKey("SessionId");
+
+                    b.HasIndex("DriverId");
 
                     b.HasIndex("EnteredByUserId");
 
-                    b.HasIndex("InvoiceNumber")
-                        .IsUnique();
-
-                    b.HasIndex("MerchantId");
-
                     b.HasIndex("RouteId");
 
-                    b.ToTable("AjalInvoices");
+                    b.ToTable("AjalSessions");
+
+                    b.HasData(
+                        new
+                        {
+                            SessionId = 1,
+                            DriverId = 1,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            RouteId = 1,
+                            SessionDate = new DateTime(2026, 6, 21, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            SessionId = 2,
+                            DriverId = 2,
+                            EnteredAt = new DateTime(2026, 6, 21, 22, 30, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            RouteId = 2,
+                            SessionDate = new DateTime(2026, 6, 21, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            SessionId = 3,
+                            DriverId = 3,
+                            EnteredAt = new DateTime(2026, 6, 21, 23, 0, 0, 0, DateTimeKind.Unspecified),
+                            EnteredByUserId = 1,
+                            RouteId = 3,
+                            SessionDate = new DateTime(2026, 6, 21, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        });
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.AuditLog", b =>
@@ -412,226 +708,6 @@ namespace ReceiptSystem.API.Migrations
                             SessionDate = new DateTime(2026, 6, 24, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             TotalAmountCollected = 28000m,
                             TotalReceiptsCount = 10
-                        });
-                });
-
-            modelBuilder.Entity("ReceiptSystem.API.Models.DayInvoice", b =>
-                {
-                    b.Property<int>("DayInvoiceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DayInvoiceId"));
-
-                    b.Property<decimal?>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("DeliveryDayId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("EnteredAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<int>("EnteredByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("InvoiceNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int?>("ManualPositionOverride")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MerchantId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("Quantity")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int>("RouteMerchantId")
-                        .HasColumnType("int");
-
-                    b.HasKey("DayInvoiceId");
-
-                    b.HasIndex("DeliveryDayId");
-
-                    b.HasIndex("EnteredByUserId");
-
-                    b.HasIndex("MerchantId");
-
-                    b.HasIndex("RouteMerchantId");
-
-                    b.ToTable("DayInvoices");
-
-                    b.HasData(
-                        new
-                        {
-                            DayInvoiceId = 1,
-                            Amount = 1750m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12371",
-                            MerchantId = 1,
-                            Quantity = "2 كراتين",
-                            RouteMerchantId = 1
-                        },
-                        new
-                        {
-                            DayInvoiceId = 2,
-                            Amount = 2000m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12372",
-                            MerchantId = 2,
-                            Quantity = "3 كراتين",
-                            RouteMerchantId = 2
-                        },
-                        new
-                        {
-                            DayInvoiceId = 3,
-                            Amount = 2250m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12373",
-                            MerchantId = 3,
-                            Quantity = "4 كراتين",
-                            RouteMerchantId = 3
-                        },
-                        new
-                        {
-                            DayInvoiceId = 4,
-                            Amount = 2500m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12374",
-                            MerchantId = 4,
-                            Quantity = "5 كراتين",
-                            RouteMerchantId = 4
-                        },
-                        new
-                        {
-                            DayInvoiceId = 5,
-                            Amount = 2750m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12375",
-                            MerchantId = 5,
-                            Quantity = "6 كراتين",
-                            RouteMerchantId = 5
-                        },
-                        new
-                        {
-                            DayInvoiceId = 6,
-                            Amount = 3000m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12376",
-                            MerchantId = 6,
-                            Quantity = "7 كراتين",
-                            RouteMerchantId = 6
-                        },
-                        new
-                        {
-                            DayInvoiceId = 7,
-                            Amount = 3250m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12377",
-                            MerchantId = 7,
-                            Quantity = "8 كراتين",
-                            RouteMerchantId = 7
-                        },
-                        new
-                        {
-                            DayInvoiceId = 8,
-                            Amount = 3500m,
-                            DeliveryDayId = 1,
-                            EnteredAt = new DateTime(2026, 6, 21, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            EnteredByUserId = 1,
-                            InvoiceNumber = "INV-12378",
-                            MerchantId = 8,
-                            Quantity = "9 كراتين",
-                            RouteMerchantId = 8
-                        });
-                });
-
-            modelBuilder.Entity("ReceiptSystem.API.Models.DeliveryDay", b =>
-                {
-                    b.Property<int>("DeliveryDayId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DeliveryDayId"));
-
-                    b.Property<string>("AssignedDriver")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("ConfirmedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<int>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("DeliveryDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("PrintedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("RouteId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Draft");
-
-                    b.HasKey("DeliveryDayId");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("RouteId", "DeliveryDate")
-                        .IsUnique();
-
-                    b.ToTable("DeliveryDays");
-
-                    b.HasData(
-                        new
-                        {
-                            DeliveryDayId = 1,
-                            AssignedDriver = "أحمد محمود حسن",
-                            ConfirmedAt = new DateTime(2026, 6, 21, 10, 0, 0, 0, DateTimeKind.Unspecified),
-                            CreatedAt = new DateTime(2026, 6, 21, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            CreatedByUserId = 1,
-                            DeliveryDate = new DateTime(2026, 6, 21, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            RouteId = 1,
-                            Status = "Confirmed"
                         });
                 });
 
@@ -2884,7 +2960,7 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "مدير النظام",
                             IsActive = true,
-                            PasswordHash = "$2a$11$QZoGf3mqBy98p.kKCrfcde3lQHMCLDgccn2Mtp6kb3.qmaGvrTeqq",
+                            PasswordHash = "$2a$11$quJUEgm2gUdSNIglxmKyR.V0FE2g9TUB/n4TluXADcPSNxwMldWfC",
                             Role = "Admin",
                             Username = "admin"
                         },
@@ -2894,7 +2970,7 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "أمين الخزينة",
                             IsActive = true,
-                            PasswordHash = "$2a$11$su8MSc4LKOpzKs/q18vee.GVZrT3YrVeF0IUwFuzghjlKcTQhbKeu",
+                            PasswordHash = "$2a$11$AoT./fgMLgjCd5JKduZ3U.t.JVGo8qdbWaET4XGvz0Qk1/HuxsdHG",
                             Role = "Treasury",
                             Username = "خزينة"
                         },
@@ -2904,13 +2980,13 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "موظف الكول سنتر",
                             IsActive = true,
-                            PasswordHash = "$2a$11$5Aacu6lZ.MLeXcPgD8aGx.HusHnBmA1OUlYDYXbbhiuBV5aZjI9QO",
+                            PasswordHash = "$2a$11$VeIZfPu0BOvz3.RH9RmHN.utXTDssswToNsybAT10hnPzvnQoZ2Zu",
                             Role = "CallCenter",
                             Username = "callcenter"
                         });
                 });
 
-            modelBuilder.Entity("ReceiptSystem.API.Models.AjalInvoice", b =>
+            modelBuilder.Entity("ReceiptSystem.API.Models.AjalEntry", b =>
                 {
                     b.HasOne("ReceiptSystem.API.Models.User", "EnteredByUser")
                         .WithMany()
@@ -2924,14 +3000,48 @@ namespace ReceiptSystem.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ReceiptSystem.API.Models.Route", "Route")
+                    b.HasOne("ReceiptSystem.API.Models.User", "ReviewedByUser")
                         .WithMany()
-                        .HasForeignKey("RouteId")
+                        .HasForeignKey("ReviewedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.AjalSession", "Session")
+                        .WithMany("Entries")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("EnteredByUser");
 
                     b.Navigation("Merchant");
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.AjalSession", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.Driver", "Driver")
+                        .WithMany("AjalSessions")
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "EnteredByUser")
+                        .WithMany()
+                        .HasForeignKey("EnteredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.Route", "Route")
+                        .WithMany("AjalSessions")
+                        .HasForeignKey("RouteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("EnteredByUser");
 
                     b.Navigation("Route");
                 });
@@ -3022,60 +3132,6 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("EnteredByUser");
 
                     b.Navigation("ReconciledByUser");
-                });
-
-            modelBuilder.Entity("ReceiptSystem.API.Models.DayInvoice", b =>
-                {
-                    b.HasOne("ReceiptSystem.API.Models.DeliveryDay", "DeliveryDay")
-                        .WithMany("DayInvoices")
-                        .HasForeignKey("DeliveryDayId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("ReceiptSystem.API.Models.User", "EnteredByUser")
-                        .WithMany()
-                        .HasForeignKey("EnteredByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("ReceiptSystem.API.Models.Merchant", "Merchant")
-                        .WithMany("DayInvoices")
-                        .HasForeignKey("MerchantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("ReceiptSystem.API.Models.RouteMerchant", "RouteMerchant")
-                        .WithMany("DayInvoices")
-                        .HasForeignKey("RouteMerchantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("DeliveryDay");
-
-                    b.Navigation("EnteredByUser");
-
-                    b.Navigation("Merchant");
-
-                    b.Navigation("RouteMerchant");
-                });
-
-            modelBuilder.Entity("ReceiptSystem.API.Models.DeliveryDay", b =>
-                {
-                    b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("ReceiptSystem.API.Models.Route", "Route")
-                        .WithMany("DeliveryDays")
-                        .HasForeignKey("RouteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("Route");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Driver", b =>
@@ -3293,6 +3349,11 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("UpdatedByUser");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.AjalSession", b =>
+                {
+                    b.Navigation("Entries");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.BookSeries", b =>
                 {
                     b.Navigation("Books");
@@ -3305,13 +3366,10 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("Receipts");
                 });
 
-            modelBuilder.Entity("ReceiptSystem.API.Models.DeliveryDay", b =>
-                {
-                    b.Navigation("DayInvoices");
-                });
-
             modelBuilder.Entity("ReceiptSystem.API.Models.Driver", b =>
                 {
+                    b.Navigation("AjalSessions");
+
                     b.Navigation("AssignedBooks");
 
                     b.Navigation("Gaps");
@@ -3328,8 +3386,6 @@ namespace ReceiptSystem.API.Migrations
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Merchant", b =>
                 {
-                    b.Navigation("DayInvoices");
-
                     b.Navigation("Receipts");
 
                     b.Navigation("RouteMerchants");
@@ -3346,14 +3402,9 @@ namespace ReceiptSystem.API.Migrations
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Route", b =>
                 {
-                    b.Navigation("DeliveryDays");
+                    b.Navigation("AjalSessions");
 
                     b.Navigation("RouteMerchants");
-                });
-
-            modelBuilder.Entity("ReceiptSystem.API.Models.RouteMerchant", b =>
-                {
-                    b.Navigation("DayInvoices");
                 });
 #pragma warning restore 612, 618
         }

@@ -13,5 +13,4 @@ public class Merchant
     // Navigation
     public ICollection<Receipt> Receipts { get; set; } = new List<Receipt>();
     public ICollection<RouteMerchant> RouteMerchants { get; set; } = new List<RouteMerchant>();
-    public ICollection<DayInvoice> DayInvoices { get; set; } = new List<DayInvoice>();
 }

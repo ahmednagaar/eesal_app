@@ -16,50 +16,98 @@ public class AjalController : ControllerBase
     public AjalController(AjalService ajal, AuditService audit) { _ajal = ajal; _audit = audit; }
     private int UserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-    // ─── Daily Register ───
-    [HttpGet("daily")]
-    public async Task<IActionResult> GetDaily([FromQuery] DateTime date) => Ok(await _ajal.GetDailyRegisterAsync(date));
-
-    // ─── Create Invoices ───
-    [HttpPost("invoices")]
-    public async Task<IActionResult> Create([FromBody] CreateAjalInvoicesDto dto)
+    // ─── Create Session with Entries ───
+    [HttpPost("sessions")]
+    public async Task<IActionResult> CreateSession([FromBody] CreateAjalSessionDto dto)
     {
-        var res = await _ajal.CreateInvoicesAsync(dto, UserId);
+        var res = await _ajal.CreateSessionAsync(dto, UserId);
         if (res.Success)
-            await _audit.LogAsync(UserId, "AddAjalInvoices", "AjalInvoice", 0, $"تم إدخال {res.Saved} فاتورة ليوم {dto.SessionDate:dd/MM/yyyy}");
+            await _audit.LogAsync(UserId, "CreateAjalSession", "AjalSession", res.SessionId,
+                $"تسجيل جلسة آجل — {res.EntriesSaved} فاتورة");
         return res.Success ? Ok(res) : BadRequest(res);
     }
 
-    // ─── Edit Invoice ───
-    [HttpPut("invoices/{id}")]
-    public async Task<IActionResult> Edit(int id, [FromBody] EditAjalInvoiceDto dto)
+    // ─── Get Sessions for a Date ───
+    [HttpGet("sessions")]
+    public async Task<IActionResult> GetSessions([FromQuery] DateTime date)
+        => Ok(await _ajal.GetSessionsAsync(date));
+
+    // ─── Get Session Detail ───
+    [HttpGet("sessions/{id}")]
+    public async Task<IActionResult> GetSession(int id)
     {
-        var ok = await _ajal.EditInvoiceAsync(id, dto, UserId);
-        if (ok) await _audit.LogAsync(UserId, "EditAjalInvoice", "AjalInvoice", id, $"تعديل فاتورة — المبلغ: {dto.Amount}");
+        var res = await _ajal.GetSessionDetailAsync(id);
+        return res != null ? Ok(res) : NotFound(new { message = "الجلسة غير موجودة" });
+    }
+
+    // ─── Update Session (Driver, Notes) ───
+    [HttpPut("sessions/{id}")]
+    public async Task<IActionResult> UpdateSession(int id, [FromBody] UpdateAjalSessionDto dto)
+    {
+        var ok = await _ajal.UpdateSessionAsync(id, dto);
+        if (ok) await _audit.LogAsync(UserId, "UpdateAjalSession", "AjalSession", id, "تعديل جلسة آجل");
+        return ok ? Ok(new { success = true }) : NotFound(new { message = "الجلسة غير موجودة" });
+    }
+
+    // ─── Delete Session ───
+    [HttpDelete("sessions/{id}")]
+    public async Task<IActionResult> DeleteSession(int id)
+    {
+        var ok = await _ajal.DeleteSessionAsync(id);
+        if (ok) await _audit.LogAsync(UserId, "DeleteAjalSession", "AjalSession", id, "حذف جلسة آجل");
+        return ok ? Ok(new { success = true }) : BadRequest(new { message = "لا يمكن حذف الجلسة — قد تحتوي على فواتير مُراجَعة" });
+    }
+
+    // ─── Add Entries to Existing Session ───
+    [HttpPost("entries")]
+    public async Task<IActionResult> AddEntries([FromBody] AddAjalEntriesDto dto)
+    {
+        var res = await _ajal.AddEntriesAsync(dto, UserId);
+        if (res.Success)
+            await _audit.LogAsync(UserId, "AddAjalEntries", "AjalEntry", res.SessionId,
+                $"إضافة {res.EntriesSaved} فاتورة");
+        return res.Success ? Ok(res) : BadRequest(res);
+    }
+
+    // ─── Update Entry ───
+    [HttpPut("entries/{id}")]
+    public async Task<IActionResult> UpdateEntry(int id, [FromBody] UpdateAjalEntryDto dto)
+    {
+        var ok = await _ajal.UpdateEntryAsync(id, dto);
+        if (ok) await _audit.LogAsync(UserId, "UpdateAjalEntry", "AjalEntry", id, "تعديل فاتورة آجل");
         return ok ? Ok(new { success = true }) : NotFound(new { message = "الفاتورة غير موجودة" });
     }
 
-    // ─── Cancel Invoice ───
-    [HttpPut("invoices/{id}/cancel")]
-    public async Task<IActionResult> Cancel(int id, [FromBody] CancelAjalInvoiceDto dto)
+    // ─── Delete Entry ───
+    [HttpDelete("entries/{id}")]
+    public async Task<IActionResult> DeleteEntry(int id)
     {
-        var ok = await _ajal.CancelInvoiceAsync(id, dto.Reason);
-        if (ok) await _audit.LogAsync(UserId, "CancelAjalInvoice", "AjalInvoice", id, $"إلغاء فاتورة — السبب: {dto.Reason}");
+        var ok = await _ajal.DeleteEntryAsync(id);
+        if (ok) await _audit.LogAsync(UserId, "DeleteAjalEntry", "AjalEntry", id, "حذف فاتورة آجل");
+        return ok ? Ok(new { success = true }) : BadRequest(new { message = "لا يمكن حذف فاتورة مُراجَعة" });
+    }
+
+    // ─── Daily View (ALL entries for a date, sorted ascending by InvoiceNumber) ───
+    [HttpGet("daily")]
+    public async Task<IActionResult> GetDaily([FromQuery] DateTime date)
+        => Ok(await _ajal.GetDailyViewAsync(date));
+
+    // ─── Review: Single Entry ───
+    [HttpPut("entries/{id}/review")]
+    public async Task<IActionResult> ReviewEntry(int id)
+    {
+        var ok = await _ajal.ReviewEntryAsync(id, UserId);
         return ok ? Ok(new { success = true }) : NotFound(new { message = "الفاتورة غير موجودة" });
     }
 
-    // ─── Merchant History ───
-    [HttpGet("merchants/{merchantId}/history")]
-    public async Task<IActionResult> MerchantHistory(int merchantId, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    // ─── Review: Batch ───
+    [HttpPut("entries/review-batch")]
+    public async Task<IActionResult> ReviewBatch([FromBody] ReviewBatchDto dto)
     {
-        var res = await _ajal.GetMerchantHistoryAsync(merchantId, from, to);
-        return res != null ? Ok(res) : NotFound(new { message = "التاجر غير موجود" });
+        int count = await _ajal.ReviewBatchAsync(dto.EntryIds, UserId);
+        await _audit.LogAsync(UserId, "ReviewAjalBatch", "AjalEntry", 0, $"مراجعة {count} فاتورة");
+        return Ok(new { success = true, reviewed = count });
     }
-
-    // ─── Employee Performance ───
-    [HttpGet("employees/performance")]
-    public async Task<IActionResult> EmployeePerformance([FromQuery] DateTime from, [FromQuery] DateTime to)
-        => Ok(await _ajal.GetEmployeePerformanceAsync(from, to));
 
     // ─── Search ───
     [HttpGet("search")]
@@ -70,7 +118,8 @@ public class AjalController : ControllerBase
     public async Task<IActionResult> ExportSearch([FromQuery] AjalSearchFilterDto filters)
     {
         var bytes = await _ajal.ExportSearchAsync(filters);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"ajal_search_{DateTime.Now:yyyyMMdd}.xlsx");
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"ajal_search_{DateTime.Now:yyyyMMdd}.xlsx");
     }
 
     // ─── Daily Export ───
@@ -78,35 +127,14 @@ public class AjalController : ControllerBase
     public async Task<IActionResult> ExportDaily([FromQuery] DateTime date)
     {
         var bytes = await _ajal.ExportDailyAsync(date);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"ajal_daily_{date:yyyyMMdd}.xlsx");
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"ajal_daily_{date:yyyyMMdd}.xlsx");
     }
 
-    // ─── Employee Export ───
-    [HttpGet("employees/export")]
-    public async Task<IActionResult> ExportEmployees([FromQuery] DateTime from, [FromQuery] DateTime to)
-    {
-        var bytes = await _ajal.ExportEmployeesAsync(from, to);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"ajal_employees_{from:yyyyMMdd}_{to:yyyyMMdd}.xlsx");
-    }
-
-    // ─── Excel Import ───
-    [HttpPost("excel/preview")]
-    public async Task<IActionResult> ExcelPreview(IFormFile file)
-    {
-        if (file == null || file.Length == 0) return BadRequest(new { error = "لم يتم رفع أي ملف" });
-        if (!file.FileName.EndsWith(".xlsx")) return BadRequest(new { error = "صيغة الملف غير صحيحة — يجب .xlsx" });
-        using var stream = file.OpenReadStream();
-        return Ok(await _ajal.PreviewExcelAsync(stream));
-    }
-
-    [HttpPost("excel/save")]
-    public async Task<IActionResult> ExcelSave([FromBody] SaveAjalExcelDto dto)
-    {
-        var res = await _ajal.SaveExcelAsync(dto, UserId);
-        if (res.Success)
-            await _audit.LogAsync(UserId, "AjalExcelImport", "AjalInvoice", 0, $"استيراد Excel: {res.Saved} فاتورة، {res.Skipped} مكررة، {res.NewMerchantsCreated} تاجر جديد");
-        return Ok(res);
-    }
+    // ─── Duplicate Check ───
+    [HttpGet("check-duplicate")]
+    public async Task<IActionResult> CheckDuplicate([FromQuery] string invoiceNumber)
+        => Ok(await _ajal.CheckDuplicateAsync(invoiceNumber));
 
     // ─── Settings ───
     [HttpGet("settings/invoice-prefix")]
@@ -117,15 +145,8 @@ public class AjalController : ControllerBase
     public async Task<IActionResult> UpdatePrefix([FromBody] UpdatePrefixDto dto)
     {
         await _ajal.UpdatePrefixAsync(dto.NewPrefix, UserId);
-        await _audit.LogAsync(UserId, "UpdateInvoicePrefix", "SystemSetting", 0, $"تغيير البادئة إلى: {dto.NewPrefix}");
+        await _audit.LogAsync(UserId, "UpdateInvoicePrefix", "SystemSetting", 0,
+            $"تغيير البادئة إلى: {dto.NewPrefix}");
         return Ok(new { success = true, prefix = dto.NewPrefix });
     }
-
-    // ─── Dashboard ───
-    [HttpGet("dashboard/today-summary")]
-    public async Task<IActionResult> TodaySummary() => Ok(await _ajal.GetTodaySummaryAsync());
-
-    // ─── Employee Names (autocomplete) ───
-    [HttpGet("employee-names")]
-    public async Task<IActionResult> EmployeeNames() => Ok(await _ajal.GetEmployeeNamesAsync());
 }

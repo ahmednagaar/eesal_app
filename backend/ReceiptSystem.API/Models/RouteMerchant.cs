@@ -15,5 +15,4 @@ public class RouteMerchant
     public Route Route { get; set; } = null!;
     public Merchant Merchant { get; set; } = null!;
     public User AddedByUser { get; set; } = null!;
-    public ICollection<DayInvoice> DayInvoices { get; set; } = new List<DayInvoice>();
 }

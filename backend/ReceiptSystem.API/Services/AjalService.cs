@@ -12,368 +12,97 @@ public class AjalService
 
     public AjalService(AppDbContext db) { _db = db; }
 
-    // ─── Daily Register ───
-    public async Task<AjalDailyResponseDto> GetDailyRegisterAsync(DateTime date)
-    {
-        var invoices = await _db.AjalInvoices
-            .Include(a => a.Merchant).Include(a => a.Route).Include(a => a.EnteredByUser)
-            .Where(a => a.SessionDate == date.Date)
-            .OrderBy(a => a.InvoiceNumber)
-            .ToListAsync();
-
-        var grouped = invoices.GroupBy(a => a.RouteId).OrderBy(g => g.Key ?? int.MaxValue);
-        var routes = grouped.Select(g => new AjalRouteGroupDto
-        {
-            RouteId = g.Key,
-            RouteName = g.First().Route?.RouteName ?? "غير محدد",
-            InvoiceCount = g.Count(),
-            RouteTotal = g.Where(i => i.InvoiceStatus != "Cancelled").Sum(i => i.Amount),
-            Invoices = g.Select(MapToDto).ToList()
-        }).ToList();
-
-        return new AjalDailyResponseDto
-        {
-            SessionDate = date.Date,
-            TotalInvoices = invoices.Count,
-            ActiveInvoices = invoices.Count(i => i.InvoiceStatus != "Cancelled"),
-            CancelledInvoices = invoices.Count(i => i.InvoiceStatus == "Cancelled"),
-            TotalAmount = invoices.Where(i => i.InvoiceStatus != "Cancelled").Sum(i => i.Amount),
-            Routes = routes
-        };
-    }
-
-    // ─── Create Invoices ───
-    public async Task<CreateAjalResponseDto> CreateInvoicesAsync(CreateAjalInvoicesDto dto, int userId)
+    // ═══════════════════════════════════════
+    // CREATE SESSION WITH ENTRIES
+    // ═══════════════════════════════════════
+    public async Task<CreateAjalSessionResponseDto> CreateSessionAsync(CreateAjalSessionDto dto, int userId)
     {
         var errors = new List<string>();
-        var numbers = dto.Invoices.Select(i => i.InvoiceNumber).ToList();
-        var existing = await _db.AjalInvoices.Where(a => numbers.Contains(a.InvoiceNumber))
-            .Select(a => a.InvoiceNumber).ToListAsync();
-        if (existing.Any())
-            errors.Add($"أرقام الفواتير التالية مسجلة مسبقاً: {string.Join(", ", existing)}");
+        var warnings = new List<string>();
 
-        var merchantIds = dto.Invoices.Select(i => i.MerchantId).Distinct().ToList();
+        // Validate route
+        var route = await _db.Routes.FindAsync(dto.RouteId);
+        if (route == null)
+            return new CreateAjalSessionResponseDto { Success = false, Errors = new() { "الخط غير موجود" } };
+
+        // Validate driver if provided
+        if (dto.DriverId.HasValue)
+        {
+            var driver = await _db.Drivers.FindAsync(dto.DriverId.Value);
+            if (driver == null)
+                return new CreateAjalSessionResponseDto { Success = false, Errors = new() { "السائق غير موجود" } };
+        }
+
+        // Check for duplicate invoice numbers within this batch
+        var invoiceNumbers = dto.Entries.Select(e => e.InvoiceNumber).ToList();
+        var duplicatesInBatch = invoiceNumbers.GroupBy(n => n).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        if (duplicatesInBatch.Any())
+            errors.Add($"أرقام فواتير مكررة في الإدخال: {string.Join(", ", duplicatesInBatch)}");
+
+        // Check for existing invoice numbers in database
+        var existingNumbers = await _db.AjalEntries
+            .Where(ae => invoiceNumbers.Contains(ae.InvoiceNumber))
+            .Select(ae => ae.InvoiceNumber)
+            .ToListAsync();
+        if (existingNumbers.Any())
+            warnings.Add($"أرقام فواتير مسجلة مسبقاً (ستُتجاهل): {string.Join(", ", existingNumbers)}");
+
+        // Validate merchants
+        var merchantIds = dto.Entries.Select(e => e.MerchantId).Distinct().ToList();
         var validMerchants = await _db.Merchants.Where(m => merchantIds.Contains(m.MerchantId))
             .Select(m => m.MerchantId).ToListAsync();
         var invalidMerchants = merchantIds.Except(validMerchants).ToList();
         if (invalidMerchants.Any())
-            errors.Add($"التجار غير موجودين: {string.Join(", ", invalidMerchants)}");
+            errors.Add($"تجار غير موجودين: {string.Join(", ", invalidMerchants)}");
 
         if (errors.Any())
-            return new CreateAjalResponseDto { Success = false, Errors = errors };
+            return new CreateAjalSessionResponseDto { Success = false, Errors = errors, Warnings = warnings };
 
         using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
-            foreach (var row in dto.Invoices)
+            var session = new AjalSession
             {
-                _db.AjalInvoices.Add(new AjalInvoice
+                SessionDate = dto.SessionDate.Date,
+                RouteId = dto.RouteId,
+                DriverId = dto.DriverId,
+                Notes = dto.Notes,
+                EnteredByUserId = userId,
+                EnteredAt = DateTime.UtcNow
+            };
+            _db.AjalSessions.Add(session);
+            await _db.SaveChangesAsync();
+
+            int sortOrder = 1;
+            int saved = 0;
+            foreach (var entry in dto.Entries)
+            {
+                // Skip duplicates
+                if (existingNumbers.Contains(entry.InvoiceNumber)) continue;
+
+                _db.AjalEntries.Add(new AjalEntry
                 {
-                    InvoiceNumber = row.InvoiceNumber,
-                    MerchantId = row.MerchantId,
-                    RouteId = dto.RouteId,
-                    CallCenterEmployeeName = row.CallCenterEmployeeName,
-                    Amount = row.Amount,
-                    SessionDate = dto.SessionDate.Date,
-                    Notes = row.Notes,
-                    ImportSource = "Manual",
+                    SessionId = session.SessionId,
+                    InvoiceNumber = entry.InvoiceNumber,
+                    MerchantId = entry.MerchantId,
+                    Amount = entry.Amount,
+                    Notes = entry.Notes,
+                    SortOrder = sortOrder++,
                     EnteredByUserId = userId,
                     EnteredAt = DateTime.UtcNow
-                });
-            }
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
-            return new CreateAjalResponseDto { Success = true, Saved = dto.Invoices.Count };
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-    }
-
-    // ─── Edit Invoice ───
-    public async Task<bool> EditInvoiceAsync(int id, EditAjalInvoiceDto dto, int userId)
-    {
-        var inv = await _db.AjalInvoices.FindAsync(id);
-        if (inv == null) return false;
-
-        if (dto.Amount != inv.Amount && inv.OriginalAmount == null)
-            inv.OriginalAmount = inv.Amount;
-
-        inv.Amount = dto.Amount;
-        inv.CallCenterEmployeeName = dto.CallCenterEmployeeName;
-        inv.RouteId = dto.RouteId;
-        inv.Notes = dto.Notes;
-        if (!string.IsNullOrWhiteSpace(dto.InvoiceStatus))
-        {
-            inv.InvoiceStatus = dto.InvoiceStatus;
-            if (dto.InvoiceStatus == "Modified" && !string.IsNullOrWhiteSpace(dto.ModificationNote))
-                inv.ModificationNote = dto.ModificationNote;
-        }
-        await _db.SaveChangesAsync();
-        return true;
-    }
-
-    // ─── Cancel Invoice ───
-    public async Task<bool> CancelInvoiceAsync(int id, string reason)
-    {
-        var inv = await _db.AjalInvoices.FindAsync(id);
-        if (inv == null) return false;
-        inv.InvoiceStatus = "Cancelled";
-        inv.ModificationNote = reason;
-        await _db.SaveChangesAsync();
-        return true;
-    }
-
-    // ─── Merchant History ───
-    public async Task<AjalMerchantHistoryDto?> GetMerchantHistoryAsync(int merchantId, DateTime? from, DateTime? to)
-    {
-        var merchant = await _db.Merchants.FindAsync(merchantId);
-        if (merchant == null) return null;
-
-        var query = _db.AjalInvoices.Include(a => a.Route)
-            .Where(a => a.MerchantId == merchantId);
-        if (from.HasValue) query = query.Where(a => a.SessionDate >= from.Value.Date);
-        if (to.HasValue) query = query.Where(a => a.SessionDate <= to.Value.Date);
-
-        var invoices = await query.OrderByDescending(a => a.SessionDate)
-            .ThenByDescending(a => a.InvoiceNumber)
-            .Select(a => new AjalMerchantHistoryEntryDto
-            {
-                SessionDate = a.SessionDate, InvoiceNumber = a.InvoiceNumber,
-                Amount = a.Amount, RouteName = a.Route != null ? a.Route.RouteName : null,
-                CallCenterEmployeeName = a.CallCenterEmployeeName, InvoiceStatus = a.InvoiceStatus
-            }).ToListAsync();
-
-        return new AjalMerchantHistoryDto
-        {
-            MerchantId = merchantId, MerchantName = merchant.MerchantName,
-            Phone = merchant.PhoneNumber, City = merchant.City,
-            TotalInvoices = invoices.Count,
-            ActiveTotal = invoices.Where(i => i.InvoiceStatus != "Cancelled").Sum(i => i.Amount),
-            Invoices = invoices
-        };
-    }
-
-    // ─── Employee Performance ───
-    public async Task<AjalEmployeePerformanceResponseDto> GetEmployeePerformanceAsync(DateTime from, DateTime to)
-    {
-        var invoices = await _db.AjalInvoices
-            .Where(a => a.SessionDate >= from.Date && a.SessionDate <= to.Date && a.InvoiceStatus != "Cancelled")
-            .ToListAsync();
-
-        var grouped = invoices.Where(a => !string.IsNullOrWhiteSpace(a.CallCenterEmployeeName))
-            .GroupBy(a => a.CallCenterEmployeeName!)
-            .Select(g => new AjalEmployeeDto
-            {
-                EmployeeName = g.Key,
-                InvoiceCount = g.Count(),
-                TotalAmount = g.Sum(i => i.Amount),
-                AverageInvoice = g.Count() > 0 ? Math.Round(g.Sum(i => i.Amount) / g.Count(), 2) : 0,
-                DailyBreakdown = g.GroupBy(i => i.SessionDate).OrderBy(d => d.Key)
-                    .Select(d => new AjalEmployeeDailyDto { Date = d.Key, Count = d.Count(), Amount = d.Sum(i => i.Amount) }).ToList()
-            }).OrderByDescending(e => e.TotalAmount).ToList();
-
-        return new AjalEmployeePerformanceResponseDto
-        {
-            From = from.Date, To = to.Date,
-            GrandTotalInvoices = invoices.Count,
-            GrandTotalAmount = invoices.Sum(i => i.Amount),
-            Employees = grouped
-        };
-    }
-
-    // ─── Search ───
-    public async Task<AjalSearchResponseDto> SearchAsync(AjalSearchFilterDto f)
-    {
-        var q = _db.AjalInvoices.Include(a => a.Merchant).Include(a => a.Route).Include(a => a.EnteredByUser).AsQueryable();
-        if (!string.IsNullOrWhiteSpace(f.MerchantName)) q = q.Where(a => a.Merchant.MerchantName.Contains(f.MerchantName));
-        if (!string.IsNullOrWhiteSpace(f.InvoiceNumber)) q = q.Where(a => a.InvoiceNumber.Contains(f.InvoiceNumber));
-        if (f.RouteId.HasValue) q = q.Where(a => a.RouteId == f.RouteId);
-        if (!string.IsNullOrWhiteSpace(f.EmployeeName)) q = q.Where(a => a.CallCenterEmployeeName != null && a.CallCenterEmployeeName.Contains(f.EmployeeName));
-        if (f.DateFrom.HasValue) q = q.Where(a => a.SessionDate >= f.DateFrom.Value.Date);
-        if (f.DateTo.HasValue) q = q.Where(a => a.SessionDate <= f.DateTo.Value.Date);
-        if (!string.IsNullOrWhiteSpace(f.Status)) q = q.Where(a => a.InvoiceStatus == f.Status);
-
-        var total = await q.CountAsync();
-        var totalAmt = total > 0 ? await q.Where(a => a.InvoiceStatus != "Cancelled").SumAsync(a => a.Amount) : 0;
-        var results = await q.OrderByDescending(a => a.SessionDate).ThenByDescending(a => a.InvoiceNumber)
-            .Skip((f.Page - 1) * f.PageSize).Take(f.PageSize).ToListAsync();
-
-        return new AjalSearchResponseDto { TotalCount = total, TotalAmount = totalAmt, Page = f.Page, Results = results.Select(MapToDto).ToList() };
-    }
-
-    // ─── Export Daily ───
-    public async Task<byte[]> ExportDailyAsync(DateTime date)
-    {
-        var data = await GetDailyRegisterAsync(date);
-        using var wb = new XLWorkbook();
-        foreach (var route in data.Routes)
-        {
-            var ws = wb.Worksheets.Add(route.RouteName.Length > 31 ? route.RouteName[..31] : route.RouteName);
-            ws.RightToLeft = true;
-            ws.Cell(1, 1).Value = "رقم الفاتورة"; ws.Cell(1, 2).Value = "التاجر";
-            ws.Cell(1, 3).Value = "الموظف"; ws.Cell(1, 4).Value = "المبلغ"; ws.Cell(1, 5).Value = "الحالة";
-            var hdr = ws.Range(1, 1, 1, 5); hdr.Style.Font.Bold = true;
-            hdr.Style.Fill.BackgroundColor = XLColor.FromHtml("#667eea"); hdr.Style.Font.FontColor = XLColor.White;
-
-            for (int i = 0; i < route.Invoices.Count; i++)
-            {
-                var inv = route.Invoices[i]; var r = i + 2;
-                ws.Cell(r, 1).Value = inv.InvoiceNumber; ws.Cell(r, 2).Value = inv.MerchantName;
-                ws.Cell(r, 3).Value = inv.CallCenterEmployeeName ?? "—";
-                ws.Cell(r, 4).Value = (double)inv.Amount;
-                ws.Cell(r, 5).Value = inv.InvoiceStatus == "Active" ? "نشطة" : inv.InvoiceStatus == "Cancelled" ? "ملغاة" : "معدّلة";
-            }
-            var tr = route.Invoices.Count + 2;
-            ws.Cell(tr, 3).Value = "الإجمالي"; ws.Cell(tr, 3).Style.Font.Bold = true;
-            ws.Cell(tr, 4).Value = (double)route.RouteTotal; ws.Cell(tr, 4).Style.Font.Bold = true;
-            ws.Columns().AdjustToContents();
-        }
-        using var ms = new MemoryStream(); wb.SaveAs(ms); return ms.ToArray();
-    }
-
-    // ─── Export Search ───
-    public async Task<byte[]> ExportSearchAsync(AjalSearchFilterDto f)
-    {
-        f.Page = 1; f.PageSize = 10000;
-        var res = await SearchAsync(f);
-        using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add("نتائج البحث"); ws.RightToLeft = true;
-        ws.Cell(1, 1).Value = "رقم الفاتورة"; ws.Cell(1, 2).Value = "التاجر"; ws.Cell(1, 3).Value = "الخط";
-        ws.Cell(1, 4).Value = "الموظف"; ws.Cell(1, 5).Value = "التاريخ"; ws.Cell(1, 6).Value = "المبلغ"; ws.Cell(1, 7).Value = "الحالة";
-        var hdr = ws.Range(1, 1, 1, 7); hdr.Style.Font.Bold = true;
-        hdr.Style.Fill.BackgroundColor = XLColor.FromHtml("#667eea"); hdr.Style.Font.FontColor = XLColor.White;
-        for (int i = 0; i < res.Results.Count; i++)
-        {
-            var inv = res.Results[i]; var r = i + 2;
-            ws.Cell(r, 1).Value = inv.InvoiceNumber; ws.Cell(r, 2).Value = inv.MerchantName;
-            ws.Cell(r, 3).Value = inv.MerchantCity ?? "—"; ws.Cell(r, 4).Value = inv.CallCenterEmployeeName ?? "—";
-            ws.Cell(r, 5).Value = inv.EnteredAt.ToString("dd/MM/yyyy"); ws.Cell(r, 6).Value = (double)inv.Amount;
-            ws.Cell(r, 7).Value = inv.InvoiceStatus == "Active" ? "نشطة" : inv.InvoiceStatus == "Cancelled" ? "ملغاة" : "معدّلة";
-        }
-        ws.Columns().AdjustToContents();
-        using var ms = new MemoryStream(); wb.SaveAs(ms); return ms.ToArray();
-    }
-
-    // ─── Export Employee Performance ───
-    public async Task<byte[]> ExportEmployeesAsync(DateTime from, DateTime to)
-    {
-        var data = await GetEmployeePerformanceAsync(from, to);
-        using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add("أداء الموظفين"); ws.RightToLeft = true;
-        ws.Cell(1, 1).Value = "الموظف"; ws.Cell(1, 2).Value = "عدد الفواتير";
-        ws.Cell(1, 3).Value = "الإجمالي"; ws.Cell(1, 4).Value = "المتوسط";
-        var hdr = ws.Range(1, 1, 1, 4); hdr.Style.Font.Bold = true;
-        hdr.Style.Fill.BackgroundColor = XLColor.FromHtml("#667eea"); hdr.Style.Font.FontColor = XLColor.White;
-        for (int i = 0; i < data.Employees.Count; i++)
-        {
-            var e = data.Employees[i]; var r = i + 2;
-            ws.Cell(r, 1).Value = e.EmployeeName; ws.Cell(r, 2).Value = e.InvoiceCount;
-            ws.Cell(r, 3).Value = (double)e.TotalAmount; ws.Cell(r, 4).Value = (double)e.AverageInvoice;
-        }
-        ws.Columns().AdjustToContents();
-        using var ms = new MemoryStream(); wb.SaveAs(ms); return ms.ToArray();
-    }
-
-    // ─── Excel Import Preview ───
-    private static readonly string[] InvNumVariants = { "رقم الفاتورة", "الفاتورة", "رقم" };
-    private static readonly string[] MerchVariants = { "اسم العميل", "العميل", "اسم التاجر", "التاجر" };
-    private static readonly string[] AmtVariants = { "الإجمالي", "المبلغ", "إجمالي الفاتورة", "قيمة الفاتورة", "الاجمالي" };
-    private static readonly string[] EmpVariants = { "الموظف", "موظف الكول سنتر" };
-
-    public async Task<AjalExcelPreviewResponseDto> PreviewExcelAsync(Stream stream)
-    {
-        try
-        {
-            using var wb = new XLWorkbook(stream);
-            var ws = wb.Worksheets.First();
-            int? invCol = null, merchCol = null, amtCol = null, empCol = null;
-            var lastCol = ws.LastColumnUsed()?.ColumnNumber() ?? 0;
-            for (int c = 1; c <= lastCol; c++)
-            {
-                var h = ws.Cell(1, c).GetString().Trim();
-                if (string.IsNullOrEmpty(h)) continue;
-                if (invCol == null && InvNumVariants.Any(v => h.Contains(v))) invCol = c;
-                else if (merchCol == null && MerchVariants.Any(v => h.Contains(v))) merchCol = c;
-                else if (amtCol == null && AmtVariants.Any(v => h.Contains(v))) amtCol = c;
-                else if (empCol == null && EmpVariants.Any(v => h.Contains(v, StringComparison.OrdinalIgnoreCase))) empCol = c;
-            }
-            if (invCol == null || merchCol == null || amtCol == null)
-                return new AjalExcelPreviewResponseDto { Success = false, Error = "لم يتم التعرف على أعمدة الملف. يجب أن يحتوي على: رقم الفاتورة، اسم التاجر، المبلغ" };
-
-            var rows = new List<AjalExcelPreviewRowDto>(); var warnings = new List<string>();
-            var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
-            for (int r = 2; r <= lastRow; r++)
-            {
-                var invNum = ws.Cell(r, invCol.Value).GetString().Trim();
-                if (string.IsNullOrWhiteSpace(invNum)) continue;
-                var name = ws.Cell(r, merchCol.Value).GetString().Trim();
-                decimal amount = 0;
-                var amtCell = ws.Cell(r, amtCol.Value);
-                if (amtCell.TryGetValue(out double d)) amount = (decimal)d;
-                else decimal.TryParse(amtCell.GetString().Trim().Replace(",", ""), out amount);
-
-                string? emp = empCol.HasValue ? ws.Cell(r, empCol.Value).GetString().Trim() : null;
-                if (string.IsNullOrWhiteSpace(emp)) emp = null;
-
-                var match = await FindMerchant(name);
-                var isDup = await _db.AjalInvoices.AnyAsync(a => a.InvoiceNumber == invNum);
-                var row = new AjalExcelPreviewRowDto
-                {
-                    RowIndex = rows.Count + 1, InvoiceNumber = invNum, MerchantNameRaw = name,
-                    Amount = amount, CallCenterEmployeeName = emp,
-                    MatchedMerchantId = match?.MerchantId, MatchedMerchantName = match?.MerchantName,
-                    IsNewMerchant = match == null, IsDuplicate = isDup
-                };
-                rows.Add(row);
-                if (match == null) warnings.Add($"الصف {row.RowIndex}: التاجر '{name}' غير موجود — سيُنشأ تلقائياً");
-                if (isDup) warnings.Add($"الصف {row.RowIndex}: الفاتورة {invNum} مسجلة مسبقاً — ستُتجاهل");
-            }
-            if (rows.Count == 0) return new AjalExcelPreviewResponseDto { Success = false, Error = "الملف فارغ" };
-
-            return new AjalExcelPreviewResponseDto
-            {
-                Success = true, RowCount = rows.Count, TotalAmount = rows.Where(r => !r.IsDuplicate).Sum(r => r.Amount),
-                DuplicateCount = rows.Count(r => r.IsDuplicate), Rows = rows, Warnings = warnings
-            };
-        }
-        catch (Exception ex) { return new AjalExcelPreviewResponseDto { Success = false, Error = $"خطأ في قراءة الملف: {ex.Message}" }; }
-    }
-
-    // ─── Excel Import Save ───
-    public async Task<SaveAjalExcelResponseDto> SaveExcelAsync(SaveAjalExcelDto dto, int userId)
-    {
-        int saved = 0, skipped = 0, newMerchants = 0;
-
-        using var transaction = await _db.Database.BeginTransactionAsync();
-        try
-        {
-            foreach (var row in dto.Rows)
-            {
-                if (await _db.AjalInvoices.AnyAsync(a => a.InvoiceNumber == row.InvoiceNumber)) { skipped++; continue; }
-                int merchantId;
-                if (row.IsNewMerchant)
-                {
-                    var m = new Merchant { MerchantName = row.NewMerchantName ?? row.InvoiceNumber, IsActive = true, Notes = "تم إنشاؤه من ملف Excel — دفتر الآجل", CreatedAt = DateTime.UtcNow };
-                    _db.Merchants.Add(m); await _db.SaveChangesAsync(); merchantId = m.MerchantId; newMerchants++;
-                }
-                else { merchantId = row.MerchantId!.Value; }
-
-                _db.AjalInvoices.Add(new AjalInvoice
-                {
-                    InvoiceNumber = row.InvoiceNumber, MerchantId = merchantId, RouteId = dto.RouteId,
-                    CallCenterEmployeeName = row.CallCenterEmployeeName, Amount = row.Amount,
-                    SessionDate = dto.SessionDate.Date, ImportSource = "Excel", EnteredByUserId = userId, EnteredAt = DateTime.UtcNow
                 });
                 saved++;
             }
             await _db.SaveChangesAsync();
-
             await transaction.CommitAsync();
 
-            return new SaveAjalExcelResponseDto { Success = true, Saved = saved, Skipped = skipped, NewMerchantsCreated = newMerchants };
+            return new CreateAjalSessionResponseDto
+            {
+                Success = true,
+                SessionId = session.SessionId,
+                EntriesSaved = saved,
+                Warnings = warnings
+            };
         }
         catch
         {
@@ -382,14 +111,303 @@ public class AjalService
         }
     }
 
-    // ─── Settings ───
+    // ═══════════════════════════════════════
+    // GET SESSIONS FOR A DATE
+    // ═══════════════════════════════════════
+    public async Task<List<AjalSessionSummaryDto>> GetSessionsAsync(DateTime date)
+    {
+        return await _db.AjalSessions
+            .Include(s => s.Route).Include(s => s.Driver).Include(s => s.Entries)
+            .Where(s => s.SessionDate == date.Date)
+            .OrderBy(s => s.Route.RouteName)
+            .Select(s => new AjalSessionSummaryDto
+            {
+                SessionId = s.SessionId,
+                SessionDate = s.SessionDate,
+                RouteName = s.Route.RouteName,
+                DriverName = s.Driver != null ? s.Driver.FullName : null,
+                EntryCount = s.Entries.Count,
+                ReviewedCount = s.Entries.Count(e => e.IsReviewed),
+                TotalAmount = s.Entries.Where(e => e.Amount.HasValue).Sum(e => e.Amount!.Value)
+            }).ToListAsync();
+    }
+
+    // ═══════════════════════════════════════
+    // GET SESSION DETAIL
+    // ═══════════════════════════════════════
+    public async Task<AjalSessionDetailDto?> GetSessionDetailAsync(int sessionId)
+    {
+        var session = await _db.AjalSessions
+            .Include(s => s.Route).Include(s => s.Driver).Include(s => s.EnteredByUser)
+            .Include(s => s.Entries).ThenInclude(e => e.Merchant)
+            .Include(s => s.Entries).ThenInclude(e => e.ReviewedByUser)
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+
+        if (session == null) return null;
+
+        return new AjalSessionDetailDto
+        {
+            SessionId = session.SessionId,
+            SessionDate = session.SessionDate,
+            RouteId = session.RouteId,
+            RouteName = session.Route.RouteName,
+            DriverId = session.DriverId,
+            DriverName = session.Driver?.FullName,
+            Notes = session.Notes,
+            EntryCount = session.Entries.Count,
+            ReviewedCount = session.Entries.Count(e => e.IsReviewed),
+            TotalAmount = session.Entries.Where(e => e.Amount.HasValue).Sum(e => e.Amount!.Value),
+            EnteredByUserName = session.EnteredByUser.FullName,
+            EnteredAt = session.EnteredAt,
+            Entries = session.Entries.OrderBy(e => e.SortOrder).Select(e => new AjalEntryDto
+            {
+                EntryId = e.EntryId,
+                InvoiceNumber = e.InvoiceNumber,
+                MerchantId = e.MerchantId,
+                MerchantName = e.Merchant.MerchantName,
+                MerchantCity = e.Merchant.City,
+                Amount = e.Amount,
+                SortOrder = e.SortOrder,
+                IsReviewed = e.IsReviewed,
+                ReviewedByUserName = e.ReviewedByUser?.FullName,
+                ReviewedAt = e.ReviewedAt,
+                Notes = e.Notes,
+                EnteredAt = e.EnteredAt
+            }).ToList()
+        };
+    }
+
+    // ═══════════════════════════════════════
+    // UPDATE SESSION (Driver, Notes)
+    // ═══════════════════════════════════════
+    public async Task<bool> UpdateSessionAsync(int sessionId, UpdateAjalSessionDto dto)
+    {
+        var session = await _db.AjalSessions.FindAsync(sessionId);
+        if (session == null) return false;
+
+        if (dto.DriverId.HasValue) session.DriverId = dto.DriverId;
+        if (dto.Notes != null) session.Notes = dto.Notes;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    // ═══════════════════════════════════════
+    // DELETE SESSION
+    // ═══════════════════════════════════════
+    public async Task<bool> DeleteSessionAsync(int sessionId)
+    {
+        var session = await _db.AjalSessions.Include(s => s.Entries).FirstOrDefaultAsync(s => s.SessionId == sessionId);
+        if (session == null) return false;
+
+        // Don't delete if any entry is reviewed
+        if (session.Entries.Any(e => e.IsReviewed))
+            return false;
+
+        _db.AjalSessions.Remove(session); // Cascade deletes entries
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    // ═══════════════════════════════════════
+    // ADD ENTRIES TO EXISTING SESSION
+    // ═══════════════════════════════════════
+    public async Task<CreateAjalSessionResponseDto> AddEntriesAsync(AddAjalEntriesDto dto, int userId)
+    {
+        var session = await _db.AjalSessions.Include(s => s.Entries).FirstOrDefaultAsync(s => s.SessionId == dto.SessionId);
+        if (session == null)
+            return new CreateAjalSessionResponseDto { Success = false, Errors = new() { "الجلسة غير موجودة" } };
+
+        var invoiceNumbers = dto.Entries.Select(e => e.InvoiceNumber).ToList();
+        var existing = await _db.AjalEntries.Where(ae => invoiceNumbers.Contains(ae.InvoiceNumber))
+            .Select(ae => ae.InvoiceNumber).ToListAsync();
+
+        int maxSort = session.Entries.Any() ? session.Entries.Max(e => e.SortOrder) : 0;
+        int saved = 0;
+
+        foreach (var entry in dto.Entries)
+        {
+            if (existing.Contains(entry.InvoiceNumber)) continue;
+            _db.AjalEntries.Add(new AjalEntry
+            {
+                SessionId = session.SessionId,
+                InvoiceNumber = entry.InvoiceNumber,
+                MerchantId = entry.MerchantId,
+                Amount = entry.Amount,
+                Notes = entry.Notes,
+                SortOrder = ++maxSort,
+                EnteredByUserId = userId,
+                EnteredAt = DateTime.UtcNow
+            });
+            saved++;
+        }
+        await _db.SaveChangesAsync();
+
+        return new CreateAjalSessionResponseDto
+        {
+            Success = true,
+            SessionId = session.SessionId,
+            EntriesSaved = saved,
+            Warnings = existing.Any() ? new() { $"تم تجاهل {existing.Count} فاتورة مكررة" } : new()
+        };
+    }
+
+    // ═══════════════════════════════════════
+    // UPDATE ENTRY
+    // ═══════════════════════════════════════
+    public async Task<bool> UpdateEntryAsync(int entryId, UpdateAjalEntryDto dto)
+    {
+        var entry = await _db.AjalEntries.FindAsync(entryId);
+        if (entry == null) return false;
+
+        if (dto.InvoiceNumber != null) entry.InvoiceNumber = dto.InvoiceNumber;
+        if (dto.MerchantId.HasValue) entry.MerchantId = dto.MerchantId.Value;
+        if (dto.Amount.HasValue) entry.Amount = dto.Amount;
+        if (dto.Notes != null) entry.Notes = dto.Notes;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    // ═══════════════════════════════════════
+    // DELETE ENTRY
+    // ═══════════════════════════════════════
+    public async Task<bool> DeleteEntryAsync(int entryId)
+    {
+        var entry = await _db.AjalEntries.FindAsync(entryId);
+        if (entry == null || entry.IsReviewed) return false;
+
+        _db.AjalEntries.Remove(entry);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    // ═══════════════════════════════════════
+    // DAILY VIEW (All entries for a date, sorted ascending by InvoiceNumber)
+    // This is the KEY view for مراجعة دفتر الآجل
+    // ═══════════════════════════════════════
+    public async Task<AjalDailyViewDto> GetDailyViewAsync(DateTime date)
+    {
+        var entries = await _db.AjalEntries
+            .Include(e => e.Session).ThenInclude(s => s.Route)
+            .Include(e => e.Session).ThenInclude(s => s.Driver)
+            .Include(e => e.Merchant)
+            .Include(e => e.ReviewedByUser)
+            .Where(e => e.Session.SessionDate == date.Date)
+            .OrderBy(e => e.InvoiceNumber)  // ← ASCENDING by invoice number for ERP comparison
+            .ToListAsync();
+
+        return new AjalDailyViewDto
+        {
+            SessionDate = date.Date,
+            TotalEntries = entries.Count,
+            ReviewedCount = entries.Count(e => e.IsReviewed),
+            PendingCount = entries.Count(e => !e.IsReviewed),
+            RouteCount = entries.Select(e => e.Session.RouteId).Distinct().Count(),
+            Entries = entries.Select(MapToDailyEntry).ToList()
+        };
+    }
+
+    // ═══════════════════════════════════════
+    // REVIEW: Mark single entry as reviewed
+    // ═══════════════════════════════════════
+    public async Task<bool> ReviewEntryAsync(int entryId, int userId)
+    {
+        var entry = await _db.AjalEntries.FindAsync(entryId);
+        if (entry == null) return false;
+        if (entry.IsReviewed) return true; // Already reviewed
+
+        entry.IsReviewed = true;
+        entry.ReviewedByUserId = userId;
+        entry.ReviewedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    // ═══════════════════════════════════════
+    // REVIEW: Batch review
+    // ═══════════════════════════════════════
+    public async Task<int> ReviewBatchAsync(List<int> entryIds, int userId)
+    {
+        var entries = await _db.AjalEntries.Where(e => entryIds.Contains(e.EntryId) && !e.IsReviewed).ToListAsync();
+        foreach (var entry in entries)
+        {
+            entry.IsReviewed = true;
+            entry.ReviewedByUserId = userId;
+            entry.ReviewedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+        return entries.Count;
+    }
+
+    // ═══════════════════════════════════════
+    // SEARCH
+    // ═══════════════════════════════════════
+    public async Task<AjalSearchResponseDto> SearchAsync(AjalSearchFilterDto f)
+    {
+        var q = _db.AjalEntries
+            .Include(e => e.Session).ThenInclude(s => s.Route)
+            .Include(e => e.Session).ThenInclude(s => s.Driver)
+            .Include(e => e.Merchant)
+            .Include(e => e.ReviewedByUser)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(f.InvoiceNumber))
+            q = q.Where(e => e.InvoiceNumber.Contains(f.InvoiceNumber));
+        if (!string.IsNullOrWhiteSpace(f.MerchantName))
+            q = q.Where(e => e.Merchant.MerchantName.Contains(f.MerchantName));
+        if (f.RouteId.HasValue)
+            q = q.Where(e => e.Session.RouteId == f.RouteId);
+        if (f.DriverId.HasValue)
+            q = q.Where(e => e.Session.DriverId == f.DriverId);
+        if (f.DateFrom.HasValue)
+            q = q.Where(e => e.Session.SessionDate >= f.DateFrom.Value.Date);
+        if (f.DateTo.HasValue)
+            q = q.Where(e => e.Session.SessionDate <= f.DateTo.Value.Date);
+        if (f.ReviewStatus == "reviewed")
+            q = q.Where(e => e.IsReviewed);
+        else if (f.ReviewStatus == "pending")
+            q = q.Where(e => !e.IsReviewed);
+
+        var total = await q.CountAsync();
+        var results = await q.OrderBy(e => e.InvoiceNumber)
+            .Skip((f.Page - 1) * f.PageSize).Take(f.PageSize).ToListAsync();
+
+        return new AjalSearchResponseDto
+        {
+            TotalCount = total,
+            Page = f.Page,
+            Results = results.Select(MapToDailyEntry).ToList()
+        };
+    }
+
+    // ═══════════════════════════════════════
+    // DUPLICATE CHECK
+    // ═══════════════════════════════════════
+    public async Task<DuplicateCheckResultDto> CheckDuplicateAsync(string invoiceNumber)
+    {
+        var existing = await _db.AjalEntries
+            .Include(e => e.Session).ThenInclude(s => s.Route)
+            .FirstOrDefaultAsync(e => e.InvoiceNumber == invoiceNumber);
+
+        return new DuplicateCheckResultDto
+        {
+            InvoiceNumber = invoiceNumber,
+            IsDuplicate = existing != null,
+            ExistingDate = existing?.Session.SessionDate,
+            ExistingRoute = existing?.Session.Route.RouteName
+        };
+    }
+
+    // ═══════════════════════════════════════
+    // SETTINGS (Prefix)
+    // ═══════════════════════════════════════
     public async Task<AjalPrefixSettingsDto> GetSettingsAsync()
     {
         var settings = await _db.SystemSettings.ToDictionaryAsync(s => s.SettingKey, s => s.SettingValue);
         var prefix = settings.GetValueOrDefault("InvoicePrefix", "441");
         return new AjalPrefixSettingsDto
         {
-            Prefix = prefix, WarningThreshold = int.Parse(settings.GetValueOrDefault("InvoicePrefixWarningThreshold", "950")),
+            Prefix = prefix,
+            WarningThreshold = int.Parse(settings.GetValueOrDefault("InvoicePrefixWarningThreshold", "950")),
             TotalDigits = int.Parse(settings.GetValueOrDefault("InvoiceTotalDigits", "6")),
             NextPrefix = (int.Parse(prefix) + 1).ToString()
         };
@@ -398,50 +416,124 @@ public class AjalService
     public async Task UpdatePrefixAsync(string newPrefix, int userId)
     {
         var setting = await _db.SystemSettings.FindAsync("InvoicePrefix");
-        if (setting != null) { setting.SettingValue = newPrefix; setting.UpdatedAt = DateTime.UtcNow; setting.UpdatedByUserId = userId; }
+        if (setting != null)
+        {
+            setting.SettingValue = newPrefix;
+            setting.UpdatedAt = DateTime.UtcNow;
+            setting.UpdatedByUserId = userId;
+        }
         await _db.SaveChangesAsync();
     }
 
-    // ─── Dashboard ───
-    public async Task<AjalDashboardSummaryDto> GetTodaySummaryAsync()
+    // ═══════════════════════════════════════
+    // EXPORT DAILY
+    // ═══════════════════════════════════════
+    public async Task<byte[]> ExportDailyAsync(DateTime date)
     {
-        var today = DateTime.Today;
-        var invoices = await _db.AjalInvoices.Where(a => a.SessionDate == today).ToListAsync();
-        return new AjalDashboardSummaryDto
+        var data = await GetDailyViewAsync(date);
+        using var wb = new XLWorkbook();
+
+        // Sheet 1: All invoices sorted ascending (for مراجعة)
+        var ws = wb.Worksheets.Add("كل الفواتير");
+        ws.RightToLeft = true;
+        ws.Cell(1, 1).Value = "رقم الفاتورة"; ws.Cell(1, 2).Value = "التاجر";
+        ws.Cell(1, 3).Value = "الخط"; ws.Cell(1, 4).Value = "السائق";
+        ws.Cell(1, 5).Value = "المبلغ"; ws.Cell(1, 6).Value = "المراجعة";
+        var hdr = ws.Range(1, 1, 1, 6);
+        hdr.Style.Font.Bold = true;
+        hdr.Style.Fill.BackgroundColor = XLColor.FromHtml("#667eea");
+        hdr.Style.Font.FontColor = XLColor.White;
+
+        for (int i = 0; i < data.Entries.Count; i++)
         {
-            TodaySessionDate = today, InvoiceCount = invoices.Count(i => i.InvoiceStatus != "Cancelled"),
-            TotalAmount = invoices.Where(i => i.InvoiceStatus != "Cancelled").Sum(i => i.Amount),
-            RouteCount = invoices.Select(i => i.RouteId).Distinct().Count(),
-            CancelledCount = invoices.Count(i => i.InvoiceStatus == "Cancelled")
-        };
+            var e = data.Entries[i]; var r = i + 2;
+            ws.Cell(r, 1).Value = e.InvoiceNumber;
+            ws.Cell(r, 2).Value = e.MerchantName;
+            ws.Cell(r, 3).Value = e.RouteName;
+            ws.Cell(r, 4).Value = e.DriverName ?? "—";
+            ws.Cell(r, 5).Value = e.Amount.HasValue ? (double)e.Amount.Value : 0;
+            ws.Cell(r, 6).Value = e.IsReviewed ? "✅" : "⏳";
+        }
+        ws.Columns().AdjustToContents();
+
+        // Group by route in separate sheets
+        var grouped = data.Entries.GroupBy(e => e.RouteName);
+        foreach (var group in grouped)
+        {
+            var sheetName = group.Key.Length > 31 ? group.Key[..31] : group.Key;
+            var rws = wb.Worksheets.Add(sheetName);
+            rws.RightToLeft = true;
+            rws.Cell(1, 1).Value = "رقم الفاتورة"; rws.Cell(1, 2).Value = "التاجر";
+            rws.Cell(1, 3).Value = "المبلغ"; rws.Cell(1, 4).Value = "المراجعة";
+            var rhdr = rws.Range(1, 1, 1, 4);
+            rhdr.Style.Font.Bold = true;
+            rhdr.Style.Fill.BackgroundColor = XLColor.FromHtml("#667eea");
+            rhdr.Style.Font.FontColor = XLColor.White;
+
+            var routeEntries = group.OrderBy(e => e.InvoiceNumber).ToList();
+            for (int i = 0; i < routeEntries.Count; i++)
+            {
+                var e = routeEntries[i]; var r = i + 2;
+                rws.Cell(r, 1).Value = e.InvoiceNumber;
+                rws.Cell(r, 2).Value = e.MerchantName;
+                rws.Cell(r, 3).Value = e.Amount.HasValue ? (double)e.Amount.Value : 0;
+                rws.Cell(r, 4).Value = e.IsReviewed ? "✅" : "⏳";
+            }
+            rws.Columns().AdjustToContents();
+        }
+
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
     }
 
-    // ─── Unique Employee Names (for autocomplete) ───
-    public async Task<List<string>> GetEmployeeNamesAsync()
+    // ═══════════════════════════════════════
+    // EXPORT SEARCH
+    // ═══════════════════════════════════════
+    public async Task<byte[]> ExportSearchAsync(AjalSearchFilterDto f)
     {
-        return await _db.AjalInvoices.Where(a => a.CallCenterEmployeeName != null)
-            .Select(a => a.CallCenterEmployeeName!).Distinct().OrderBy(n => n).ToListAsync();
+        f.Page = 1; f.PageSize = 10000;
+        var res = await SearchAsync(f);
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("نتائج البحث"); ws.RightToLeft = true;
+        ws.Cell(1, 1).Value = "رقم الفاتورة"; ws.Cell(1, 2).Value = "التاجر"; ws.Cell(1, 3).Value = "الخط";
+        ws.Cell(1, 4).Value = "السائق"; ws.Cell(1, 5).Value = "التاريخ"; ws.Cell(1, 6).Value = "المبلغ";
+        ws.Cell(1, 7).Value = "المراجعة";
+        var hdr = ws.Range(1, 1, 1, 7); hdr.Style.Font.Bold = true;
+        hdr.Style.Fill.BackgroundColor = XLColor.FromHtml("#667eea"); hdr.Style.Font.FontColor = XLColor.White;
+        for (int i = 0; i < res.Results.Count; i++)
+        {
+            var e = res.Results[i]; var r = i + 2;
+            ws.Cell(r, 1).Value = e.InvoiceNumber; ws.Cell(r, 2).Value = e.MerchantName;
+            ws.Cell(r, 3).Value = e.RouteName; ws.Cell(r, 4).Value = e.DriverName ?? "—";
+            ws.Cell(r, 5).Value = e.EnteredAt.ToString("dd/MM/yyyy");
+            ws.Cell(r, 6).Value = e.Amount.HasValue ? (double)e.Amount.Value : 0;
+            ws.Cell(r, 7).Value = e.IsReviewed ? "✅" : "⏳";
+        }
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream(); wb.SaveAs(ms); return ms.ToArray();
     }
 
-    // ─── Helpers ───
-    private AjalInvoiceDto MapToDto(AjalInvoice a) => new()
+    // ═══════════════════════════════════════
+    // HELPER
+    // ═══════════════════════════════════════
+    private static AjalDailyEntryDto MapToDailyEntry(AjalEntry e) => new()
     {
-        AjalInvoiceId = a.AjalInvoiceId, InvoiceNumber = a.InvoiceNumber,
-        MerchantId = a.MerchantId, MerchantName = a.Merchant.MerchantName,
-        MerchantPhone = a.Merchant.PhoneNumber, MerchantCity = a.Merchant.City,
-        Amount = a.Amount, OriginalAmount = a.OriginalAmount,
-        CallCenterEmployeeName = a.CallCenterEmployeeName, InvoiceStatus = a.InvoiceStatus,
-        ModificationNote = a.ModificationNote, Notes = a.Notes, ImportSource = a.ImportSource,
-        EnteredByUserName = a.EnteredByUser.FullName, EnteredAt = a.EnteredAt
+        EntryId = e.EntryId,
+        SessionId = e.SessionId,
+        InvoiceNumber = e.InvoiceNumber,
+        MerchantId = e.MerchantId,
+        MerchantName = e.Merchant.MerchantName,
+        MerchantCity = e.Merchant.City,
+        Amount = e.Amount,
+        RouteId = e.Session.RouteId,
+        RouteName = e.Session.Route.RouteName,
+        DriverId = e.Session.DriverId,
+        DriverName = e.Session.Driver?.FullName,
+        IsReviewed = e.IsReviewed,
+        ReviewedByUserName = e.ReviewedByUser?.FullName,
+        ReviewedAt = e.ReviewedAt,
+        Notes = e.Notes,
+        EnteredAt = e.EnteredAt
     };
-
-    private async Task<Merchant?> FindMerchant(string name)
-    {
-        var t = name.Trim();
-        var exact = await _db.Merchants.FirstOrDefaultAsync(m => m.MerchantName == t);
-        if (exact != null) return exact;
-        var ci = await _db.Merchants.FirstOrDefaultAsync(m => m.MerchantName.ToLower() == t.ToLower());
-        if (ci != null) return ci;
-        return await _db.Merchants.FirstOrDefaultAsync(m => m.MerchantName.Contains(t) || t.Contains(m.MerchantName));
-    }
 }

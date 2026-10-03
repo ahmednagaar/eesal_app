@@ -33,10 +33,8 @@ public partial class MainWindow : Window
     // Cached Module 3: Ajal pages
     private AjalDailyPage? _ajalDailyPage;
     private AjalEntryPage? _ajalEntryPage;
+    private AjalReviewPage? _ajalReviewPage;
     private AjalSearchPage? _ajalSearchPage;
-    private AjalEmployeePerfPage? _ajalEmployeePerfPage;
-    private AjalMerchantHistoryPage? _ajalMerchantHistoryPage;
-    private AjalExcelImportPage? _ajalExcelImportPage;
     private AjalSettingsPage? _ajalSettingsPage;
 
     // Cached Admin pages
@@ -256,25 +254,15 @@ public partial class MainWindow : Window
                 PageContent.Content = _ajalEntryPage;
                 PageTitle.Text = "✏️ إدخال فواتير";
                 break;
+            case "AjalReview":
+                _ajalReviewPage ??= new AjalReviewPage(_api);
+                PageContent.Content = _ajalReviewPage;
+                PageTitle.Text = "✅ مراجعة الآجل";
+                break;
             case "AjalSearch":
                 _ajalSearchPage ??= new AjalSearchPage(_api);
                 PageContent.Content = _ajalSearchPage;
                 PageTitle.Text = "🔍 بحث الآجل";
-                break;
-            case "AjalEmployeePerf":
-                _ajalEmployeePerfPage ??= new AjalEmployeePerfPage(_api);
-                PageContent.Content = _ajalEmployeePerfPage;
-                PageTitle.Text = "👥 أداء الموظفين";
-                break;
-            case "AjalMerchantHistory":
-                _ajalMerchantHistoryPage ??= new AjalMerchantHistoryPage(_api);
-                PageContent.Content = _ajalMerchantHistoryPage;
-                PageTitle.Text = "📊 كشف حساب تاجر";
-                break;
-            case "AjalExcelImport":
-                _ajalExcelImportPage ??= new AjalExcelImportPage(_api);
-                PageContent.Content = _ajalExcelImportPage;
-                PageTitle.Text = "📥 استيراد إكسل";
                 break;
             case "AjalSettings":
                 _ajalSettingsPage ??= new AjalSettingsPage(_api);
