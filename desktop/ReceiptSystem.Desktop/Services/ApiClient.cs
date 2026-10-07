@@ -651,6 +651,11 @@ public class ApiClient
         return await PutWithResponseAsync($"erp-import/batches/{batchId}/complete", new { });
     }
 
+    public async Task<dynamic?> DiscardErpBatchAsync(int batchId)
+    {
+        return await PutWithResponseAsync($"erp-import/batches/{batchId}/discard", new { });
+    }
+
     // ══════════════════════════════════════
     // Reports (Module 1)
     // ══════════════════════════════════════

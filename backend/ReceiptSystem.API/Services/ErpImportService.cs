@@ -236,6 +236,32 @@ public class ErpImportService
                 row.MatchedMerchantId = newMerchant.MerchantId;
             }
 
+            // ── Duplicate Import Detection ──
+            // Check if any non-discarded batch already has the same ErpId values
+            var incomingErpIds = dto.Rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.ErpId))
+                .Select(r => r.ErpId!)
+                .ToList();
+
+            if (incomingErpIds.Any())
+            {
+                var duplicateErpIds = await _db.ExcelImportRows
+                    .Where(r => r.Batch.Status != "Discarded"
+                        && r.ErpId != null
+                        && incomingErpIds.Contains(r.ErpId))
+                    .Select(r => new { r.ErpId, r.BatchId })
+                    .Take(5)
+                    .ToListAsync();
+
+                if (duplicateErpIds.Any())
+                {
+                    var batchIds = duplicateErpIds.Select(d => d.BatchId).Distinct().ToList();
+                    throw new InvalidOperationException(
+                        $"تم اكتشاف بيانات مكررة! أرقام ERP التالية موجودة بالفعل في الدفعة رقم {string.Join(", ", batchIds)}: " +
+                        $"{string.Join(", ", duplicateErpIds.Select(d => d.ErpId))}");
+                }
+            }
+
             // Create batch
             var batch = new ExcelImportBatch
             {
@@ -310,7 +336,8 @@ public class ErpImportService
         // ║  Driver must own the book(s) for the receipt range ║
         // ╚══════════════════════════════════════════════════════╝
         var driverBooks = await _db.ReceiptBooks
-            .Where(b => b.AssignedToDriverId == dto.DriverId)
+            .Where(b => b.AssignedToDriverId == dto.DriverId
+                && (b.Status == "Assigned" || b.Status == "InProgress"))
             .ToListAsync();
 
         if (!driverBooks.Any())
@@ -434,7 +461,13 @@ public class ErpImportService
             _db.CollectionSessions.Add(session);
             await _db.SaveChangesAsync();
 
+            // Validate all rows have a matched merchant before creating any receipts
+            var unmatchedRows = rows.Where(r => r.MatchedMerchantId == null).Select(r => r.RowIndex).ToList();
+            if (unmatchedRows.Any())
+                return new AssignBlockResultDto { Success = false, Error = $"الصفوف التالية ليس لها تاجر مطابق: {string.Join(", ", unmatchedRows)}. يرجى مراجعة الدُفعة." };
+
             // Create receipts — merchants map to non-skipped positions in order
+            var createdReceipts = new List<Receipt>();
             for (int i = 0; i < numbersToAssign.Count; i++)
             {
                 var row = rows[i];
@@ -459,12 +492,16 @@ public class ErpImportService
                     ImportSource = "ERP"
                 };
                 _db.Receipts.Add(receipt);
-                await _db.SaveChangesAsync();
-
-                // Mark row as assigned
+                createdReceipts.Add(receipt);
                 row.IsAssigned = true;
-                row.AssignedReceiptId = receipt.ReceiptId;
                 row.AssignedAt = DateTime.UtcNow;
+            }
+            await _db.SaveChangesAsync();
+
+            // Now that IDs are generated, link receipts back to rows
+            for (int i = 0; i < createdReceipts.Count; i++)
+            {
+                rows[i].AssignedReceiptId = createdReceipts[i].ReceiptId;
             }
 
             // Create explicit ReceiptGap records for user-specified skipped receipts
@@ -489,6 +526,22 @@ public class ErpImportService
             // Update batch counter
             var batch = await _db.ExcelImportBatches.FindAsync(dto.BatchId);
             batch!.AssignedRowsCount += numbersToAssign.Count;
+
+            // Auto-update book status based on receipt usage
+            foreach (var bb in bookBreakdown)
+            {
+                var book = await _db.ReceiptBooks.FindAsync(bb.BookId);
+                if (book == null) continue;
+
+                int totalInBook = book.EndReceiptNumber - book.StartReceiptNumber + 1;
+                var usedCount = await _db.Receipts.CountAsync(r => r.BookId == book.BookId);
+
+                if (book.Status == "Assigned" && usedCount > 0)
+                    book.Status = "InProgress";
+
+                if (usedCount >= totalInBook)
+                    book.Status = "Completed";
+            }
             await _db.SaveChangesAsync();
 
             // Additional gap detection (between-session gaps)
@@ -933,6 +986,29 @@ public class ErpImportService
         return (true, remaining);
     }
 
+    public async Task<string> DiscardAsync(int batchId)
+    {
+        var batch = await _db.ExcelImportBatches
+            .Include(b => b.Rows)
+            .FirstOrDefaultAsync(b => b.BatchId == batchId)
+            ?? throw new InvalidOperationException("الدفعة غير موجودة");
+
+        if (batch.Status == "Completed")
+            throw new InvalidOperationException("لا يمكن إلغاء دفعة مكتملة");
+
+        if (batch.Status == "Discarded")
+            throw new InvalidOperationException("الدفعة ملغاة بالفعل");
+
+        var assignedCount = batch.Rows.Count(r => r.IsAssigned);
+        if (assignedCount > 0)
+            throw new InvalidOperationException($"لا يمكن إلغاء الدفعة — يوجد {assignedCount} صف مسجل. يجب التراجع عن جميع التعيينات أولاً.");
+
+        batch.Status = "Discarded";
+        await _db.SaveChangesAsync();
+
+        return $"تم إلغاء الدفعة رقم {batchId} بنجاح";
+    }
+
     // ════════════════════════════════════════════
     // TWO-BOOK DETECTION ALGORITHM
     // Generates correct receipt numbers when a range spans two books
@@ -1231,13 +1307,12 @@ public class ErpImportService
         var lower = trimmed.ToLower();
         var ciMatch = await _db.Merchants
             .FirstOrDefaultAsync(m => m.MerchantName.ToLower() == lower);
-        if (ciMatch != null) return ciMatch;
+        return ciMatch;
 
-        // Step 3: Contains match (Excel name inside DB name or vice versa)
-        var contains = await _db.Merchants
-            .Where(m => m.MerchantName.Contains(trimmed) || trimmed.Contains(m.MerchantName))
-            .FirstOrDefaultAsync();
-        return contains;
+        // NOTE: Previously had a "Contains" step here that was removed because
+        // it could silently match wrong merchants (e.g. "أحمد" matching
+        // "أحمد محمود حسن التاجر"). Unmatched merchants are now auto-created
+        // during batch creation, which is safer.
     }
 }
 

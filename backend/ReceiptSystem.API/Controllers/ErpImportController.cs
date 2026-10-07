@@ -260,5 +260,23 @@ public class ErpImportController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Discard a batch (only if no rows are assigned)
+    /// </summary>
+    [HttpPut("batches/{id}/discard")]
+    public async Task<IActionResult> Discard(int id)
+    {
+        try
+        {
+            var message = await _erpService.DiscardAsync(id);
+            await _audit.LogAsync(UserId, "DiscardErpBatch", "ExcelImportBatch", id);
+            return Ok(new { message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
 

@@ -225,6 +225,11 @@
                             <Button x:Name="CompleteBatchBtn" Content="✓ إتمام الدُفعة" Style="{StaticResource PrimaryButton}"
                                     Click="CompleteBatch_Click" Padding="16,8" FontSize="14"
                                     Foreground="White"/>
+
+                            <!-- Discard -->
+                            <Button x:Name="DiscardBatchBtn" Content="✕ إلغاء الدُفعة" Style="{StaticResource SecondaryButton}"
+                                    Click="DiscardBatch_Click" Padding="16,8" FontSize="13" Margin="0,8,0,0"
+                                    Foreground="#FF6B6B"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

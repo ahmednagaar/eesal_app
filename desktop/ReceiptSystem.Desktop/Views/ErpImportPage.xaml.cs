@@ -199,7 +199,7 @@ public partial class ErpImportPage : UserControl
             var list = batches.Select(b => new BatchComboItem
             {
                 batchId = b["batchId"]?.Value<int>() ?? 0,
-                display = $"دُفعة {b["batchId"]} — {b["importDate"]?.ToString()?.Substring(0, 10)} ({b["status"]})"
+                display = $"دُفعة {b["batchId"]} — {b["uploadedAt"]?.ToString()?.Substring(0, 10)} ({b["status"]})"
             }).ToList();
             BatchCombo.ItemsSource = list;
             if (list.Count > 0) BatchCombo.SelectedIndex = 0;
@@ -221,7 +221,10 @@ public partial class ErpImportPage : UserControl
             _allRoutes = await _api.GetRoutesAsync();
             BlockRouteArea.ItemsSource = _allRoutes;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"خطأ في تحميل البيانات: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private async void BatchCombo_Changed(object sender, SelectionChangedEventArgs e)
@@ -253,6 +256,15 @@ public partial class ErpImportPage : UserControl
                     assignedReceipt = r["assignedReceiptNumber"]?.ToString() ?? ""
                 }).ToList();
                 BatchRowsGrid.ItemsSource = _batchRows;
+
+                // Subscribe to checkbox changes for live selected count
+                foreach (var row in _batchRows)
+                    row.PropertyChanged += (_, args) =>
+                    {
+                        if (args.PropertyName == "isSelected")
+                            UpdateSelectedCount();
+                    };
+                UpdateSelectedCount();
             }
         }
         catch (Exception ex)
@@ -762,6 +774,50 @@ public partial class ErpImportPage : UserControl
         }
         catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
         finally { CompleteBatchBtn.IsEnabled = true; }
+    }
+
+    // ══════════════════════════════════════
+    // SELECTED COUNT HELPER
+    // ══════════════════════════════════════
+
+    private void UpdateSelectedCount()
+    {
+        var selected = _batchRows.Where(r => r.isSelected && !r.isAssigned).ToList();
+        var totalSelected = _batchRows.Count(r => r.isSelected);
+        var totalAmount = selected.Sum(r => r.rawAmount);
+        var assignedCount = _batchRows.Count(r => r.isAssigned);
+        var remaining = _batchRows.Count - assignedCount;
+
+        SelectedCountLabel.Text = $"المحددة: {totalSelected} صف — المبلغ: {totalAmount:N2} | " +
+            $"مسجل: {assignedCount}/{_batchRows.Count} — متبقي: {remaining}";
+    }
+
+    // ══════════════════════════════════════
+    // DISCARD BATCH
+    // ══════════════════════════════════════
+
+    private async void DiscardBatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedBatchId == 0) return;
+
+        var answer = MessageBox.Show(
+            "هل أنت متأكد من إلغاء هذه الدُفعة؟ لا يمكن التراجع عن هذا الإجراء.",
+            "تأكيد الإلغاء", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes) return;
+
+        DiscardBatchBtn.IsEnabled = false;
+        try
+        {
+            var result = await _api.DiscardErpBatchAsync(_selectedBatchId);
+            if (result != null)
+            {
+                string msg = result["message"]?.ToString() ?? "تم إلغاء الدُفعة";
+                ToastHelper.ShowSuccess(RootGrid, msg);
+                await LoadBatchesListAsync();
+            }
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+        finally { DiscardBatchBtn.IsEnabled = true; }
     }
 
     // ══════════════════════════════════════
