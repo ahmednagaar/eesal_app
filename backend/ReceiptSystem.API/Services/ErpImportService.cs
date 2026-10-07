@@ -144,8 +144,8 @@ public class ErpImportService
                 else
                     decimal.TryParse(amountCell.GetString().Trim().Replace(",", ""), out amount);
 
-                // Skip zero-amount rows
-                if (amount == 0) { skippedCount++; continue; }
+                // Skip zero or negative-amount rows (refunds/credits)
+                if (amount <= 0) { skippedCount++; continue; }
 
                 // Read extra columns
                 string? erpInvoiceNumber = invoiceNumberCol != null
@@ -759,6 +759,12 @@ public class ErpImportService
 
             // Delete the receipt
             _db.Receipts.Remove(receipt);
+
+            // Update HasGaps flag — check if session still has any open gaps
+            var remainingGaps = await _db.ReceiptGaps
+                .AnyAsync(g => g.DetectedInSessionId == session.SessionId && g.Status == "Open");
+            session.HasGaps = remainingGaps;
+
             await _db.SaveChangesAsync();
 
             await transaction.CommitAsync();

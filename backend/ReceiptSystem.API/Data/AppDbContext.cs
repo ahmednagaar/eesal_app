@@ -133,6 +133,10 @@ public class AppDbContext : DbContext
         {
             e.HasKey(r => r.ReceiptId);
             e.HasIndex(r => new { r.SeriesId, r.ReceiptNumber }).IsUnique();
+            // Filtered index to enforce uniqueness of ReceiptNumber when SeriesId is NULL
+            e.HasIndex(r => r.ReceiptNumber)
+             .IsUnique()
+             .HasFilter("[SeriesId] IS NULL");
             e.HasOne(r => r.Series).WithMany().HasForeignKey(r => r.SeriesId).OnDelete(DeleteBehavior.Restrict);
             e.Property(r => r.Amount).HasColumnType("decimal(18,2)");
             e.Property(r => r.IsPartialPayment).HasDefaultValue(false);
