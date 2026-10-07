@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ReceiptSystem.Desktop.Services;
 
@@ -198,7 +199,7 @@ public class ApiClient
     {
         var json = await GetAsync("routes");
         if (json == null) return new List<Models.Route>();
-        return JsonConvert.DeserializeObject<List<Models.Route>>(json) ?? new List<Models.Route>();
+        return DeserializeList<Models.Route>(json);
     }
 
     public async Task<dynamic?> CreateRouteAsync(string routeName, string? notes = null)
@@ -220,7 +221,7 @@ public class ApiClient
     {
         var json = await GetAsync($"routes/{routeId}/merchants");
         if (json == null) return new List<Models.RouteMerchant>();
-        return JsonConvert.DeserializeObject<List<Models.RouteMerchant>>(json) ?? new List<Models.RouteMerchant>();
+        return DeserializeList<Models.RouteMerchant>(json);
     }
 
     public async Task<dynamic?> AddMerchantToRouteAsync(int routeId, int merchantId, int position)
@@ -242,7 +243,7 @@ public class ApiClient
     {
         var json = await GetAsync($"merchants/search?q={Uri.EscapeDataString(query)}");
         if (json == null) return new List<Models.MerchantSearchResult>();
-        return JsonConvert.DeserializeObject<List<Models.MerchantSearchResult>>(json) ?? new List<Models.MerchantSearchResult>();
+        return DeserializeList<Models.MerchantSearchResult>(json);
     }
 
     // ══════════════════════════════════════
@@ -259,7 +260,7 @@ public class ApiClient
         var json = await GetAsync($"delivery-days{q}");
         
         if (json == null) return new List<Models.DeliveryDayItem>();
-        return JsonConvert.DeserializeObject<List<Models.DeliveryDayItem>>(json) ?? new List<Models.DeliveryDayItem>();
+        return DeserializeList<Models.DeliveryDayItem>(json);
     }
 
     public async Task<dynamic?> CreateDeliveryDayAsync(int routeId, DateTime date, string? driver = null)
@@ -283,7 +284,7 @@ public class ApiClient
         var qs = query.Count > 0 ? "?" + string.Join("&", query) : "";
         var json = await GetAsync($"delivery-days{qs}");
         if (json == null) return new List<dynamic>();
-        return JsonConvert.DeserializeObject<List<dynamic>>(json) ?? new List<dynamic>();
+        return DeserializeList<dynamic>(json);
     }
 
     // ══════════════════════════════════════
@@ -910,6 +911,50 @@ public class ApiClient
         if (!string.IsNullOrEmpty(dateFrom)) q.Add($"dateFrom={dateFrom}");
         if (!string.IsNullOrEmpty(dateTo)) q.Add($"dateTo={dateTo}");
         return await GetAsync($"audit?{string.Join("&", q)}");
+    }
+
+    /// <summary>
+    /// Deserializes a JSON array, or a wrapper object that contains one
+    /// (e.g. { "data": [ ... ] } or { "data": { "items": [ ... ] } }).
+    /// Never throws for an unexpected object shape — returns an empty list instead.
+    /// </summary>
+    private static List<T> DeserializeList<T>(string json)
+    {
+        try
+        {
+            var array = FindArray(JToken.Parse(json));
+            if (array == null) return new List<T>();
+            var serializer = JsonSerializer.Create(new JsonSerializerSettings
+            {
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                NullValueHandling = NullValueHandling.Ignore
+            });
+            serializer.Error += (_, args) => args.ErrorContext.Handled = true;
+            return array.ToObject<List<T>>(serializer) ?? new List<T>();
+        }
+        catch
+        {
+            return new List<T>();
+        }
+    }
+
+    private static JArray? FindArray(JToken? token)
+    {
+        if (token is JArray arr) return arr;
+        if (token is not JObject obj) return null;
+
+        foreach (var name in new[] { "data", "Data", "items", "results", "routes", "merchants", "drivers" })
+        {
+            var found = FindArray(obj[name]);
+            if (found != null) return found;
+        }
+
+        foreach (var prop in obj.Properties())
+        {
+            if (prop.Value is JArray nested) return nested;
+        }
+
+        return null;
     }
 
     // ══════════════════════════════════════

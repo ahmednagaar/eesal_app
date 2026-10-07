@@ -51,7 +51,7 @@
                 <!-- Driver -->
                 <StackPanel Grid.Column="1" Margin="0,0,12,0">
                     <TextBlock Text="السائق" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="cmbDriver" DisplayMemberPath="FullName" SelectedValuePath="DriverId"
+                    <ComboBox x:Name="cmbDriver" DisplayMemberPath="fullName" SelectedValuePath="driverId"
                               />
                 </StackPanel>
 

@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ReceiptSystem.Desktop.Helpers;
 using ReceiptSystem.Desktop.Services;
@@ -14,9 +13,9 @@ public partial class AjalEntryPage : UserControl
     private readonly ApiClient _api;
     private string _prefix = "441";
     private int _totalDigits = 6;
-    private List<dynamic> _routes = new();
-    private List<dynamic> _drivers = new();
-    private List<dynamic> _merchants = new();
+    private List<Models.Route> _routes = new();
+    private List<DriverComboItem> _drivers = new();
+    private List<MerchantComboItem> _merchants = new();
 
     public AjalEntryPage(ApiClient api)
     {
@@ -36,42 +35,73 @@ public partial class AjalEntryPage : UserControl
     // ═══════════════════════════════════════
     private async Task LoadLookups()
     {
+        var failed = new List<string>();
+
         try
         {
-            // Routes
-            var routes = await _api.GetRoutesAsync();
-            _routes = routes.Select(r => (dynamic)new { r.RouteId, r.RouteName }).ToList();
+            _routes = await _api.GetRoutesAsync();
             cmbRoute.ItemsSource = _routes;
             if (_routes.Count > 0) cmbRoute.SelectedIndex = 0;
+        }
+        catch
+        {
+            failed.Add("الخطوط");
+        }
 
-            // Drivers
+        try
+        {
             var driversJson = await _api.GetDriversJsonAsync();
             if (driversJson != null)
             {
-                _drivers = JsonConvert.DeserializeObject<List<dynamic>>(driversJson) ?? new();
+                _drivers = ParseJsonArray(driversJson).Select(d => new DriverComboItem
+                {
+                    driverId = d["driverId"]?.Value<int>() ?? 0,
+                    fullName = d["fullName"]?.ToString() ?? ""
+                }).ToList();
                 cmbDriver.ItemsSource = _drivers;
                 if (_drivers.Count > 0) cmbDriver.SelectedIndex = 0;
             }
+        }
+        catch
+        {
+            failed.Add("السائقين");
+        }
 
-            // Merchants
+        try
+        {
             var merchantsJson = await _api.GetMerchantsJsonAsync(1, 10000);
             if (merchantsJson != null)
-                _merchants = JsonConvert.DeserializeObject<List<dynamic>>(merchantsJson) ?? new();
+            {
+                _merchants = ParseJsonArray(merchantsJson).Select(m => new MerchantComboItem
+                {
+                    merchantId = m["merchantId"]?.Value<int>() ?? 0,
+                    merchantName = m["merchantName"]?.ToString() ?? ""
+                }).ToList();
+            }
+        }
+        catch
+        {
+            failed.Add("العملاء");
+        }
 
-            // Prefix settings
+        try
+        {
             var prefixJson = await _api.GetAjalPrefixSettingsJsonAsync();
             if (prefixJson != null)
             {
-                var settings = JObject.Parse(prefixJson);
+                var settings = UnwrapObject(prefixJson);
                 _prefix = settings["prefix"]?.ToString() ?? "441";
-                _totalDigits = (int)(settings["totalDigits"] ?? 6);
+                _totalDigits = settings["totalDigits"]?.Value<int>() ?? 6;
                 txtPrefix.Text = _prefix;
             }
         }
-        catch (Exception ex)
+        catch
         {
-            ToastHelper.ShowError(RootGrid, $"خطأ في تحميل البيانات: {ex.Message}");
+            failed.Add("البادئة");
         }
+
+        if (failed.Count > 0)
+            ToastHelper.ShowError(RootGrid, "تعذر تحميل: " + string.Join("، ", failed));
     }
 
     // ═══════════════════════════════════════
@@ -133,8 +163,8 @@ public partial class AjalEntryPage : UserControl
         {
             
             IsEditable = true, IsTextSearchEnabled = true,
-            DisplayMemberPath = "MerchantName",
-            SelectedValuePath = "MerchantId",
+            DisplayMemberPath = "merchantName",
+            SelectedValuePath = "merchantId",
             ItemsSource = _merchants,
             Tag = "merchant",
             Margin = new Thickness(2)
@@ -502,5 +532,45 @@ public partial class AjalEntryPage : UserControl
     {
         var txt = row.Children.OfType<TextBox>().FirstOrDefault(t => t.Tag?.ToString() == tag);
         return txt?.Text?.Trim() ?? "";
+    }
+
+    /// <summary>
+    /// Accepts either a raw JSON array or an object with a <c>data</c> array property.
+    /// </summary>
+    private static JArray ParseJsonArray(string json)
+    {
+        var token = JToken.Parse(json);
+        if (token is JArray arr) return arr;
+        if (token is JObject obj)
+        {
+            foreach (var name in new[] { "data", "Data", "items", "results", "merchants", "drivers" })
+            {
+                var child = obj[name];
+                if (child is JArray childArr) return childArr;
+                if (child is JObject nested)
+                {
+                    var inner = nested["items"] as JArray
+                        ?? nested["results"] as JArray
+                        ?? nested["data"] as JArray
+                        ?? nested["merchants"] as JArray;
+                    if (inner != null) return inner;
+                }
+            }
+
+            foreach (var prop in obj.Properties())
+            {
+                if (prop.Value is JArray nestedArr) return nestedArr;
+            }
+        }
+        return new JArray();
+    }
+
+    private static JObject UnwrapObject(string json)
+    {
+        var token = JToken.Parse(json);
+        if (token is not JObject obj) return new JObject();
+        if (obj["prefix"] != null || obj["totalDigits"] != null) return obj;
+        if (obj["data"] is JObject inner) return inner;
+        return obj;
     }
 }

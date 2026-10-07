@@ -14,17 +14,31 @@ public partial class AjalReviewPage : UserControl
     private readonly ApiClient _api;
     private List<ReviewEntry> _allEntries = new();
     private List<ReviewEntry> _filteredEntries = new();
+    private bool _ready;
 
     public AjalReviewPage(ApiClient api)
     {
         InitializeComponent();
         _api = api;
-        dpDate.SelectedDate = DateTime.Today;
+        Loaded += async (_, _) =>
+        {
+            _ready = true;
+            if (dpDate.SelectedDate == null)
+                dpDate.SelectedDate = DateTime.Today;
+            else
+                await LoadData();
+        };
     }
 
     // ═══════════════════════════════════════
     // DATA MODEL
     // ═══════════════════════════════════════
+    private class RouteFilterItem
+    {
+        public string RouteName { get; set; } = "";
+        public override string ToString() => RouteName;
+    }
+
     private class ReviewEntry
     {
         public int EntryId { get; set; }
@@ -45,6 +59,7 @@ public partial class AjalReviewPage : UserControl
     // ═══════════════════════════════════════
     private async void DpDate_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (!_ready) return;
         await LoadData();
     }
 
@@ -62,10 +77,12 @@ public partial class AjalReviewPage : UserControl
             var json = await _api.GetAjalDailyJsonAsync(dpDate.SelectedDate.Value);
             if (json == null) return;
 
-            var data = JObject.Parse(json);
+            var token = JToken.Parse(json);
+            var data = token as JObject ?? new JObject();
+            if (data["data"] is JObject inner) data = inner;
             _allEntries.Clear();
 
-            var entries = data["entries"] as JArray;
+            var entries = data["entries"] as JArray ?? data["Entries"] as JArray;
             if (entries != null)
             {
                 foreach (var e in entries)
@@ -86,12 +103,9 @@ public partial class AjalReviewPage : UserControl
                 }
             }
 
-            // Populate route filter
-            var routes = _allEntries.Select(e => new { e.RouteName }).Distinct().ToList();
-            var routeList = new List<dynamic> { new { RouteName = "كل الخطوط", RouteId = 0 } };
-            int fakeId = 1;
-            foreach (var r in routes)
-                routeList.Add(new { r.RouteName, RouteId = fakeId++ });
+            var routeList = new List<RouteFilterItem> { new() { RouteName = "كل الخطوط" } };
+            foreach (var name in _allEntries.Select(e => e.RouteName).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct())
+                routeList.Add(new RouteFilterItem { RouteName = name });
             cmbRouteFilter.ItemsSource = routeList;
             cmbRouteFilter.SelectedIndex = 0;
 
@@ -107,41 +121,43 @@ public partial class AjalReviewPage : UserControl
     // ═══════════════════════════════════════
     // FILTERS
     // ═══════════════════════════════════════
-    private void CmbFilter_Changed(object sender, SelectionChangedEventArgs e) => ApplyFilters();
-    private void TxtSearch_Changed(object sender, TextChangedEventArgs e) => ApplyFilters();
+    private void CmbFilter_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_ready) ApplyFilters();
+    }
+
+    private void TxtSearch_Changed(object sender, TextChangedEventArgs e)
+    {
+        if (_ready) ApplyFilters();
+    }
 
     private void ApplyFilters()
     {
+        if (!_ready || cmbRouteFilter == null || txtSearchInvoice == null || dgEntries == null)
+            return;
+
         _filteredEntries = _allEntries.ToList();
 
-        // Status filter
-        if (cmbFilter.SelectedItem is ComboBoxItem item)
+        if (cmbFilter?.SelectedItem is ComboBoxItem item)
         {
             string tag = item.Tag?.ToString() ?? "all";
             if (tag == "pending") _filteredEntries = _filteredEntries.Where(e => !e.IsReviewed).ToList();
             else if (tag == "reviewed") _filteredEntries = _filteredEntries.Where(e => e.IsReviewed).ToList();
         }
 
-        // Route filter
-        if (cmbRouteFilter.SelectedIndex > 0)
+        if (cmbRouteFilter.SelectedItem is RouteFilterItem selected
+            && cmbRouteFilter.SelectedIndex > 0
+            && !string.IsNullOrWhiteSpace(selected.RouteName))
         {
-            var selected = cmbRouteFilter.SelectedItem;
-            if (selected != null)
-            {
-                string routeName = ((dynamic)selected).RouteName;
-                _filteredEntries = _filteredEntries.Where(e => e.RouteName == routeName).ToList();
-            }
+            _filteredEntries = _filteredEntries.Where(e => e.RouteName == selected.RouteName).ToList();
         }
 
-        // Invoice number search
-        string search = txtSearchInvoice.Text.Trim();
+        string search = txtSearchInvoice.Text?.Trim() ?? "";
         if (!string.IsNullOrEmpty(search) && search != "بحث برقم الفاتورة...")
             _filteredEntries = _filteredEntries.Where(e => e.InvoiceNumber.Contains(search)).ToList();
 
-        // Always sorted ascending by invoice number
         _filteredEntries = _filteredEntries.OrderBy(e => e.InvoiceNumber).ToList();
 
-        dgEntries.ItemsSource = null;
         dgEntries.ItemsSource = _filteredEntries;
     }
 
