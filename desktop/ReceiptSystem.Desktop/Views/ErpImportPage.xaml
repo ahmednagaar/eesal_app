@@ -95,6 +95,7 @@
                 <Grid Grid.Column="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -110,8 +111,15 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Batch Summary Info Bar -->
+                    <Border x:Name="BatchSummaryBar" Grid.Row="1" Background="#1A667eea" Padding="12,8"
+                            Visibility="Collapsed">
+                        <TextBlock x:Name="BatchSummaryText" TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </Border>
+
                     <!-- Batch rows with checkboxes -->
-                    <DataGrid x:Name="BatchRowsGrid" Grid.Row="1" AutoGenerateColumns="False"
+                    <DataGrid x:Name="BatchRowsGrid" Grid.Row="2" AutoGenerateColumns="False"
                               CanUserAddRows="False" Background="Transparent" BorderThickness="0"
                               RowBackground="{StaticResource BgCardBrush}"
                               AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
@@ -133,8 +141,9 @@
                             <DataGridTextColumn Header="#" Binding="{Binding rowIndex}" Width="40" IsReadOnly="True"/>
                             <DataGridTextColumn Header="التاجر" Binding="{Binding merchantName}" Width="*" IsReadOnly="True"/>
                             <DataGridTextColumn Header="المبلغ" Binding="{Binding amount}" Width="90" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="مُعيّن" Binding="{Binding assignedDisplay}" Width="80" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding assignedReceipt}" Width="100" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="فاتورة ERP" Binding="{Binding erpInvoice}" Width="90" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="مُعيّن" Binding="{Binding assignedDisplay}" Width="60" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding assignedReceipt}" Width="90" IsReadOnly="True"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -234,6 +243,52 @@
                     </ScrollViewer>
                 </Border>
             </Grid>
+        </Border>
+
+        <!-- Preview Overlay -->
+        <Border x:Name="PreviewOverlay" Grid.RowSpan="2" Background="#CC1a1a2e" Visibility="Collapsed"
+                MouseDown="PreviewOverlay_Close">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="20"
+                    MaxWidth="700" MaxHeight="500" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="👁 معاينة التعيين" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="PreviewInfoText" Grid.Row="1" TextWrapping="Wrap" FontSize="12"
+                               Foreground="{StaticResource AccentWarningBrush}" Margin="0,0,0,8"/>
+                    <DataGrid x:Name="PreviewMappingGrid" Grid.Row="2" AutoGenerateColumns="False"
+                              IsReadOnly="True" CanUserAddRows="False" Background="Transparent"
+                              BorderThickness="0" FontSize="12" MaxHeight="350"
+                              RowBackground="{StaticResource BgCardBrush}"
+                              AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
+                              Foreground="{StaticResource TextPrimaryBrush}"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                              HeadersVisibility="Column">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="{StaticResource BgDeepBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                <Setter Property="Padding" Value="8,5"/>
+                                <Setter Property="FontSize" Value="11"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding receiptNumber}" Width="100"/>
+                            <DataGridTextColumn Header="التاجر" Binding="{Binding merchantName}" Width="*"/>
+                            <DataGridTextColumn Header="المبلغ" Binding="{Binding amount}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <Button Grid.Row="3" Content="✕ إغلاق" Style="{StaticResource SecondaryButton}"
+                            Click="PreviewOverlay_Close" Padding="14,6" FontSize="12" Margin="0,10,0,0"
+                            HorizontalAlignment="Left"/>
+                </Grid>
+            </Border>
         </Border>
 
         <!-- Loading -->

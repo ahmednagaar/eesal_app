@@ -28,6 +28,7 @@ public class ErpBatchRow : INotifyPropertyChanged
     public string assignedDisplay { get; set; } = "";
     public bool isAssigned { get; set; }
     public string assignedReceipt { get; set; } = "";
+    public string erpInvoice { get; set; } = "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -253,7 +254,8 @@ public partial class ErpImportPage : UserControl
                     rawAmount = r["amount"]?.Value<decimal>() ?? 0,
                     isAssigned = r["isAssigned"]?.Value<bool>() ?? false,
                     assignedDisplay = (r["isAssigned"]?.Value<bool>() ?? false) ? "✓" : "",
-                    assignedReceipt = r["assignedReceiptNumber"]?.ToString() ?? ""
+                    assignedReceipt = r["assignedReceiptNumber"]?.ToString() ?? "",
+                    erpInvoice = r["erpInvoiceNumber"]?.ToString() ?? ""
                 }).ToList();
                 BatchRowsGrid.ItemsSource = _batchRows;
 
@@ -265,6 +267,15 @@ public partial class ErpImportPage : UserControl
                             UpdateSelectedCount();
                     };
                 UpdateSelectedCount();
+
+                // Show batch summary bar
+                var totalAmount = detail["ledgerTotalAmount"]?.Value<decimal>() ?? _batchRows.Sum(r => r.rawAmount);
+                var assignedAmount = _batchRows.Where(r => r.isAssigned).Sum(r => r.rawAmount);
+                var assignedCount = _batchRows.Count(r => r.isAssigned);
+                var remaining = _batchRows.Count - assignedCount;
+                var status = detail["status"]?.ToString() ?? "";
+                BatchSummaryText.Text = $"إجمالي: {totalAmount:N2} ج | مسجل: {assignedAmount:N2} ج | صفوف: {assignedCount}/{_batchRows.Count} | متبقي: {remaining} | الحالة: {status}";
+                BatchSummaryBar.Visibility = Visibility.Visible;
             }
         }
         catch (Exception ex)
@@ -355,15 +366,14 @@ public partial class ErpImportPage : UserControl
 
             if (result != null)
             {
-                // Build preview message
-                var sb = new System.Text.StringBuilder();
+                // Show preview in overlay instead of MessageBox
+                var infoText = new System.Text.StringBuilder();
 
                 bool hasMismatch = (bool)(result["hasMismatch"] ?? false);
                 if (hasMismatch)
                 {
                     string mismatchMsg = result["mismatchMessage"]?.ToString() ?? "";
-                    sb.AppendLine(mismatchMsg);
-                    sb.AppendLine();
+                    infoText.AppendLine(mismatchMsg);
                     CountValidationPanel.Visibility = Visibility.Visible;
                     CountValidationText.Text = mismatchMsg;
                 }
@@ -375,34 +385,45 @@ public partial class ErpImportPage : UserControl
                 bool spansTwoBooks = (bool)(result["spansTwoBooks"] ?? false);
                 if (spansTwoBooks)
                 {
-                    sb.AppendLine("📖 يمتد عبر دفترين:");
+                    infoText.Append("📖 يمتد عبر دفترين: ");
                     var breakdown = result["bookBreakdown"] as Newtonsoft.Json.Linq.JArray;
                     if (breakdown != null)
                     {
                         foreach (var b in breakdown)
-                        {
-                            sb.AppendLine($"  دفتر #{b["bookNumber"]}: إيصالات {b["firstReceipt"]}→{b["lastReceipt"]} ({b["receiptCount"]} إيصال)");
-                        }
+                            infoText.Append($"دفتر #{b["bookNumber"]}: {b["firstReceipt"]}→{b["lastReceipt"]} ({b["receiptCount"]} إيصال) | ");
                     }
-                    sb.AppendLine();
                 }
 
-                sb.AppendLine("ترتيب الإيصالات:");
-                sb.AppendLine("────────────────────────────");
+                PreviewInfoText.Text = infoText.ToString();
+
+                // Build grid data from mappings
                 var mappings = result["mappings"] as Newtonsoft.Json.Linq.JArray;
                 if (mappings != null)
                 {
-                    foreach (var m in mappings)
+                    var previewItems = mappings.Select(m => new
                     {
-                        sb.AppendLine($"إيصال {m["receiptNumber"]} → {m["merchantName"]} ({m["amount"]:N2} ج)");
-                    }
+                        receiptNumber = m["receiptNumber"]?.Value<int>() ?? 0,
+                        merchantName = m["merchantName"]?.ToString() ?? "",
+                        amount = (m["amount"]?.Value<decimal>() ?? 0).ToString("N2")
+                    }).ToList();
+                    PreviewMappingGrid.ItemsSource = previewItems;
                 }
 
-                MessageBox.Show(sb.ToString(), "معاينة التعيين", MessageBoxButton.OK, MessageBoxImage.Information);
+                PreviewOverlay.Visibility = Visibility.Visible;
             }
         }
         catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
         finally { PreviewBlockBtn.IsEnabled = true; }
+    }
+
+    private void PreviewOverlay_Close(object sender, RoutedEventArgs e)
+    {
+        PreviewOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void PreviewOverlay_Close(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        PreviewOverlay.Visibility = Visibility.Collapsed;
     }
 
     // ══════════════════════════════════════
@@ -752,12 +773,12 @@ public partial class ErpImportPage : UserControl
 
     private async void CompleteBatch_Click(object sender, RoutedEventArgs e)
     {
-        // Warn about unassigned rows
+        // Warn about unassigned rows and require reason
         int unassigned = _batchRows.Count(r => !r.isAssigned);
         if (unassigned > 0)
         {
             var answer = MessageBox.Show(
-                $"يوجد {unassigned} صف غير مُعيّن. هل تريد إتمام الدُفعة على أي حال؟",
+                $"يوجد {unassigned} صف غير مُعيّن. هل تريد إتمام الدُفعة على أي حال؟\n\nسيتم تسجيل هذا في الملاحظات.",
                 "تأكيد الإتمام", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (answer != MessageBoxResult.Yes) return;
         }
