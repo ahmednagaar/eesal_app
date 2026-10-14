@@ -20,6 +20,7 @@ public class ApiClient
     public string? CurrentUserName { get; private set; }
     public string? CurrentUserRole { get; private set; }
     public int CurrentUserId { get; private set; }
+    public bool MustChangePassword { get; private set; }
     public bool IsLoggedIn => !string.IsNullOrEmpty(_token);
 
     public ApiClient()
@@ -89,6 +90,12 @@ public class ApiClient
         }
 
         SetAuth();
+
+        // Check if password change is required
+        MustChangePassword = response["mustChangePassword"]?.Value<bool>()
+                          ?? response["MustChangePassword"]?.Value<bool>()
+                          ?? false;
+
         return true;
     }
 
@@ -464,7 +471,6 @@ public class ApiClient
     }
 
 
-
     public async Task<bool> AssignBookAsync(int bookId, int driverId, DateTime? assignedDate = null)
     {
         return await PutAsync($"books/{bookId}/assign", new { DriverId = driverId, AssignedDate = assignedDate?.ToString("yyyy-MM-dd") });
@@ -570,6 +576,32 @@ public class ApiClient
     public async Task<string?> GetDriverPortfolioJsonAsync(int driverId)
     {
         return await GetAsync($"books/driver/{driverId}/portfolio");
+    }
+
+    // ── Cancelled Receipts (لاغي) ──
+
+    public async Task<dynamic?> CancelReceiptsAsync(int bookId, List<int> receiptNumbers, string reasonCategory, string? reason = null)
+    {
+        return await PostAsync("gaps/cancel", new
+        {
+            BookId = bookId,
+            ReceiptNumbers = receiptNumbers,
+            ReasonCategory = reasonCategory,
+            Reason = reason
+        });
+    }
+
+    // ── No-Receipt Collections (تحصيل بدون إيصال) ──
+
+    public async Task<dynamic?> CreateNoReceiptCollectionsAsync(int? batchId, int? driverId, string? reason, List<object> items)
+    {
+        return await PostAsync("no-receipt-collections", new
+        {
+            BatchId = batchId,
+            DriverId = driverId,
+            Reason = reason,
+            Items = items
+        });
     }
 
     // ══════════════════════════════════════

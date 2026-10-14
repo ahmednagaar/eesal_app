@@ -178,6 +178,22 @@ public class ExcelImportService
             };
         }
 
+        // Check for cancelled (لاغي) receipt numbers
+        var cancelledNumbers = await _db.ReceiptGaps
+            .Where(g => rangeNumbers.Contains(g.MissingReceiptNumber)
+                     && g.Status == "Cancelled")
+            .Select(g => g.MissingReceiptNumber)
+            .ToListAsync();
+
+        if (cancelledNumbers.Any())
+        {
+            return new SaveExcelResponseDto
+            {
+                Success = false,
+                Error = $"⛔ الإيصالات التالية ملغية (لاغي) ولا يمكن استخدامها: {string.Join(", ", cancelledNumbers.OrderBy(n => n))}"
+            };
+        }
+
         // Create new merchants for unmatched rows
         int newMerchantsCreated = 0;
 
@@ -219,15 +235,29 @@ public class ExcelImportService
             _db.CollectionSessions.Add(session);
             await _db.SaveChangesAsync();
 
+            // Load driver's books so we can resolve BookId for each receipt
+            var driverBooks = await _db.ReceiptBooks
+                .Where(b => b.AssignedToDriverId == dto.DriverId
+                         && (b.Status == "Assigned" || b.Status == "InProgress"
+                             || b.Status == "Completed" || b.Status == "Returned"))
+                .Select(b => new { b.BookId, b.StartReceiptNumber, b.EndReceiptNumber })
+                .ToListAsync();
+
             // Create receipts with sequential numbers
             var sortedRows = dto.Rows.OrderBy(r => r.RowIndex).ToList();
             for (int i = 0; i < sortedRows.Count; i++)
             {
                 var row = sortedRows[i];
+                var receiptNum = dto.StartReceiptNumber + i;
+
+                // Resolve which book this receipt belongs to
+                var matchingBook = driverBooks.FirstOrDefault(b =>
+                    receiptNum >= b.StartReceiptNumber && receiptNum <= b.EndReceiptNumber);
+
                 _db.Receipts.Add(new Receipt
                 {
-                    ReceiptNumber = dto.StartReceiptNumber + i,
-                    BookId = null, // Excel imports have no physical book
+                    ReceiptNumber = receiptNum,
+                    BookId = matchingBook?.BookId,
                     SessionId = session.SessionId,
                     DriverId = dto.DriverId,
                     MerchantId = row.MatchedMerchantId!.Value,

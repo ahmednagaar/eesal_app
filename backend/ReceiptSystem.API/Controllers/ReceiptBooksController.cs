@@ -183,6 +183,7 @@ public class ReceiptBooksController : ControllerBase
 
         int totalReceipts = book.EndReceiptNumber - book.StartReceiptNumber + 1;
         int usedCount = book.Receipts.Count;
+        int cancelledCount = book.Gaps.Count(g => g.Status == "Cancelled");
         string displayName = book.Series != null
             ? $"{book.Series.SeriesCode}-{book.BookNumber}"
             : $"#{book.BookNumber}";
@@ -202,7 +203,8 @@ public class ReceiptBooksController : ControllerBase
             ReturnedDate = book.ReturnedDate,
             IsVerified = book.IsVerified,
             UsedReceipts = usedCount,
-            RemainingReceipts = totalReceipts - usedCount,
+            CancelledReceipts = cancelledCount,
+            RemainingReceipts = totalReceipts - usedCount - cancelledCount,
             UsagePercent = totalReceipts > 0 ? Math.Round((double)usedCount / totalReceipts * 100, 1) : 0,
             MissingReceipts = book.Gaps.Count(g => g.Status == "Open"),
             Gaps = book.Gaps.OrderBy(g => g.MissingReceiptNumber).Select(g => new BookGapDto
@@ -212,7 +214,9 @@ public class ReceiptBooksController : ControllerBase
                 Status = g.Status,
                 ReasonCategory = g.ReasonCategory,
                 Resolution = g.Resolution,
-                DetectedAt = g.DetectedAt
+                DetectedAt = g.DetectedAt,
+                CancelledByReason = g.CancelledByReason,
+                CancelledAt = g.CancelledAt
             }).ToList(),
             Receipts = book.Receipts.OrderBy(r => r.ReceiptNumber).Select(r => new BookReceiptDto
             {
@@ -438,6 +442,7 @@ public class ReceiptBooksController : ControllerBase
         {
             int total = b.EndReceiptNumber - b.StartReceiptNumber + 1;
             int used = b.Receipts.Count;
+            int cancelled = b.Gaps.Count(g => g.Status == "Cancelled");
             int missing = b.Gaps.Count(g => g.Status == "Open");
             string display = b.Series != null ? $"{b.Series.SeriesCode}-{b.BookNumber}" : $"#{b.BookNumber}";
 
@@ -450,7 +455,7 @@ public class ReceiptBooksController : ControllerBase
                 EndReceiptNumber = b.EndReceiptNumber,
                 Status = b.Status,
                 UsedReceipts = used,
-                RemainingReceipts = total - used,
+                RemainingReceipts = total - used - cancelled,
                 MissingReceipts = missing,
                 UsagePercent = total > 0 ? Math.Round((double)used / total * 100, 1) : 0,
                 AssignedDate = b.AssignedDate,

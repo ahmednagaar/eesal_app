@@ -55,20 +55,9 @@ public partial class NewSessionPage : UserControl
                 DriverCombo.ItemsSource = driverList;
             }
 
-            // Load available books
-            var booksJson = await _api.GetAvailableBooksJsonAsync();
-            if (booksJson != null)
-            {
-                var books = JArray.Parse(booksJson);
-                var bookList = books.Select(b => new BookComboItem
-                {
-                    bookId = b["bookId"]?.Value<int>() ?? 0,
-                    display = $"دفتر {b["bookNumber"]} ({b["startReceiptNumber"]}–{b["endReceiptNumber"]})"
-                }).ToList();
-                BookCombo.ItemsSource = bookList;
-                if (bookList.Count > 0)
-                    BookCombo.SelectedIndex = 0;
-            }
+            // Books are loaded when a driver is selected (see DriverCombo_SelectionChanged)
+            // — we don't load them here because we need the driver's assigned books,
+            // not unassigned "Available" books.
 
             // Add first empty row
             AddReceiptRow();
@@ -90,6 +79,30 @@ public partial class NewSessionPage : UserControl
 
         try
         {
+            // Load the driver's assigned books (not "Available" books)
+            var booksJson = await _api.GetDriverBooksJsonAsync(driverId);
+            if (booksJson != null)
+            {
+                var result = JObject.Parse(booksJson);
+                var booksArray = result["books"] as JArray;
+                if (booksArray != null)
+                {
+                    var bookList = booksArray
+                        .Where(b => (b["status"]?.ToString() == "Assigned" || b["status"]?.ToString() == "InProgress"))
+                        .Select(b => new BookComboItem
+                        {
+                            bookId = b["bookId"]?.Value<int>() ?? 0,
+                            display = $"دفتر {b["bookNumber"]} ({b["startReceiptNumber"]}–{b["endReceiptNumber"]}) — متبقي {b["remainingCount"]}"
+                        }).ToList();
+                    BookCombo.ItemsSource = bookList;
+                    if (bookList.Count > 0)
+                        BookCombo.SelectedIndex = 0;
+                    else
+                        BookCombo.ItemsSource = null;
+                }
+            }
+
+            // Load last session hint for receipt number auto-fill
             var lastJson = await _api.GetLastSessionForDriverJsonAsync(driverId);
             if (lastJson != null)
             {

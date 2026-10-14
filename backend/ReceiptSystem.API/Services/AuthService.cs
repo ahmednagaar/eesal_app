@@ -40,7 +40,8 @@ public class AuthService
             FullName = user.FullName,
             Role = user.Role,
             UserId = user.UserId,
-            ExpiresAt = expiry
+            ExpiresAt = expiry,
+            MustChangePassword = user.MustChangePassword
         };
     }
 
@@ -61,7 +62,9 @@ public class AuthService
     public string GenerateTokenForUser(User user)
     {
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "ReceiptSystemSuperSecretKey2026!@#$%^&*()DefaultKey"));
+            Encoding.UTF8.GetBytes(_config["Jwt:Key"]
+                ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                ?? throw new InvalidOperationException("JWT key not configured")));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]

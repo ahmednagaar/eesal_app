@@ -32,10 +32,12 @@ public class ReportService
             TotalReceipts = sessions.Sum(s => s.TotalReceiptsCount),
             TotalAmount = sessions.Sum(s => s.TotalAmountCollected),
             MissingReceiptsCount = sessions.Sum(s => s.DetectedGaps.Count(g => g.Status == "Open")),
+            CancelledReceiptsCount = sessions.Sum(s => s.DetectedGaps.Count(g => g.Status == "Cancelled")),
             DriverReports = sessions.GroupBy(s => s.DriverId).Select(g =>
             {
                 var driverSessions = g.ToList();
                 var driver = driverSessions.First().Driver;
+                var driverGaps = driverSessions.SelectMany(s => s.DetectedGaps).ToList();
                 return new DriverDailyReportDto
                 {
                     DriverName = driver.FullName,
@@ -51,9 +53,14 @@ public class ReportService
                             MerchantName = r.Merchant.MerchantName,
                             Amount = r.Amount
                         }).ToList(),
-                    MissingReceipts = driverSessions
-                        .SelectMany(s => s.DetectedGaps)
+                    MissingReceipts = driverGaps
                         .Where(g => g.Status == "Open")
+                        .Select(g => g.MissingReceiptNumber)
+                        .OrderBy(n => n)
+                        .ToList(),
+                    CancelledReceiptsCount = driverGaps.Count(g => g.Status == "Cancelled"),
+                    CancelledReceipts = driverGaps
+                        .Where(g => g.Status == "Cancelled")
                         .Select(g => g.MissingReceiptNumber)
                         .OrderBy(n => n)
                         .ToList()
@@ -67,32 +74,57 @@ public class ReportService
     public async Task<List<DriverPerformanceDto>> GetDriverPerformanceAsync(DateTime from, DateTime to)
     {
         var drivers = await _db.Drivers.Where(d => d.IsActive).ToListAsync();
-        var results = new List<DriverPerformanceDto>();
+        var driverIds = drivers.Select(d => d.DriverId).ToList();
 
-        foreach (var driver in drivers)
+        // Batch load all sessions and gaps in just 2 queries instead of 2*N
+        var allSessions = await _db.CollectionSessions
+            .Where(s => driverIds.Contains(s.DriverId) && s.SessionDate >= from.Date && s.SessionDate <= to.Date)
+            .GroupBy(s => s.DriverId)
+            .Select(g => new
+            {
+                DriverId = g.Key,
+                TotalSessions = g.Count(),
+                TotalReceipts = g.Sum(s => s.TotalReceiptsCount),
+                TotalAmount = g.Sum(s => s.TotalAmountCollected)
+            })
+            .ToListAsync();
+
+        var allGaps = await _db.ReceiptGaps
+            .Where(g => driverIds.Contains(g.DriverId) && g.DetectedAt >= from.Date && g.DetectedAt <= to.Date)
+            .GroupBy(g => g.DriverId)
+            .Select(g => new
+            {
+                DriverId = g.Key,
+                Total = g.Count(),
+                Resolved = g.Count(x => x.Status == "Resolved" || x.Status == "Explained"),
+                Open = g.Count(x => x.Status == "Open" || x.Status == "UnderInvestigation")
+            })
+            .ToListAsync();
+
+        var sessionLookup = allSessions.ToDictionary(s => s.DriverId);
+        var gapLookup = allGaps.ToDictionary(g => g.DriverId);
+
+        var results = drivers.Select(driver =>
         {
-            var sessions = await _db.CollectionSessions
-                .Where(s => s.DriverId == driver.DriverId && s.SessionDate >= from.Date && s.SessionDate <= to.Date)
-                .ToListAsync();
+            sessionLookup.TryGetValue(driver.DriverId, out var sessionData);
+            gapLookup.TryGetValue(driver.DriverId, out var gapData);
 
-            var totalReceipts = sessions.Sum(s => s.TotalReceiptsCount);
-            var gaps = await _db.ReceiptGaps
-                .Where(g => g.DriverId == driver.DriverId && g.DetectedAt >= from.Date && g.DetectedAt <= to.Date)
-                .ToListAsync();
+            var totalReceipts = sessionData?.TotalReceipts ?? 0;
+            var totalGaps = gapData?.Total ?? 0;
 
-            results.Add(new DriverPerformanceDto
+            return new DriverPerformanceDto
             {
                 DriverId = driver.DriverId,
                 DriverName = driver.FullName,
-                TotalSessions = sessions.Count,
+                TotalSessions = sessionData?.TotalSessions ?? 0,
                 TotalReceipts = totalReceipts,
-                TotalAmountCollected = sessions.Sum(s => s.TotalAmountCollected),
-                TotalGapsDetected = gaps.Count,
-                TotalGapsResolved = gaps.Count(g => g.Status == "Resolved" || g.Status == "Explained"),
-                TotalGapsOpen = gaps.Count(g => g.Status == "Open" || g.Status == "UnderInvestigation"),
-                GapRatePercent = totalReceipts > 0 ? Math.Round((decimal)gaps.Count / totalReceipts * 100, 2) : 0
-            });
-        }
+                TotalAmountCollected = sessionData?.TotalAmount ?? 0,
+                TotalGapsDetected = totalGaps,
+                TotalGapsResolved = gapData?.Resolved ?? 0,
+                TotalGapsOpen = gapData?.Open ?? 0,
+                GapRatePercent = totalReceipts > 0 ? Math.Round((decimal)totalGaps / totalReceipts * 100, 2) : 0
+            };
+        }).ToList();
 
         return results.OrderByDescending(r => r.TotalGapsOpen).ToList();
     }

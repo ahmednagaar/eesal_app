@@ -230,6 +230,16 @@
 
                             <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,16"/>
 
+                            <!-- No-Receipt Collection -->
+                            <TextBlock Text="📝 تحصيل بدون إيصال" FontSize="14" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <TextBlock Text="للصفوف المحددة التي تم تحصيلها بدون إيصال ورقي"
+                                       FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <Button x:Name="NoReceiptBtn" Content="📝 تسجيل بدون إيصال" Style="{StaticResource SecondaryButton}"
+                                    Click="NoReceipt_Click" Padding="14,6" FontSize="12"
+                                    Foreground="{StaticResource AccentWarningBrush}"/>
+
+                            <Border Height="1" Background="{StaticResource BorderSubtleBrush}" Margin="0,16"/>
+
                             <!-- Complete -->
                             <Button x:Name="CompleteBatchBtn" Content="✓ إتمام الدُفعة" Style="{StaticResource PrimaryButton}"
                                     Click="CompleteBatch_Click" Padding="16,8" FontSize="14"
@@ -243,6 +253,70 @@
                     </ScrollViewer>
                 </Border>
             </Grid>
+        </Border>
+
+        <!-- ═══ NO-RECEIPT COLLECTION DIALOG ═══ -->
+        <Border x:Name="NoReceiptDialog" Grid.RowSpan="2" Background="#CC000000" Visibility="Collapsed">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="24,20"
+                    MaxWidth="550" MaxHeight="500" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{StaticResource AccentWarningBrush}" BorderThickness="2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="📝 تسجيل تحصيل بدون إيصال" FontSize="16" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="NoReceiptSummary" Grid.Row="1" FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+
+                    <!-- Selected rows preview -->
+                    <DataGrid x:Name="NoReceiptPreviewGrid" Grid.Row="2" AutoGenerateColumns="False"
+                              IsReadOnly="True" CanUserAddRows="False" Background="Transparent"
+                              BorderThickness="0" FontSize="12" MaxHeight="250"
+                              RowBackground="{StaticResource BgCardBrush}"
+                              AlternatingRowBackground="{StaticResource BgSurfaceBrush}"
+                              Foreground="{StaticResource TextPrimaryBrush}"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                              HeadersVisibility="Column">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="{StaticResource BgDeepBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                <Setter Property="Padding" Value="8,5"/>
+                                <Setter Property="FontSize" Value="11"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="#" Binding="{Binding rowIndex}" Width="40"/>
+                            <DataGridTextColumn Header="التاجر" Binding="{Binding merchantName}" Width="*"/>
+                            <DataGridTextColumn Header="المبلغ" Binding="{Binding amount}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Reason -->
+                    <StackPanel Grid.Row="3" Margin="0,10,0,0">
+                        <TextBlock Text="سبب التحصيل بدون إيصال (اختياري):" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBox x:Name="NoReceiptReasonBox" Style="{StaticResource ModernTextBox}" Height="34"
+                                 Foreground="White" CaretBrush="White"/>
+                    </StackPanel>
+
+                    <!-- Buttons -->
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                        <Button x:Name="NoReceiptConfirmBtn" Content="✓ تأكيد التسجيل" Style="{StaticResource PrimaryButton}"
+                                Click="NoReceiptConfirm_Click" Padding="18,8" FontSize="13" Margin="0,0,8,0"/>
+                        <Button Content="إلغاء" Style="{StaticResource SecondaryButton}"
+                                Click="NoReceiptCancel_Click" Padding="14,8" FontSize="13"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Border>
 
         <!-- Preview Overlay -->

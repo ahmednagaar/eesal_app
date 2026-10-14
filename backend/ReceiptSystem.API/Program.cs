@@ -26,7 +26,9 @@ builder.Services.AddScoped<AjalService>();
 builder.Services.AddScoped<ErpImportService>();
 
 // JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "ReceiptSystemSuperSecretKey2026!@#$%^&*()DefaultKey";
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? throw new InvalidOperationException("JWT key is not configured. Set 'Jwt:Key' in appsettings.json or JWT_SECRET_KEY environment variable.");
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

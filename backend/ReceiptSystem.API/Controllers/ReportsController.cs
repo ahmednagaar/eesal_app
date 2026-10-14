@@ -65,6 +65,7 @@ public class ReportsController : ControllerBase
             TotalAmountToday = todaySessions.Sum(s => s.TotalAmountCollected),
             DriversToday = todaySessions.Select(s => s.DriverId).Distinct().Count(),
             OpenGapsCount = await _db.ReceiptGaps.CountAsync(g => g.Status == "Open" || g.Status == "UnderInvestigation"),
+            CancelledReceiptsCount = await _db.ReceiptGaps.CountAsync(g => g.Status == "Cancelled"),
             ReceiptsToday = todaySessions.Sum(s => s.TotalReceiptsCount),
             TodaySessions = todaySessions
         };

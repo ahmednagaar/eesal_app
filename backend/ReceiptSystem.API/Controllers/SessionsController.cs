@@ -56,9 +56,12 @@ public class SessionsController : ControllerBase
                 TotalReceiptsCount = s.TotalReceiptsCount,
                 TotalAmountCollected = s.TotalAmountCollected,
                 HasGaps = s.HasGaps,
+                IsConfirmed = s.IsConfirmed,
                 Notes = s.Notes,
                 EnteredByName = s.EnteredByUser.FullName,
-                EnteredAt = s.EnteredAt
+                EnteredAt = s.EnteredAt,
+                ImportSource = s.ImportSource,
+                OriginalFileName = s.OriginalFileName
             })
             .ToListAsync();
 
@@ -176,14 +179,25 @@ public class SessionsController : ControllerBase
         var session = await _db.CollectionSessions.FindAsync(id);
         if (session == null) return NotFound(new { message = "الجلسة غير موجودة" });
 
-        var difference = dto.ActualCashCounted - session.TotalAmountCollected;
+        // Calculate no-receipt collections linked to this session
+        var noReceiptTotal = await _db.NoReceiptCollections
+            .Where(n => n.SessionId == id)
+            .SumAsync(n => (decimal?)n.Amount) ?? 0;
+        var noReceiptCount = await _db.NoReceiptCollections
+            .Where(n => n.SessionId == id)
+            .CountAsync();
+
+        var receiptBackedAmount = session.TotalAmountCollected;
+        var expectedTotal = receiptBackedAmount + noReceiptTotal;
+        var difference = dto.ActualCashCounted - expectedTotal;
+
         session.ActualCashCounted = dto.ActualCashCounted;
         session.CashDifference = difference;
         session.CashReconciled = true;
         session.ReconciledAt = DateTime.UtcNow;
         session.ReconciledByUserId = UserId;
         await _db.SaveChangesAsync();
-        await _audit.LogAsync(UserId, "ReconcileSession", "CollectionSession", id, newValues: new { dto.ActualCashCounted, difference });
+        await _audit.LogAsync(UserId, "ReconcileSession", "CollectionSession", id, newValues: new { dto.ActualCashCounted, expectedTotal, difference });
 
         string status, message;
         if (difference == 0)
@@ -202,7 +216,17 @@ public class SessionsController : ControllerBase
             message = $"نقص {Math.Abs(difference):N2} جنيه — يجب مراجعة السائق";
         }
 
-        return Ok(new ReconcileResponseDto { Status = status, Difference = difference, Message = message });
+        return Ok(new ReconcileResponseDto
+        {
+            Status = status,
+            Difference = difference,
+            Message = message,
+            ReceiptBackedAmount = receiptBackedAmount,
+            ReceiptBackedCount = session.TotalReceiptsCount,
+            NoReceiptAmount = noReceiptTotal,
+            NoReceiptCount = noReceiptCount,
+            ExpectedTotal = expectedTotal
+        });
     }
 
     [HttpGet("missing-today")]

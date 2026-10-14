@@ -35,6 +35,7 @@ public partial class ReceiptDashboardPage : UserControl
                 StatDrivers.Text = (dash["driversToday"]?.Value<int>() ?? 0).ToString();
                 StatReceipts.Text = (dash["receiptsToday"]?.Value<int>() ?? 0).ToString();
                 StatOpenGaps.Text = (dash["openGapsCount"]?.Value<int>() ?? 0).ToString();
+                StatCancelled.Text = (dash["cancelledReceiptsCount"]?.Value<int>() ?? 0).ToString();
 
                 // Load today's sessions
                 var sessions = dash["todaySessions"] as JArray;

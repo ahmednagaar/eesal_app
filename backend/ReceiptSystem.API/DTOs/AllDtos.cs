@@ -18,6 +18,7 @@ public class TokenResponseDto
     public string Role { get; set; } = string.Empty;
     public int UserId { get; set; }
     public DateTime ExpiresAt { get; set; }
+    public bool MustChangePassword { get; set; }
 }
 
 public class UserInfoDto
@@ -126,6 +127,7 @@ public class BookDto
 
     // Lifecycle tracking
     public int UsedReceipts { get; set; }
+    public int CancelledReceipts { get; set; }
     public int RemainingReceipts { get; set; }
     public DateTime? ReturnedDate { get; set; }
     public bool IsVerified { get; set; }
@@ -181,6 +183,7 @@ public class BookDetailDto
 
     // Usage summary
     public int UsedReceipts { get; set; }
+    public int CancelledReceipts { get; set; }
     public int RemainingReceipts { get; set; }
     public double UsagePercent { get; set; }
 
@@ -203,6 +206,8 @@ public class BookGapDto
     public string? ReasonCategory { get; set; }
     public string? Resolution { get; set; }
     public DateTime DetectedAt { get; set; }
+    public string? CancelledByReason { get; set; }
+    public DateTime? CancelledAt { get; set; }
 }
 
 public class BookReceiptDto

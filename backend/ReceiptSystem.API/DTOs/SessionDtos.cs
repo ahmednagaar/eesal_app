@@ -15,6 +15,7 @@ public class SessionDto
     public int TotalReceiptsCount { get; set; }
     public decimal TotalAmountCollected { get; set; }
     public bool HasGaps { get; set; }
+    public bool IsConfirmed { get; set; }
     public string? Notes { get; set; }
     public string EnteredByName { get; set; } = string.Empty;
     public DateTime EnteredAt { get; set; }
@@ -78,7 +79,7 @@ public class GapDto
 {
     public int GapId { get; set; }
     public int MissingReceiptNumber { get; set; }
-    public int DetectedInSessionId { get; set; }
+    public int? DetectedInSessionId { get; set; }
     public int DriverId { get; set; }
     public string DriverName { get; set; } = string.Empty;
     public int? BookId { get; set; }
@@ -89,6 +90,10 @@ public class GapDto
     public string? Resolution { get; set; }
     public DateTime? ResolvedAt { get; set; }
     public string? ResolvedByName { get; set; }
+    // Cancellation fields
+    public string? CancelledByReason { get; set; }
+    public string? CancelledByName { get; set; }
+    public DateTime? CancelledAt { get; set; }
 }
 
 public class ResolveGapDto
@@ -99,11 +104,38 @@ public class ResolveGapDto
     public string? Resolution { get; set; }
 }
 
+// ── Receipt Cancellation (لاغي) ──
+public class CancelReceiptsDto
+{
+    [Required(ErrorMessage = "رقم الدفتر مطلوب")]
+    public int BookId { get; set; }
+
+    [Required(ErrorMessage = "أرقام الإيصالات مطلوبة")]
+    [MinLength(1, ErrorMessage = "يجب اختيار إيصال واحد على الأقل")]
+    public List<int> ReceiptNumbers { get; set; } = new();
+
+    [Required(ErrorMessage = "سبب الإلغاء مطلوب")]
+    public string ReasonCategory { get; set; } = string.Empty; // Cancelled_BookArchive | Cancelled_Damaged | Cancelled_Other
+
+    [MaxLength(500)]
+    public string? Reason { get; set; }
+}
+
+public class CancelReceiptsResponseDto
+{
+    public bool Success { get; set; }
+    public int CancelledCount { get; set; }
+    public int AlreadyCancelledCount { get; set; }
+    public List<int> ConflictNumbers { get; set; } = new(); // Numbers already used for collections
+    public string? Error { get; set; }
+}
+
 public class GapSummaryDto
 {
     public int OpenCount { get; set; }
     public int UnderInvestigationCount { get; set; }
     public int ResolvedCount { get; set; }
+    public int CancelledCount { get; set; }
     public int TotalCount { get; set; }
 }
 
@@ -116,6 +148,7 @@ public class DailyReportDto
     public int TotalReceipts { get; set; }
     public decimal TotalAmount { get; set; }
     public int MissingReceiptsCount { get; set; }
+    public int CancelledReceiptsCount { get; set; }
     public List<DriverDailyReportDto> DriverReports { get; set; } = new();
 }
 
@@ -127,6 +160,8 @@ public class DriverDailyReportDto
     public decimal TotalAmount { get; set; }
     public List<ReceiptLineDto> Receipts { get; set; } = new();
     public List<int> MissingReceipts { get; set; } = new();
+    public int CancelledReceiptsCount { get; set; }
+    public List<int> CancelledReceipts { get; set; } = new();
 }
 
 public class ReceiptLineDto
@@ -166,6 +201,7 @@ public class DashboardDto
     public decimal TotalAmountToday { get; set; }
     public int DriversToday { get; set; }
     public int OpenGapsCount { get; set; }
+    public int CancelledReceiptsCount { get; set; }
     public int ReceiptsToday { get; set; }
     public List<SessionDto> TodaySessions { get; set; } = new();
 }
@@ -188,4 +224,60 @@ public class ReconcileResponseDto
     public string Status { get; set; } = string.Empty; // match | surplus | shortage
     public decimal Difference { get; set; }
     public string Message { get; set; } = string.Empty;
+
+    // Breakdown by collection type
+    public decimal ReceiptBackedAmount { get; set; }
+    public int ReceiptBackedCount { get; set; }
+    public decimal NoReceiptAmount { get; set; }
+    public int NoReceiptCount { get; set; }
+    public decimal ExpectedTotal { get; set; }
+}
+
+// ── No-Receipt Collections (تحصيل بدون إيصال) ──
+public class CreateNoReceiptCollectionDto
+{
+    public int? BatchId { get; set; }
+    public List<int>? ImportRowIds { get; set; }
+    public int? DriverId { get; set; }
+
+    [Required(ErrorMessage = "بيانات التحصيل مطلوبة")]
+    [MinLength(1)]
+    public List<NoReceiptCollectionItemDto> Items { get; set; } = new();
+
+    public string? Reason { get; set; }
+}
+
+public class NoReceiptCollectionItemDto
+{
+    public int? MerchantId { get; set; }
+    public string? MerchantNameRaw { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime? CollectionDate { get; set; }
+    public int? ImportRowId { get; set; }
+}
+
+public class NoReceiptCollectionDto
+{
+    public int Id { get; set; }
+    public int? SessionId { get; set; }
+    public int? BatchId { get; set; }
+    public int? DriverId { get; set; }
+    public string? DriverName { get; set; }
+    public int? MerchantId { get; set; }
+    public string? MerchantName { get; set; }
+    public string? MerchantNameRaw { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime CollectionDate { get; set; }
+    public string? Reason { get; set; }
+    public string? Notes { get; set; }
+    public string EnteredByName { get; set; } = string.Empty;
+    public DateTime EnteredAt { get; set; }
+}
+
+public class CreateNoReceiptCollectionResponseDto
+{
+    public bool Success { get; set; }
+    public int CreatedCount { get; set; }
+    public decimal TotalAmount { get; set; }
+    public string? Error { get; set; }
 }

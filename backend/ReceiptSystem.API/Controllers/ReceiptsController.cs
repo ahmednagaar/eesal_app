@@ -16,12 +16,14 @@ public class ReceiptsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly AuditService _audit;
     private readonly SessionService _sessionService;
+    private readonly GapDetectionService _gapService;
 
-    public ReceiptsController(AppDbContext db, AuditService audit, SessionService sessionService)
+    public ReceiptsController(AppDbContext db, AuditService audit, SessionService sessionService, GapDetectionService gapService)
     {
         _db = db;
         _audit = audit;
         _sessionService = sessionService;
+        _gapService = gapService;
     }
 
     private int UserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
@@ -65,6 +67,8 @@ public class ReceiptsController : ControllerBase
         if (receipt == null) return NotFound(new { message = "الإيصال غير موجود" });
         if (receipt.Session.IsConfirmed && !User.IsInRole("Admin"))
             return StatusCode(403, new { message = "الجلسة مقفلة ولا يمكن تعديلها" });
+        if (dto.Amount <= 0)
+            return BadRequest(new { message = "المبلغ يجب أن يكون أكبر من صفر" });
         var old = new { receipt.Amount, receipt.MerchantId, receipt.IsPartialPayment, receipt.Notes };
         receipt.Amount = dto.Amount;
         receipt.MerchantId = dto.MerchantId;
@@ -94,6 +98,11 @@ public class ReceiptsController : ControllerBase
 
         // Recalculate session totals after deletion
         await _sessionService.RecalculateSessionTotalsAsync(sessionId);
+
+        // Re-run gap detection — the deleted receipt number is now missing
+        // from the session, so HasGaps and ReceiptGaps must be updated
+        await _gapService.DetectAndSaveGapsAsync(sessionId);
+
         await _audit.LogAsync(UserId, "DeleteReceipt", "Receipt", id);
 
         return Ok(new { message = "تم حذف الإيصال بنجاح" });

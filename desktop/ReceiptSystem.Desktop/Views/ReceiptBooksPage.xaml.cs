@@ -197,7 +197,8 @@ public partial class ReceiptBooksPage : UserControl
                 var st = b["status"]?.ToString() ?? "Available";
                 int start = b["startReceiptNumber"]?.Value<int>() ?? 0;
                 int end = b["endReceiptNumber"]?.Value<int>() ?? 0;
-                int usedCount = b["receipts"] is JArray receipts ? receipts.Count : 0;
+                int usedCount = b["usedReceipts"]?.Value<int>() ?? (b["receipts"] is JArray receipts ? receipts.Count : 0);
+                int cancelledCount = b["cancelledReceipts"]?.Value<int>() ?? 0;
                 int total = end - start + 1;
 
                 return new
@@ -226,7 +227,8 @@ public partial class ReceiptBooksPage : UserControl
                                  ?? b["driverName"]?.ToString() ?? "—",
                     assignedDate = b["assignedDate"]?.ToString()?.Substring(0, Math.Min(10, b["assignedDate"]?.ToString()?.Length ?? 0)) ?? "—",
                     usedReceipts = usedCount,
-                    remainingReceipts = total - usedCount,
+                    cancelledReceipts = cancelledCount,
+                    remainingReceipts = total - usedCount - cancelledCount,
                     isVerified = b["isVerified"]?.Value<bool>() ?? false,
                     verifiedDisplay = (b["isVerified"]?.Value<bool>() ?? false) ? "✓" : "—"
                 };
@@ -403,6 +405,9 @@ public partial class ReceiptBooksPage : UserControl
     // Return — with reconciliation preview
     // ══════════════════════════════════════
 
+    // Cached unused numbers for "cancel remaining" on return
+    private List<int> _returnUnusedNumbers = new();
+
     private async void Return_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedBookId <= 0) return;
@@ -430,6 +435,21 @@ public partial class ReceiptBooksPage : UserControl
                 ReconcMissingPanel.Visibility = Visibility.Collapsed;
             }
 
+            // Populate cancel-remaining panel
+            var unusedArr = data["unusedReceiptNumbers"] as JArray;
+            _returnUnusedNumbers = unusedArr?.Select(n => n.Value<int>()).ToList() ?? new List<int>();
+            if (_returnUnusedNumbers.Count > 0)
+            {
+                CancelRemainingPanel.Visibility = Visibility.Visible;
+                CancelRemainingCheck.IsChecked = false;
+                CancelRemainingInfo.Text = $"{_returnUnusedNumbers.Count} إيصال غير مستخدم سيتم إلغاؤه تلقائياً (أرشفة الدفتر)";
+            }
+            else
+            {
+                CancelRemainingPanel.Visibility = Visibility.Collapsed;
+                CancelRemainingCheck.IsChecked = false;
+            }
+
             ReturnReconcNotes.Text = "";
             ReturnReconcDialog.Visibility = Visibility.Visible;
         }
@@ -446,7 +466,29 @@ public partial class ReceiptBooksPage : UserControl
             bool ok = await _api.ReturnBookAsync(_selectedBookId, ReturnReconcNotes.Text.Trim());
             if (ok)
             {
-                ToastHelper.ShowSuccess(RootGrid, "✓ تم تسجيل إرجاع الدفتر");
+                // Cancel remaining unused receipts if checked
+                if (CancelRemainingCheck.IsChecked == true && _returnUnusedNumbers.Count > 0)
+                {
+                    try
+                    {
+                        await _api.CancelReceiptsAsync(
+                            _selectedBookId,
+                            _returnUnusedNumbers,
+                            "Cancelled_BookArchive",
+                            "إلغاء تلقائي عند إرجاع الدفتر");
+                        ToastHelper.ShowSuccess(RootGrid, $"✓ تم إرجاع الدفتر وإلغاء {_returnUnusedNumbers.Count} إيصال");
+                    }
+                    catch
+                    {
+                        // Return succeeded but cancel failed — inform but don't block
+                        ToastHelper.ShowWarning(RootGrid, "✓ تم الإرجاع، لكن فشل إلغاء الإيصالات المتبقية — يمكنك إلغاؤها يدوياً من تفاصيل الدفتر");
+                    }
+                }
+                else
+                {
+                    ToastHelper.ShowSuccess(RootGrid, "✓ تم تسجيل إرجاع الدفتر");
+                }
+
                 ReturnReconcDialog.Visibility = Visibility.Collapsed;
                 await LoadBooksForSeriesAsync(_selectedSeriesId);
                 await LoadSeriesAsync();
@@ -520,6 +562,11 @@ public partial class ReceiptBooksPage : UserControl
     // Book Detail
     // ══════════════════════════════════════
 
+    // Book detail data cached for cancel dialog
+    private int _detailBookStart;
+    private int _detailBookEnd;
+    private JObject? _detailBookData;
+
     private async void ShowDetail_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedBookId <= 0) return;
@@ -530,14 +577,24 @@ public partial class ReceiptBooksPage : UserControl
             if (json == null) { ToastHelper.ShowError(RootGrid, "خطأ في تحميل التفاصيل"); return; }
 
             var d = JObject.Parse(json);
+            _detailBookData = d;
+            _detailBookStart = d["startReceiptNumber"]?.Value<int>() ?? 0;
+            _detailBookEnd = d["endReceiptNumber"]?.Value<int>() ?? 0;
+
             DetailTitle.Text = $"📖 دفتر {d["displayName"]}";
-            DetailSubtitle.Text = $"النطاق: {d["startReceiptNumber"]}–{d["endReceiptNumber"]} | السائق: {d["driverName"] ?? "—"} | الحالة: {d["status"]}";
+            DetailSubtitle.Text = $"النطاق: {_detailBookStart}–{_detailBookEnd} | السائق: {d["driverName"] ?? "—"} | الحالة: {d["status"]}";
 
             DetailTotal.Text = d["totalReceipts"]?.ToString() ?? "0";
             DetailUsed.Text = d["usedReceipts"]?.ToString() ?? "0";
             DetailRemaining.Text = d["remainingReceipts"]?.ToString() ?? "0";
             DetailMissing.Text = d["missingReceipts"]?.ToString() ?? "0";
+            DetailCancelled.Text = d["cancelledReceipts"]?.ToString() ?? "0";
             DetailUsagePercent.Text = $"{d["usagePercent"]}%";
+
+            // Show/hide cancel button based on book status (only for assigned/inprogress/returned books)
+            bool canCancel = _api.CurrentUserRole?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true
+                          || _api.CurrentUserRole?.Equals("Treasury", StringComparison.OrdinalIgnoreCase) == true;
+            CancelReceiptsBtn.Visibility = canCancel ? Visibility.Visible : Visibility.Collapsed;
 
             // Receipts tab
             var receipts = d["receipts"] as JArray;
@@ -549,7 +606,7 @@ public partial class ReceiptBooksPage : UserControl
                 dateDisplay = r["collectionDate"]?.ToString()?.Substring(0, Math.Min(10, r["collectionDate"]?.ToString()?.Length ?? 0)) ?? "—"
             }).ToList();
 
-            // Gaps tab
+            // Gaps tab — includes both missing and cancelled
             var gaps = d["gaps"] as JArray;
             DetailGapsGrid.ItemsSource = gaps?.Select(g => new
             {
@@ -559,9 +616,11 @@ public partial class ReceiptBooksPage : UserControl
                     "Open" => "مفتوح",
                     "Resolved" => "تم الحل",
                     "Explained" => "موضح",
+                    "Cancelled" => "🚫 ملغي",
                     _ => g["status"]?.ToString() ?? "—"
                 },
                 reasonCategory = g["reasonCategory"]?.ToString() ?? "—",
+                cancelReason = g["cancelledByReason"]?.ToString() ?? "—",
                 detectedDisplay = g["detectedAt"]?.ToString()?.Substring(0, Math.Min(10, g["detectedAt"]?.ToString()?.Length ?? 0)) ?? "—"
             }).ToList();
 
@@ -575,6 +634,11 @@ public partial class ReceiptBooksPage : UserControl
                 dateDisplay = m["performedAt"]?.ToString()?.Substring(0, Math.Min(16, m["performedAt"]?.ToString()?.Length ?? 0)) ?? "—"
             }).ToList();
 
+            // ══════════════════════════════════════
+            // Receipt Map — visual grid of every number
+            // ══════════════════════════════════════
+            BuildReceiptMap(d);
+
             BookDetailDialog.Visibility = Visibility.Visible;
         }
         catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
@@ -583,6 +647,258 @@ public partial class ReceiptBooksPage : UserControl
     private void CloseDetail_Click(object sender, RoutedEventArgs e) => BookDetailDialog.Visibility = Visibility.Collapsed;
     private void BookDetailOverlay_Click(object sender, MouseButtonEventArgs e) => BookDetailDialog.Visibility = Visibility.Collapsed;
     private void BookDetailInner_Click(object sender, MouseButtonEventArgs e) => e.Handled = true;
+
+    // ══════════════════════════════════════
+    // Receipt Map — visual status grid
+    // ══════════════════════════════════════
+
+    private void BuildReceiptMap(JObject bookData)
+    {
+        ReceiptMapPanel.Children.Clear();
+
+        int start = bookData["startReceiptNumber"]?.Value<int>() ?? 0;
+        int end = bookData["endReceiptNumber"]?.Value<int>() ?? 0;
+        if (start <= 0 || end <= 0 || end < start) return;
+
+        // Build lookup dictionaries for O(1) status resolution
+        var usedReceipts = new Dictionary<int, JToken>();
+        if (bookData["receipts"] is JArray receiptsArr)
+        {
+            foreach (var r in receiptsArr)
+            {
+                var num = r["receiptNumber"]?.Value<int>() ?? 0;
+                if (num > 0) usedReceipts[num] = r;
+            }
+        }
+
+        var gapsByNumber = new Dictionary<int, JToken>();
+        if (bookData["gaps"] is JArray gapsArr)
+        {
+            foreach (var g in gapsArr)
+            {
+                var num = g["missingReceiptNumber"]?.Value<int>() ?? 0;
+                if (num > 0) gapsByNumber[num] = g;
+            }
+        }
+
+        // Build tiles
+        for (int num = start; num <= end; num++)
+        {
+            string status;
+            System.Windows.Media.Color bgColor;
+            System.Windows.Media.Color fgColor;
+            string tooltip;
+
+            if (usedReceipts.TryGetValue(num, out var receipt))
+            {
+                status = "Used";
+                bgColor = Color.FromArgb(0x33, 0x22, 0xC5, 0x5E);
+                fgColor = Color.FromRgb(0x22, 0xC5, 0x5E);
+                var merchant = receipt["merchantName"]?.ToString() ?? "";
+                var amount = receipt["amount"]?.Value<decimal>() ?? 0;
+                tooltip = $"✅ مستخدم\n{merchant}\n{amount:N2} جنيه";
+            }
+            else if (gapsByNumber.TryGetValue(num, out var gap))
+            {
+                var gapStatus = gap["status"]?.ToString() ?? "Open";
+                if (gapStatus == "Cancelled")
+                {
+                    status = "Cancelled";
+                    bgColor = Color.FromArgb(0x33, 0xFB, 0xBF, 0x24);
+                    fgColor = Color.FromRgb(0xFB, 0xBF, 0x24);
+                    var reason = gap["cancelledByReason"]?.ToString() ?? gap["reasonCategory"]?.ToString() ?? "—";
+                    tooltip = $"🚫 ملغي\n{reason}";
+                }
+                else
+                {
+                    status = "Missing";
+                    bgColor = Color.FromArgb(0x33, 0xEF, 0x44, 0x44);
+                    fgColor = Color.FromRgb(0xEF, 0x44, 0x44);
+                    var reason = gap["reasonCategory"]?.ToString() ?? "—";
+                    tooltip = $"⚠️ مفقود ({gapStatus})\n{reason}";
+                }
+            }
+            else
+            {
+                status = "Available";
+                bgColor = Color.FromArgb(0x22, 0x88, 0x88, 0x88);
+                fgColor = Color.FromRgb(0x88, 0x88, 0x88);
+                tooltip = "⬜ متاح — لم يُستخدم بعد";
+            }
+
+            var tile = new Border
+            {
+                Background = new SolidColorBrush(bgColor),
+                CornerRadius = new CornerRadius(4),
+                Width = 52, Height = 32,
+                Margin = new Thickness(2),
+                ToolTip = tooltip,
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+
+            var text = new TextBlock
+            {
+                Text = num.ToString(),
+                FontSize = 10,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(fgColor),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            tile.Child = text;
+            ReceiptMapPanel.Children.Add(tile);
+        }
+    }
+
+    // ══════════════════════════════════════
+    // Cancel Receipts (لاغي)
+    // ══════════════════════════════════════
+
+    private void OpenCancelDialog_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedBookId <= 0 || _detailBookData == null) return;
+
+        CancelDialogBookLabel.Text = $"دفتر {_detailBookData["displayName"]} — النطاق: {_detailBookStart}–{_detailBookEnd}";
+        CancelRangeFrom.Text = "";
+        CancelRangeTo.Text = "";
+        CancelReasonCombo.SelectedIndex = -1;
+        CancelReasonText.Text = "";
+        CancelPreviewText.Text = "أدخل نطاق الأرقام لمعاينة الإيصالات التي سيتم إلغاؤها";
+        CancelPreviewCount.Text = "";
+        CancelReceiptsDialog.Visibility = Visibility.Visible;
+    }
+
+    private void CancelRange_Changed(object sender, TextChangedEventArgs e)
+    {
+        UpdateCancelPreview();
+    }
+
+    private void UpdateCancelPreview()
+    {
+        if (CancelPreviewText == null || CancelPreviewCount == null) return;
+
+        if (!int.TryParse(CancelRangeFrom.Text, out int from) || !int.TryParse(CancelRangeTo.Text, out int to))
+        {
+            CancelPreviewText.Text = "أدخل نطاق الأرقام لمعاينة الإيصالات التي سيتم إلغاؤها";
+            CancelPreviewCount.Text = "";
+            return;
+        }
+
+        // Clamp to book range
+        from = Math.Max(from, _detailBookStart);
+        to = Math.Min(to, _detailBookEnd);
+
+        if (from > to)
+        {
+            CancelPreviewText.Text = "النطاق غير صحيح (الرقم الأول أكبر من الثاني)";
+            CancelPreviewCount.Text = "";
+            return;
+        }
+
+        // Get used and already cancelled numbers from cached data
+        var usedNumbers = new HashSet<int>();
+        var cancelledNumbers = new HashSet<int>();
+
+        if (_detailBookData?["receipts"] is JArray receipts)
+            foreach (var r in receipts)
+                usedNumbers.Add(r["receiptNumber"]?.Value<int>() ?? 0);
+
+        if (_detailBookData?["gaps"] is JArray gaps)
+            foreach (var g in gaps)
+                if (g["status"]?.ToString() == "Cancelled")
+                    cancelledNumbers.Add(g["missingReceiptNumber"]?.Value<int>() ?? 0);
+
+        var numbersToCancel = Enumerable.Range(from, to - from + 1)
+            .Where(n => !usedNumbers.Contains(n) && !cancelledNumbers.Contains(n))
+            .ToList();
+
+        var skippedUsed = Enumerable.Range(from, to - from + 1).Count(n => usedNumbers.Contains(n));
+        var skippedCancelled = Enumerable.Range(from, to - from + 1).Count(n => cancelledNumbers.Contains(n));
+
+        string preview = $"سيتم إلغاء الأرقام من {from} إلى {to}";
+        if (skippedUsed > 0) preview += $"\n⏭ سيتم تجاوز {skippedUsed} إيصال مستخدم";
+        if (skippedCancelled > 0) preview += $"\n⏭ سيتم تجاوز {skippedCancelled} إيصال ملغي مسبقاً";
+
+        CancelPreviewText.Text = preview;
+        CancelPreviewCount.Text = $"إجمالي الإيصالات التي سيتم إلغاؤها: {numbersToCancel.Count}";
+    }
+
+    private void CancelAllRemaining_Click(object sender, RoutedEventArgs e)
+    {
+        // Fill from/to with the book range — the preview will automatically exclude used+cancelled
+        CancelRangeFrom.Text = _detailBookStart.ToString();
+        CancelRangeTo.Text = _detailBookEnd.ToString();
+        UpdateCancelPreview();
+    }
+
+    private async void CancelReceiptsConfirm_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(CancelRangeFrom.Text, out int from) || !int.TryParse(CancelRangeTo.Text, out int to))
+        { ToastHelper.ShowError(RootGrid, "أدخل نطاق الأرقام"); return; }
+
+        from = Math.Max(from, _detailBookStart);
+        to = Math.Min(to, _detailBookEnd);
+        if (from > to) { ToastHelper.ShowError(RootGrid, "النطاق غير صحيح"); return; }
+
+        var reasonItem = CancelReasonCombo.SelectedItem as System.Windows.Controls.ComboBoxItem;
+        if (reasonItem == null) { ToastHelper.ShowError(RootGrid, "اختر سبب الإلغاء"); return; }
+        string reasonCategory = reasonItem.Tag?.ToString() ?? "Cancelled_Other";
+
+        // Build list of numbers to cancel (exclude used and already cancelled)
+        var usedNumbers = new HashSet<int>();
+        var cancelledNumbers = new HashSet<int>();
+
+        if (_detailBookData?["receipts"] is JArray receipts)
+            foreach (var r in receipts)
+                usedNumbers.Add(r["receiptNumber"]?.Value<int>() ?? 0);
+
+        if (_detailBookData?["gaps"] is JArray gaps)
+            foreach (var g in gaps)
+                if (g["status"]?.ToString() == "Cancelled")
+                    cancelledNumbers.Add(g["missingReceiptNumber"]?.Value<int>() ?? 0);
+
+        var numbersToCancel = Enumerable.Range(from, to - from + 1)
+            .Where(n => !usedNumbers.Contains(n) && !cancelledNumbers.Contains(n))
+            .ToList();
+
+        if (numbersToCancel.Count == 0)
+        { ToastHelper.ShowError(RootGrid, "لا توجد إيصالات قابلة للإلغاء في هذا النطاق"); return; }
+
+        // Confirm
+        var confirm = MessageBox.Show(
+            $"هل أنت متأكد من إلغاء {numbersToCancel.Count} إيصال؟\nلا يمكن التراجع عن هذا الإجراء.",
+            "تأكيد إلغاء الإيصالات", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        CancelReceiptsConfirmBtn.IsEnabled = false;
+        try
+        {
+            var result = await _api.CancelReceiptsAsync(
+                _selectedBookId,
+                numbersToCancel,
+                reasonCategory,
+                CancelReasonText.Text.Trim());
+
+            if (result != null)
+            {
+                int cancelled = result["cancelledCount"]?.Value<int>() ?? 0;
+                ToastHelper.ShowSuccess(RootGrid, $"✓ تم إلغاء {cancelled} إيصال بنجاح");
+                CancelReceiptsDialog.Visibility = Visibility.Collapsed;
+
+                // Refresh the book detail dialog to show updated data
+                ShowDetail_Click(sender, e);
+
+                // Refresh the books list
+                if (_selectedSeriesId > 0)
+                    await LoadBooksForSeriesAsync(_selectedSeriesId);
+            }
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+        finally { CancelReceiptsConfirmBtn.IsEnabled = true; }
+    }
+
+    private void CancelReceiptsCancel_Click(object sender, RoutedEventArgs e) => CancelReceiptsDialog.Visibility = Visibility.Collapsed;
 
     // ══════════════════════════════════════
     // Driver Portfolio

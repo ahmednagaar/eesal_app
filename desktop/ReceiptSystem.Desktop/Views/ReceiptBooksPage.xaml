@@ -240,6 +240,7 @@
                         <DataGridTextColumn Header="السائق" Binding="{Binding driverName}" Width="*"/>
                         <DataGridTextColumn Header="تاريخ التسليم" Binding="{Binding assignedDate}" Width="100"/>
                         <DataGridTextColumn Header="مستخدم" Binding="{Binding usedReceipts}" Width="70"/>
+                        <DataGridTextColumn Header="ملغى" Binding="{Binding cancelledReceipts}" Width="60"/>
                         <DataGridTextColumn Header="متبقي" Binding="{Binding remainingReceipts}" Width="70"/>
                         <DataGridTextColumn Header="تم التحقق" Binding="{Binding verifiedDisplay}" Width="80"/>
                     </DataGrid.Columns>
@@ -431,6 +432,20 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Cancel remaining unused receipts option -->
+                    <Border x:Name="CancelRemainingPanel" Background="#1AFBBF24" CornerRadius="6"
+                            Padding="10,8" Margin="0,0,0,10" Visibility="Collapsed"
+                            BorderBrush="{StaticResource AccentWarningBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <CheckBox x:Name="CancelRemainingCheck" Foreground="{StaticResource TextPrimaryBrush}"
+                                      FontSize="13" Margin="0,0,0,4" FlowDirection="RightToLeft">
+                                <TextBlock Text="🚫 إلغاء باقي الإيصالات غير المستخدمة (لاغي — أرشفة)" TextWrapping="Wrap"/>
+                            </CheckBox>
+                            <TextBlock x:Name="CancelRemainingInfo" FontSize="11"
+                                       Foreground="{StaticResource TextMutedBrush}" Margin="22,0,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="ملاحظات الإرجاع (اختياري):" FontSize="13" Margin="0,4,0,6"/>
                     <TextBox x:Name="ReturnReconcNotes" Style="{StaticResource ModernTextBox}" Height="50"
                              TextWrapping="Wrap" AcceptsReturn="True"
@@ -451,7 +466,7 @@
         <Border x:Name="BookDetailDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed"
                 MouseLeftButtonDown="BookDetailOverlay_Click">
             <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="28,20"
-                    MaxWidth="750" MaxHeight="600" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MaxWidth="850" MaxHeight="700" HorizontalAlignment="Center" VerticalAlignment="Center"
                     BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2"
                     MouseLeftButtonDown="BookDetailInner_Click">
                 <Grid>
@@ -466,19 +481,25 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <TextBlock x:Name="DetailTitle" FontSize="20" FontWeight="Bold"/>
                             <TextBlock x:Name="DetailSubtitle" FontSize="13"
                                        Foreground="{StaticResource TextSecondaryBrush}"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Content="✕" Style="{StaticResource SecondaryButton}"
+                        <Button x:Name="CancelReceiptsBtn" Grid.Column="1" Content="🚫 إلغاء إيصالات (لاغي)"
+                                Style="{StaticResource SecondaryButton}" Padding="10,6" FontSize="12"
+                                Margin="0,0,8,0" Click="OpenCancelDialog_Click"
+                                Foreground="#EF4444" BorderBrush="#EF4444"/>
+                        <Button Grid.Column="2" Content="✕" Style="{StaticResource SecondaryButton}"
                                 Padding="8,4" FontSize="14" Click="CloseDetail_Click"/>
                     </Grid>
 
                     <!-- Stats Row -->
                     <Grid Grid.Row="1" Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
@@ -512,6 +533,14 @@
                                 <TextBlock Text="مفقود" FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
                             </StackPanel>
                         </Border>
+                        <!-- Cancelled stat - extends grid to 6 columns -->
+                        <Border Grid.Column="5" Background="#33EF4444" CornerRadius="8" Padding="8,6" Margin="2,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="DetailCancelled" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"
+                                           Foreground="#EF4444"/>
+                                <TextBlock Text="ملغي" FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </Border>
                         <Border Grid.Column="4" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="8,6" Margin="4,0,0,0">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock x:Name="DetailUsagePercent" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"
@@ -521,8 +550,34 @@
                         </Border>
                     </Grid>
 
-                    <!-- Tabs: Receipts / Gaps / Movements -->
+                    <!-- Tabs: Map / Receipts / Gaps / Movements -->
                     <TabControl Grid.Row="2" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimaryBrush}">
+                        <TabItem Header="📊 خريطة الإيصالات" Foreground="{StaticResource TextPrimaryBrush}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <!-- Legend -->
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,8" HorizontalAlignment="Center">
+                                    <Border Background="#2222C55E" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
+                                        <TextBlock Text="✅ مستخدم" FontSize="10" Foreground="#22C55E"/>
+                                    </Border>
+                                    <Border Background="#22EF4444" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
+                                        <TextBlock Text="⚠️ مفقود" FontSize="10" Foreground="#EF4444"/>
+                                    </Border>
+                                    <Border Background="#22FBBF24" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
+                                        <TextBlock Text="🚫 ملغي" FontSize="10" Foreground="#FBBF24"/>
+                                    </Border>
+                                    <Border Background="#22888888" CornerRadius="4" Padding="8,3">
+                                        <TextBlock Text="⬜ متاح" FontSize="10" Foreground="#888888"/>
+                                    </Border>
+                                </StackPanel>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                    <WrapPanel x:Name="ReceiptMapPanel" Margin="0,0,0,8"/>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
                         <TabItem Header="الإيصالات" Foreground="{StaticResource TextPrimaryBrush}">
                             <DataGrid x:Name="DetailReceiptsGrid" AutoGenerateColumns="False" IsReadOnly="True"
                                       CanUserAddRows="False" Background="Transparent" BorderThickness="0"
@@ -550,9 +605,10 @@
                                       HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
                                       HeadersVisibility="Column">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding missingReceiptNumber}" Width="100"/>
-                                    <DataGridTextColumn Header="الحالة" Binding="{Binding statusDisplay}" Width="100"/>
-                                    <DataGridTextColumn Header="السبب" Binding="{Binding reasonCategory}" Width="120"/>
+                                    <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding missingReceiptNumber}" Width="90"/>
+                                    <DataGridTextColumn Header="الحالة" Binding="{Binding statusDisplay}" Width="90"/>
+                                    <DataGridTextColumn Header="السبب" Binding="{Binding reasonCategory}" Width="110"/>
+                                    <DataGridTextColumn Header="سبب الإلغاء" Binding="{Binding cancelReason}" Width="120"/>
                                     <DataGridTextColumn Header="تاريخ الاكتشاف" Binding="{Binding detectedDisplay}" Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
@@ -586,6 +642,102 @@
                             </ItemsControl>
                         </TabItem>
                     </TabControl>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- ═══ CANCEL RECEIPTS DIALOG (لاغي) ═══ -->
+        <Border x:Name="CancelReceiptsDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="28,20"
+                    MaxWidth="550" MaxHeight="600" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="#EF4444" BorderThickness="2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="🚫 إلغاء إيصالات (لاغي)" FontSize="18" FontWeight="Bold"
+                                   HorizontalAlignment="Center" Foreground="#EF4444"/>
+                        <TextBlock x:Name="CancelDialogBookLabel" FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- Selection Mode -->
+                    <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                        <TextBlock Text="طريقة التحديد:" FontSize="13" Margin="0,0,0,6"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <TextBlock Text="من:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBox x:Name="CancelRangeFrom" Style="{StaticResource ModernTextBox}" Width="90" Height="34"
+                                         FlowDirection="LeftToRight" TextAlignment="Center"
+                                         Foreground="White" CaretBrush="White"
+                                         TextChanged="CancelRange_Changed"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0">
+                                <TextBlock Text="إلى:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBox x:Name="CancelRangeTo" Style="{StaticResource ModernTextBox}" Width="90" Height="34"
+                                         FlowDirection="LeftToRight" TextAlignment="Center"
+                                         Foreground="White" CaretBrush="White"
+                                         TextChanged="CancelRange_Changed"/>
+                            </StackPanel>
+                            <Button Grid.Column="2" x:Name="CancelAllRemainingBtn" Content="إلغاء كل المتبقي"
+                                    Style="{StaticResource SecondaryButton}" Padding="10,6" FontSize="11"
+                                    Click="CancelAllRemaining_Click" Foreground="#EF4444" BorderBrush="#EF4444"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Reason -->
+                    <StackPanel Grid.Row="2" Margin="0,0,0,10">
+                        <TextBlock Text="سبب الإلغاء:" FontSize="13" Margin="0,0,0,6"/>
+                        <ComboBox x:Name="CancelReasonCombo" Height="34" FontSize="13">
+                            <ComboBoxItem Content="أرشفة الدفتر (Book Archive)" Tag="Cancelled_BookArchive"/>
+                            <ComboBoxItem Content="إيصال تالف (Damaged)" Tag="Cancelled_Damaged"/>
+                            <ComboBoxItem Content="سبب آخر (Other)" Tag="Cancelled_Other"/>
+                        </ComboBox>
+                        <TextBox x:Name="CancelReasonText" Style="{StaticResource ModernTextBox}" Height="40"
+                                 TextWrapping="Wrap" AcceptsReturn="False" Margin="0,6,0,0"
+                                 Foreground="White" CaretBrush="White"/>
+                    </StackPanel>
+
+                    <!-- Preview -->
+                    <Border Grid.Row="3" Background="{StaticResource BgInputBrush}" CornerRadius="8" Padding="12,8">
+                        <StackPanel>
+                            <TextBlock Text="معاينة:" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <TextBlock x:Name="CancelPreviewText" FontSize="12" TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="CancelPreviewCount" FontSize="14" FontWeight="Bold"
+                                       Foreground="#EF4444" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Warning -->
+                    <Border Grid.Row="4" Background="#33EF4444" CornerRadius="6" Padding="10,6" Margin="0,10,0,0">
+                        <TextBlock Text="⚠️ الإيصالات الملغاة لا يمكن إعادة استخدامها. لن يتم احتسابها كفجوة مفقودة ولن يُسمح بتخصيصها لتحصيلات."
+                                   FontSize="11" Foreground="#EF4444" TextWrapping="Wrap"/>
+                    </Border>
+
+                    <!-- Buttons -->
+                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                        <Button x:Name="CancelReceiptsConfirmBtn" Content="تأكيد الإلغاء"
+                                Style="{StaticResource PrimaryButton}" Padding="20,8"
+                                Click="CancelReceiptsConfirm_Click" Margin="0,0,8,0"
+                                Background="#EF4444"/>
+                        <Button Content="رجوع" Style="{StaticResource SecondaryButton}" Padding="16,8"
+                                Click="CancelReceiptsCancel_Click"/>
+                    </StackPanel>
                 </Grid>
             </Border>
         </Border>

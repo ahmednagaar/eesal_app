@@ -1143,6 +1143,72 @@ namespace ReceiptSystem.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.NoReceiptCollection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CollectionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnteredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("EnteredByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ImportRowId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MerchantNameRaw")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("SessionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("EnteredByUserId");
+
+                    b.HasIndex("ImportRowId");
+
+                    b.HasIndex("MerchantId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("NoReceiptCollections");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.Receipt", b =>
                 {
                     b.Property<int>("ReceiptId")
@@ -1217,6 +1283,10 @@ namespace ReceiptSystem.API.Migrations
                     b.HasIndex("EnteredByUserId");
 
                     b.HasIndex("MerchantId");
+
+                    b.HasIndex("ReceiptNumber")
+                        .IsUnique()
+                        .HasFilter("[SeriesId] IS NULL");
 
                     b.HasIndex("SessionId");
 
@@ -2307,12 +2377,22 @@ namespace ReceiptSystem.API.Migrations
                     b.Property<int?>("BookId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancelledByReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("CancelledByUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("DetectedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETDATE()");
 
-                    b.Property<int>("DetectedInSessionId")
+                    b.Property<int?>("DetectedInSessionId")
                         .HasColumnType("int");
 
                     b.Property<int>("DriverId")
@@ -2345,6 +2425,8 @@ namespace ReceiptSystem.API.Migrations
                     b.HasKey("GapId");
 
                     b.HasIndex("BookId");
+
+                    b.HasIndex("CancelledByUserId");
 
                     b.HasIndex("DetectedInSessionId");
 
@@ -2929,6 +3011,9 @@ namespace ReceiptSystem.API.Migrations
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -2960,7 +3045,8 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "مدير النظام",
                             IsActive = true,
-                            PasswordHash = "$2a$11$quJUEgm2gUdSNIglxmKyR.V0FE2g9TUB/n4TluXADcPSNxwMldWfC",
+                            MustChangePassword = true,
+                            PasswordHash = "$2a$11$HMJi6oCnkdy9ENg9d8P2T.VIxDWl3p3P4FfARjwa.FS.8pilfbxSq",
                             Role = "Admin",
                             Username = "admin"
                         },
@@ -2970,7 +3056,8 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "أمين الخزينة",
                             IsActive = true,
-                            PasswordHash = "$2a$11$AoT./fgMLgjCd5JKduZ3U.t.JVGo8qdbWaET4XGvz0Qk1/HuxsdHG",
+                            MustChangePassword = true,
+                            PasswordHash = "$2a$11$z.XixqtlWbVYr7oatl7VHuJKrGWvTe2EfoCL1AIyTOjP.qoPJA6Wi",
                             Role = "Treasury",
                             Username = "خزينة"
                         },
@@ -2980,7 +3067,8 @@ namespace ReceiptSystem.API.Migrations
                             CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
                             FullName = "موظف الكول سنتر",
                             IsActive = true,
-                            PasswordHash = "$2a$11$VeIZfPu0BOvz3.RH9RmHN.utXTDssswToNsybAT10hnPzvnQoZ2Zu",
+                            MustChangePassword = true,
+                            PasswordHash = "$2a$11$IlmNxenhjGL3Sfu4VsOO..Tsr6Y2MTwyNSojRgXAJ5bTrL9sxoOeK",
                             Role = "CallCenter",
                             Username = "callcenter"
                         });
@@ -3181,6 +3269,52 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("MatchedMerchant");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.NoReceiptCollection", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.ExcelImportBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.Driver", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "EnteredByUser")
+                        .WithMany()
+                        .HasForeignKey("EnteredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.ExcelImportRow", "ImportRow")
+                        .WithMany()
+                        .HasForeignKey("ImportRowId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.Merchant", "Merchant")
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.CollectionSession", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("EnteredByUser");
+
+                    b.Navigation("ImportRow");
+
+                    b.Navigation("Merchant");
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.Receipt", b =>
                 {
                     b.HasOne("ReceiptSystem.API.Models.ReceiptBook", "Book")
@@ -3275,11 +3409,15 @@ namespace ReceiptSystem.API.Migrations
                         .HasForeignKey("BookId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("ReceiptSystem.API.Models.User", "CancelledByUser")
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ReceiptSystem.API.Models.CollectionSession", "DetectedInSession")
                         .WithMany("DetectedGaps")
                         .HasForeignKey("DetectedInSessionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ReceiptSystem.API.Models.Driver", "Driver")
                         .WithMany("Gaps")
@@ -3293,6 +3431,8 @@ namespace ReceiptSystem.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Book");
+
+                    b.Navigation("CancelledByUser");
 
                     b.Navigation("DetectedInSession");
 

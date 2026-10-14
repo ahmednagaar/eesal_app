@@ -22,7 +22,7 @@
         </Border>
 
         <!-- ═══ SUMMARY CARDS ═══ -->
-        <UniformGrid Grid.Row="1" Columns="4" Margin="24,12,24,0">
+        <UniformGrid Grid.Row="1" Columns="5" Margin="24,12,24,0">
             <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,10,0">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="السائقون" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
@@ -42,11 +42,18 @@
                                Foreground="{StaticResource AccentPrimaryBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10">
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,10,0">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="إيصالات مفقودة" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="StatMissing" Text="—" FontSize="22" FontWeight="Bold"
                                Foreground="{StaticResource AccentDangerBrush}" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{StaticResource BgCardBrush}" CornerRadius="10" Padding="14,10">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="إيصالات ملغاة" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StatCancelled" Text="—" FontSize="22" FontWeight="Bold"
+                               Foreground="{StaticResource AccentWarningBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
         </UniformGrid>

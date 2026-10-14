@@ -8,6 +8,7 @@ public class User
     public string FullName { get; set; } = string.Empty;
     public string Role { get; set; } = "Treasury";
     public bool IsActive { get; set; } = true;
+    public bool MustChangePassword { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
 }

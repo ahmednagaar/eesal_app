@@ -388,6 +388,24 @@ public class ErpImportService
         }
 
         // ╔══════════════════════════════════════════════════╗
+        // ║  Check for cancelled (لاغي) receipt numbers      ║
+        // ╚══════════════════════════════════════════════════╝
+        var rangeNumbers = Enumerable.Range(dto.StartReceiptNumber, dto.EndReceiptNumber - dto.StartReceiptNumber + 1).ToList();
+        var cancelledNumbers = await _db.ReceiptGaps
+            .Where(g => rangeNumbers.Contains(g.MissingReceiptNumber)
+                     && g.Status == "Cancelled"
+                     && driverBooks.Select(b => b.BookId).Contains(g.BookId ?? 0))
+            .Select(g => g.MissingReceiptNumber)
+            .ToListAsync();
+
+        if (cancelledNumbers.Any())
+            return new AssignBlockResultDto
+            {
+                Success = false,
+                Error = $"⛔ الإيصالات التالية ملغية (لاغي) ولا يمكن استخدامها: {string.Join(", ", cancelledNumbers.OrderBy(n => n))}"
+            };
+
+        // ╔══════════════════════════════════════════════════╗
         // ║  Generate receipt numbers (handles two-book)     ║
         // ╚══════════════════════════════════════════════════╝
         var (receiptNumbers, bookBreakdown, spansTwoBooks) = await GenerateReceiptNumbers(
@@ -592,6 +610,15 @@ public class ErpImportService
         var numberExists = await _db.Receipts.AnyAsync(r => r.ReceiptNumber == dto.ReceiptNumber);
         if (numberExists)
             return new AssignSingleResultDto { Success = false, Error = $"رقم الإيصال {dto.ReceiptNumber} مسجل بالفعل في النظام" };
+
+        // ╔══════════════════════════════════════════════════╗
+        // ║  Check for cancelled (لاغي) receipt number       ║
+        // ╚══════════════════════════════════════════════════╝
+        var isCancelled = await _db.ReceiptGaps
+            .AnyAsync(g => g.MissingReceiptNumber == dto.ReceiptNumber
+                        && g.Status == "Cancelled");
+        if (isCancelled)
+            return new AssignSingleResultDto { Success = false, Error = $"⛔ رقم الإيصال {dto.ReceiptNumber} ملغي (لاغي) — لا يمكن استخدامه" };
 
         // ╔══════════════════════════════════════════════════╗
         // ║  Book/Driver Ownership Validation                 ║
@@ -820,6 +847,9 @@ public class ErpImportService
         var batch = await _db.ExcelImportBatches.FindAsync(dto.BatchId);
         if (batch == null)
             throw new InvalidOperationException("الدفعة غير موجودة");
+
+        if (dto.Amount <= 0)
+            throw new InvalidOperationException("المبلغ يجب أن يكون أكبر من صفر");
 
         int? merchantId = dto.MerchantId;
         bool isNew = false;

@@ -14,6 +14,7 @@ public static class ToastHelper
 {
     public static void ShowSuccess(Panel parent, string message) => Show(parent, message, "Success");
     public static void ShowInfo(Panel parent, string message) => Show(parent, message, "Info");
+    public static void ShowWarning(Panel parent, string message) => Show(parent, message, "Warning");
     public static void ShowError(Panel parent, string message) => Show(parent, message, "Error");
 
     private static void Show(Panel parent, string message, string type)
@@ -21,6 +22,7 @@ public static class ToastHelper
         var bg = type switch
         {
             "Success" => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
+            "Warning" => new SolidColorBrush(Color.FromRgb(0xFB, 0xBF, 0x24)),
             "Error" => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)),
             _ => new SolidColorBrush(Color.FromRgb(0x66, 0x7E, 0xEA))
         };
@@ -28,6 +30,7 @@ public static class ToastHelper
         var icon = type switch
         {
             "Success" => "\u2714",
+            "Warning" => "\u26A0",
             "Error" => "\u2716",
             _ => "\u2139"
         };

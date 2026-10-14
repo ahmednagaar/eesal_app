@@ -33,6 +33,9 @@ public class AppDbContext : DbContext
     // Book Movement History
     public DbSet<BookMovement> BookMovements => Set<BookMovement>();
 
+    // No-Receipt Collections
+    public DbSet<NoReceiptCollection> NoReceiptCollections => Set<NoReceiptCollection>();
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         base.OnModelCreating(mb);
@@ -160,10 +163,13 @@ public class AppDbContext : DbContext
             e.Property(g => g.Resolution).HasMaxLength(1000);
             e.Property(g => g.ReasonCategory).HasMaxLength(50);
             e.Property(g => g.DetectedAt).HasDefaultValueSql("GETDATE()");
-            e.HasOne(g => g.DetectedInSession).WithMany(s => s.DetectedGaps).HasForeignKey(g => g.DetectedInSessionId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(g => g.CancelledByReason).HasMaxLength(500);
+            e.Property(g => g.CancelledAt);
+            e.HasOne(g => g.DetectedInSession).WithMany(s => s.DetectedGaps).HasForeignKey(g => g.DetectedInSessionId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(g => g.Driver).WithMany(d => d.Gaps).HasForeignKey(g => g.DriverId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(g => g.Book).WithMany(b => b.Gaps).HasForeignKey(g => g.BookId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(g => g.ResolvedByUser).WithMany().HasForeignKey(g => g.ResolvedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(g => g.CancelledByUser).WithMany().HasForeignKey(g => g.CancelledByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── BookMovement ──
@@ -177,6 +183,23 @@ public class AppDbContext : DbContext
             e.HasOne(m => m.FromDriver).WithMany().HasForeignKey(m => m.FromDriverId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(m => m.ToDriver).WithMany().HasForeignKey(m => m.ToDriverId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(m => m.PerformedByUser).WithMany().HasForeignKey(m => m.PerformedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── NoReceiptCollection ──
+        mb.Entity<NoReceiptCollection>(e =>
+        {
+            e.HasKey(c => c.Id);
+            e.Property(c => c.MerchantNameRaw).HasMaxLength(200);
+            e.Property(c => c.Amount).HasColumnType("decimal(18,2)");
+            e.Property(c => c.Reason).HasMaxLength(500);
+            e.Property(c => c.Notes).HasMaxLength(1000);
+            e.Property(c => c.EnteredAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(c => c.Session).WithMany().HasForeignKey(c => c.SessionId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(c => c.Batch).WithMany().HasForeignKey(c => c.BatchId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(c => c.ImportRow).WithMany().HasForeignKey(c => c.ImportRowId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(c => c.Driver).WithMany().HasForeignKey(c => c.DriverId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(c => c.Merchant).WithMany().HasForeignKey(c => c.MerchantId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(c => c.EnteredByUser).WithMany().HasForeignKey(c => c.EnteredByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── AuditLog ──
@@ -288,9 +311,9 @@ public class AppDbContext : DbContext
 
         // Users
         mb.Entity<User>().HasData(
-            new User { UserId = 1, Username = "admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"), FullName = "مدير النظام", Role = "Admin", IsActive = true, CreatedAt = now },
-            new User { UserId = 2, Username = "خزينة", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Khazna@123"), FullName = "أمين الخزينة", Role = "Treasury", IsActive = true, CreatedAt = now },
-            new User { UserId = 3, Username = "callcenter", PasswordHash = BCrypt.Net.BCrypt.HashPassword("CallCenter@123"), FullName = "موظف الكول سنتر", Role = "CallCenter", IsActive = true, CreatedAt = now }
+            new User { UserId = 1, Username = "admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"), FullName = "مدير النظام", Role = "Admin", IsActive = true, MustChangePassword = true, CreatedAt = now },
+            new User { UserId = 2, Username = "خزينة", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Khazna@123"), FullName = "أمين الخزينة", Role = "Treasury", IsActive = true, MustChangePassword = true, CreatedAt = now },
+            new User { UserId = 3, Username = "callcenter", PasswordHash = BCrypt.Net.BCrypt.HashPassword("CallCenter@123"), FullName = "موظف الكول سنتر", Role = "CallCenter", IsActive = true, MustChangePassword = true, CreatedAt = now }
         );
 
         // SystemSettings seed

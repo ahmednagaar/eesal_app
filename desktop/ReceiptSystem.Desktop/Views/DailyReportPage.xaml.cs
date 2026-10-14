@@ -44,6 +44,7 @@ public partial class DailyReportPage : UserControl
             StatReceipts.Text = (_reportData["totalReceipts"]?.Value<int>() ?? 0).ToString();
             StatTotal.Text = (_reportData["totalAmount"]?.Value<decimal>() ?? 0).ToString("N2");
             StatMissing.Text = (_reportData["missingReceiptsCount"]?.Value<int>() ?? 0).ToString();
+            StatCancelled.Text = (_reportData["cancelledReceiptsCount"]?.Value<int>() ?? 0).ToString();
 
             // Per-driver sections
             var drivers = _reportData["driverReports"] as JArray;
@@ -143,6 +144,25 @@ public partial class DailyReportPage : UserControl
             stack.Children.Add(missingBorder);
         }
 
+        // Cancelled receipts
+        var cancelled = driver["cancelledReceipts"] as JArray;
+        if (cancelled != null && cancelled.Count > 0)
+        {
+            var cancelledBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFB, 0xBF, 0x24)),
+                CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6, 10, 6),
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+            var cancelledNums = cancelled.Select(n => n.Value<int>()).ToList();
+            cancelledBorder.Child = new TextBlock
+            {
+                Text = $"🚫 إيصالات ملغاة: {string.Join(", ", cancelledNums)}",
+                FontSize = 12, Foreground = (Brush)FindResource("AccentWarningBrush"), TextWrapping = TextWrapping.Wrap
+            };
+            stack.Children.Add(cancelledBorder);
+        }
+
         border.Child = stack;
         return border;
     }
@@ -233,6 +253,17 @@ public partial class DailyReportPage : UserControl
                     doc.Blocks.Add(new Paragraph(new Run($"⚠️ مفقودة: {string.Join(", ", nums)}"))
                     {
                         FontSize = 10, Foreground = Brushes.Red, Margin = new Thickness(0, 2, 0, 8)
+                    });
+                }
+
+                // Cancelled receipts
+                var cancelled = driver["cancelledReceipts"] as JArray;
+                if (cancelled != null && cancelled.Count > 0)
+                {
+                    var cancelledNums = cancelled.Select(n => n.Value<int>()).ToList();
+                    doc.Blocks.Add(new Paragraph(new Run($"🚫 ملغاة: {string.Join(", ", cancelledNums)}"))
+                    {
+                        FontSize = 10, Foreground = Brushes.DarkOrange, Margin = new Thickness(0, 2, 0, 8)
                     });
                 }
             }

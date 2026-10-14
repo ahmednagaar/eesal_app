@@ -95,6 +95,19 @@ public partial class LoginWindow : Window
             var success = await _api.LoginAsync(username, password);
             if (success)
             {
+                // Force password change if required (seed users on first login)
+                if (_api.MustChangePassword)
+                {
+                    var changeWindow = new ChangePasswordWindow(_api);
+                    changeWindow.Owner = this;
+                    var changed = changeWindow.ShowDialog() == true;
+                    if (!changed)
+                    {
+                        ShowError("يجب تغيير كلمة المرور قبل استخدام النظام");
+                        return;
+                    }
+                }
+
                 var mainWindow = new MainWindow(_api);
                 mainWindow.Show();
                 Close();

@@ -69,6 +69,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "كلمة المرور الحالية غير صحيحة" });
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.MustChangePassword = false;
         await _db.SaveChangesAsync();
         await _audit.LogAsync(UserId, "ChangePassword", "User", UserId);
 

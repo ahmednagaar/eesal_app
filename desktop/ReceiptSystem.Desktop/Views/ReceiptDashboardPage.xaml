@@ -7,7 +7,7 @@
             <StackPanel>
 
                 <!-- ═══ STAT CARDS ═══ -->
-                <UniformGrid Columns="4" Margin="0,0,0,16">
+                <UniformGrid Columns="5" Margin="0,0,0,16">
                     <!-- Total Amount -->
                     <Border Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="20,16" Margin="0,0,12,0">
                         <StackPanel>
@@ -34,12 +34,21 @@
                         </StackPanel>
                     </Border>
                     <!-- Open Gaps -->
-                    <Border Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="20,16" Margin="0,0,0,0">
+                    <Border Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="20,16" Margin="0,0,12,0">
                         <StackPanel>
                             <TextBlock Text="فجوات مفتوحة" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                             <TextBlock x:Name="StatOpenGaps" Text="—" FontSize="28" FontWeight="Bold" Margin="0,6,0,0"
                                        Foreground="{StaticResource AccentDangerBrush}"/>
                             <TextBlock Text="فجوة" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <!-- Cancelled Receipts -->
+                    <Border Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="20,16">
+                        <StackPanel>
+                            <TextBlock Text="إيصالات ملغاة" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="StatCancelled" Text="—" FontSize="28" FontWeight="Bold" Margin="0,6,0,0"
+                                       Foreground="{StaticResource AccentWarningBrush}"/>
+                            <TextBlock Text="إيصال" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
                         </StackPanel>
                     </Border>
                 </UniformGrid>

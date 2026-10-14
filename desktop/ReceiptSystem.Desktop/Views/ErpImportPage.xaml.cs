@@ -23,10 +23,13 @@ public class ErpBatchRow : INotifyPropertyChanged
     public int rowId { get; set; }
     public int rowIndex { get; set; }
     public string merchantName { get; set; } = "";
+    public int? merchantId { get; set; }
+    public string merchantNameRaw { get; set; } = "";
     public string amount { get; set; } = "";
     public decimal rawAmount { get; set; }
     public string assignedDisplay { get; set; } = "";
     public bool isAssigned { get; set; }
+    public bool isNoReceipt { get; set; }
     public string assignedReceipt { get; set; } = "";
     public string erpInvoice { get; set; } = "";
 
@@ -250,6 +253,8 @@ public partial class ErpImportPage : UserControl
                     rowId = r["rowId"]?.Value<int>() ?? 0,
                     rowIndex = r["rowIndex"]?.Value<int>() ?? 0,
                     merchantName = r["matchedMerchantName"]?.ToString() ?? r["merchantNameRaw"]?.ToString() ?? "",
+                    merchantId = r["matchedMerchantId"]?.Value<int?>(),
+                    merchantNameRaw = r["merchantNameRaw"]?.ToString() ?? "",
                     amount = (r["amount"]?.Value<decimal>() ?? 0).ToString("N2"),
                     rawAmount = r["amount"]?.Value<decimal>() ?? 0,
                     isAssigned = r["isAssigned"]?.Value<bool>() ?? false,
@@ -768,13 +773,88 @@ public partial class ErpImportPage : UserControl
     }
 
     // ══════════════════════════════════════
+    // NO-RECEIPT COLLECTION
+    // ══════════════════════════════════════
+
+    private List<ErpBatchRow> _noReceiptSelectedRows = new();
+
+    private void NoReceipt_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = _batchRows.Where(r => r.isSelected && !r.isAssigned && !r.isNoReceipt).ToList();
+        if (!selected.Any())
+        {
+            ToastHelper.ShowError(RootGrid, "حدد صفوفاً غير مُعيّنة أولاً");
+            return;
+        }
+
+        _noReceiptSelectedRows = selected;
+        NoReceiptPreviewGrid.ItemsSource = selected;
+        NoReceiptSummary.Text = $"{selected.Count} صف — إجمالي: {selected.Sum(r => r.rawAmount):N2} ج.م";
+        NoReceiptReasonBox.Text = "";
+        NoReceiptDialog.Visibility = Visibility.Visible;
+    }
+
+    private void NoReceiptCancel_Click(object sender, RoutedEventArgs e) => NoReceiptDialog.Visibility = Visibility.Collapsed;
+
+    private async void NoReceiptConfirm_Click(object sender, RoutedEventArgs e)
+    {
+        NoReceiptConfirmBtn.IsEnabled = false;
+        try
+        {
+            var items = _noReceiptSelectedRows.Select(r => (object)new
+            {
+                MerchantId = r.merchantId,
+                MerchantNameRaw = r.merchantNameRaw,
+                Amount = r.rawAmount,
+                ImportRowId = r.rowId
+            }).ToList();
+
+            // Get driver from the block driver combo if selected
+            int? driverId = BlockDriverCombo.SelectedValue is int did && did > 0 ? did : null;
+
+            var result = await _api.CreateNoReceiptCollectionsAsync(
+                _selectedBatchId,
+                driverId,
+                NoReceiptReasonBox.Text.Trim(),
+                items);
+
+            if (result != null)
+            {
+                int count = (int)(result.createdCount ?? _noReceiptSelectedRows.Count);
+                decimal total = (decimal)(result.totalAmount ?? _noReceiptSelectedRows.Sum(r => r.rawAmount));
+
+                ToastHelper.ShowSuccess(RootGrid, $"✓ تم تسجيل {count} تحصيل بدون إيصال — {total:N2} ج.م");
+
+                // Mark rows as processed
+                foreach (var row in _noReceiptSelectedRows)
+                {
+                    row.isAssigned = true;
+                    row.isNoReceipt = true;
+                    row.assignedDisplay = "📝";
+                    row.assignedReceipt = "بدون إيصال";
+                    row.isSelected = false;
+                }
+
+                NoReceiptDialog.Visibility = Visibility.Collapsed;
+                BatchRowsGrid.Items.Refresh();
+                UpdateSelectedCount();
+
+                // Refresh batch detail to get updated summary
+                await LoadBatchDetailAsync(_selectedBatchId);
+            }
+        }
+        catch (Exception ex) { ToastHelper.ShowError(RootGrid, ex.Message); }
+        finally { NoReceiptConfirmBtn.IsEnabled = true; }
+    }
+
+    // ══════════════════════════════════════
     // COMPLETE BATCH
     // ══════════════════════════════════════
 
     private async void CompleteBatch_Click(object sender, RoutedEventArgs e)
     {
         // Warn about unassigned rows and require reason
-        int unassigned = _batchRows.Count(r => !r.isAssigned);
+        int unassigned = _batchRows.Count(r => !r.isAssigned && !r.isNoReceipt);
         if (unassigned > 0)
         {
             var answer = MessageBox.Show(

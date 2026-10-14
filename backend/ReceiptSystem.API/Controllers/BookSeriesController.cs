@@ -133,29 +133,38 @@ public class BookSeriesController : ControllerBase
                 .ThenInclude(b => b.AssignedToDriver)
             .Include(s => s.Books)
                 .ThenInclude(b => b.Receipts)
+            .Include(s => s.Books)
+                .ThenInclude(b => b.Gaps)
             .FirstOrDefaultAsync(s => s.SeriesId == id);
 
         if (series == null) return NotFound(new { message = "الدورة غير موجودة" });
 
-        var books = series.Books.OrderBy(b => b.BookNumber).Select(b => new BookDto
+        var books = series.Books.OrderBy(b => b.BookNumber).Select(b =>
         {
-            BookId = b.BookId,
-            SeriesId = b.SeriesId,
-            SeriesCode = series.SeriesCode,
-            BookNumber = b.BookNumber,
-            DisplayName = $"{series.SeriesCode}-{b.BookNumber}",
-            StartReceiptNumber = b.StartReceiptNumber,
-            EndReceiptNumber = b.EndReceiptNumber,
-            AssignedToDriverId = b.AssignedToDriverId,
-            DriverName = b.AssignedToDriver?.FullName,
-            AssignedDate = b.AssignedDate,
-            Status = b.Status,
-            Notes = b.Notes,
-            UsedReceipts = b.Receipts.Count,
-            RemainingReceipts = (b.EndReceiptNumber - b.StartReceiptNumber + 1) - b.Receipts.Count,
-            ReturnedDate = b.ReturnedDate,
-            IsVerified = b.IsVerified,
-            VerifiedAt = b.VerifiedAt
+            int total = b.EndReceiptNumber - b.StartReceiptNumber + 1;
+            int used = b.Receipts.Count;
+            int cancelled = b.Gaps.Count(g => g.Status == "Cancelled");
+            return new BookDto
+            {
+                BookId = b.BookId,
+                SeriesId = b.SeriesId,
+                SeriesCode = series.SeriesCode,
+                BookNumber = b.BookNumber,
+                DisplayName = $"{series.SeriesCode}-{b.BookNumber}",
+                StartReceiptNumber = b.StartReceiptNumber,
+                EndReceiptNumber = b.EndReceiptNumber,
+                AssignedToDriverId = b.AssignedToDriverId,
+                DriverName = b.AssignedToDriver?.FullName,
+                AssignedDate = b.AssignedDate,
+                Status = b.Status,
+                Notes = b.Notes,
+                UsedReceipts = used,
+                CancelledReceipts = cancelled,
+                RemainingReceipts = total - used - cancelled,
+                ReturnedDate = b.ReturnedDate,
+                IsVerified = b.IsVerified,
+                VerifiedAt = b.VerifiedAt
+            };
         }).ToList();
 
         return Ok(new
