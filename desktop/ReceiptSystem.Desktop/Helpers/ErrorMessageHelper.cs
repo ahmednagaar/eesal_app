@@ -40,7 +40,9 @@ public static class ErrorMessageHelper
                     "انتهت صلاحية الجلسة — يرجى تسجيل الدخول مرة أخرى",
                 HttpRequestException =>
                     "تعذر الاتصال بالسيرفر — تحقق من اتصال الشبكة أو إعدادات السيرفر",
-                _ => "حدث خطأ غير متوقع"
+                _ => !string.IsNullOrEmpty(inner?.Message) && inner.Message.Any(c => c >= 0x0600 && c <= 0x06FF)
+                    ? inner.Message
+                    : "حدث خطأ غير متوقع"
             }
         };
     }

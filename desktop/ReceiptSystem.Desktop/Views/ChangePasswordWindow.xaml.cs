@@ -20,11 +20,19 @@ public partial class ChangePasswordWindow : Window
         if (e.ChangedButton == MouseButton.Left) DragMove();
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        DialogResult = false;
+        Close();
+    }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape) Close();
+        if (e.Key == Key.Escape)
+        {
+            DialogResult = false;
+            Close();
+        }
     }
 
     private async void Change_Click(object sender, RoutedEventArgs e)
@@ -57,7 +65,9 @@ public partial class ChangePasswordWindow : Window
             bool ok = await _api.ChangePasswordAsync(current, newPwd, confirm);
             if (ok)
             {
+                _api.MustChangePassword = false;
                 MessageBox.Show("✓ تم تغيير كلمة المرور بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
+                DialogResult = true;
                 Close();
             }
             else

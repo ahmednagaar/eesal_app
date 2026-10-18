@@ -20,7 +20,7 @@ public class ApiClient
     public string? CurrentUserName { get; private set; }
     public string? CurrentUserRole { get; private set; }
     public int CurrentUserId { get; private set; }
-    public bool MustChangePassword { get; private set; }
+    public bool MustChangePassword { get; set; }
     public bool IsLoggedIn => !string.IsNullOrEmpty(_token);
 
     public ApiClient()
@@ -92,9 +92,16 @@ public class ApiClient
         SetAuth();
 
         // Check if password change is required
-        MustChangePassword = response["mustChangePassword"]?.Value<bool>()
-                          ?? response["MustChangePassword"]?.Value<bool>()
-                          ?? false;
+        try
+        {
+            var mcp = response["mustChangePassword"]?.ToString()
+                   ?? response["MustChangePassword"]?.ToString();
+            MustChangePassword = bool.TryParse(mcp, out bool mustChange) && mustChange;
+        }
+        catch
+        {
+            MustChangePassword = false;
+        }
 
         return true;
     }
