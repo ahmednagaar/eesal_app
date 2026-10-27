@@ -1219,4 +1219,278 @@ public class ApiClient
         catch (ApiUnauthorizedException) { throw; }
         catch (HttpRequestException ex) { throw new HttpRequestException(ex.Message, ex); }
     }
+
+    // ══════════════════════════════════════
+    // Product Categories (أنواع الأصناف)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetProductCategoriesJsonAsync(bool includeInactive = false)
+    {
+        return await GetAsync($"product-categories?includeInactive={includeInactive}");
+    }
+
+    public async Task<dynamic?> CreateProductCategoryAsync(string categoryName, int sortOrder = 0)
+    {
+        return await PostAsync("product-categories", new { CategoryName = categoryName, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> UpdateProductCategoryAsync(int id, string categoryName, bool isActive, int sortOrder)
+    {
+        return await PutAsync($"product-categories/{id}", new { CategoryName = categoryName, IsActive = isActive, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> DeleteProductCategoryAsync(int id)
+    {
+        return await DeleteAsync($"product-categories/{id}");
+    }
+
+    // ══════════════════════════════════════
+    // Products (الأصناف)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetProductsJsonAsync(int? categoryId = null, bool includeInactive = false)
+    {
+        var url = $"products?includeInactive={includeInactive}";
+        if (categoryId.HasValue)
+            url += $"&categoryId={categoryId.Value}";
+        return await GetAsync(url);
+    }
+
+    public async Task<string?> GetProductJsonAsync(int id)
+    {
+        return await GetAsync($"products/{id}");
+    }
+
+    public async Task<string?> SearchProductsJsonAsync(string query)
+    {
+        return await GetAsync($"products/search?q={Uri.EscapeDataString(query)}");
+    }
+
+    public async Task<dynamic?> CreateProductAsync(int categoryId, string productName, string? productCode = null, int sortOrder = 0)
+    {
+        return await PostAsync("products", new { CategoryId = categoryId, ProductName = productName, ProductCode = productCode, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> UpdateProductAsync(int id, int categoryId, string productName, string? productCode, bool isActive, int sortOrder)
+    {
+        return await PutAsync($"products/{id}", new { CategoryId = categoryId, ProductName = productName, ProductCode = productCode, IsActive = isActive, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> DeleteProductAsync(int id)
+    {
+        return await DeleteAsync($"products/{id}");
+    }
+
+    // ── Product Units ──
+
+    public async Task<dynamic?> AddProductUnitAsync(int productId, int unitId, bool isDefault = false, decimal? conversionToBaseQty = null, int? baseUnitId = null, string? notes = null)
+    {
+        return await PostAsync($"products/{productId}/units", new { UnitId = unitId, IsDefault = isDefault, ConversionToBaseQty = conversionToBaseQty, BaseUnitId = baseUnitId, Notes = notes });
+    }
+
+    public async Task<bool> UpdateProductUnitAsync(int productId, int productUnitId, bool isDefault, decimal? conversionToBaseQty, int? baseUnitId, string? notes)
+    {
+        return await PutAsync($"products/{productId}/units/{productUnitId}", new { IsDefault = isDefault, ConversionToBaseQty = conversionToBaseQty, BaseUnitId = baseUnitId, Notes = notes });
+    }
+
+    public async Task<bool> RemoveProductUnitAsync(int productId, int productUnitId)
+    {
+        return await DeleteAsync($"products/{productId}/units/{productUnitId}");
+    }
+
+    // ══════════════════════════════════════
+    // Units of Measure (وحدات القياس)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetUnitsOfMeasureJsonAsync(bool includeInactive = false)
+    {
+        return await GetAsync($"units-of-measure?includeInactive={includeInactive}");
+    }
+
+    public async Task<dynamic?> CreateUnitOfMeasureAsync(string unitName, string? unitAbbreviation = null, int sortOrder = 0)
+    {
+        return await PostAsync("units-of-measure", new { UnitName = unitName, UnitAbbreviation = unitAbbreviation, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> UpdateUnitOfMeasureAsync(int id, string unitName, string? unitAbbreviation, bool isActive, int sortOrder)
+    {
+        return await PutAsync($"units-of-measure/{id}", new { UnitName = unitName, UnitAbbreviation = unitAbbreviation, IsActive = isActive, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> DeleteUnitOfMeasureAsync(int id)
+    {
+        return await DeleteAsync($"units-of-measure/{id}");
+    }
+
+    // ══════════════════════════════════════
+    // Return Reason Categories (أسباب المرتجعات)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetReturnReasonsJsonAsync(bool includeInactive = false)
+    {
+        return await GetAsync($"return-reasons?includeInactive={includeInactive}");
+    }
+
+    public async Task<dynamic?> CreateReturnReasonAsync(string reasonName, string? reasonNameEn = null, int sortOrder = 0)
+    {
+        return await PostAsync("return-reasons", new { ReasonName = reasonName, ReasonNameEn = reasonNameEn, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> UpdateReturnReasonAsync(int id, string reasonName, string? reasonNameEn, bool isActive, int sortOrder)
+    {
+        return await PutAsync($"return-reasons/{id}", new { ReasonName = reasonName, ReasonNameEn = reasonNameEn, IsActive = isActive, SortOrder = sortOrder });
+    }
+
+    public async Task<bool> DeleteReturnReasonAsync(int id)
+    {
+        return await DeleteAsync($"return-reasons/{id}");
+    }
+
+    // ══════════════════════════════════════
+    // Return Book Series (سلاسل دفاتر المرتجعات)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetReturnBookSeriesJsonAsync()
+    {
+        return await GetAsync("return-book-series");
+    }
+
+    public async Task<dynamic?> CreateReturnBookSeriesAsync(string seriesCode, int totalBooks = 200, int receiptsPerBook = 50, int startReceiptNumber = 1, string? notes = null)
+    {
+        return await PostAsync("return-book-series", new { SeriesCode = seriesCode, TotalBooks = totalBooks, ReceiptsPerBook = receiptsPerBook, StartReceiptNumber = startReceiptNumber, Notes = notes });
+    }
+
+    // ── Return Receipt Books ──
+
+    public async Task<string?> GetReturnBooksJsonAsync(int seriesId, string? status = null)
+    {
+        var url = $"return-book-series/{seriesId}/books";
+        if (!string.IsNullOrEmpty(status))
+            url += $"?status={status}";
+        return await GetAsync(url);
+    }
+
+    public async Task<dynamic?> AssignReturnBookAsync(int bookId, int driverId, string? notes = null)
+    {
+        return await PostAsync($"return-book-series/books/{bookId}/assign", new { DriverId = driverId, Notes = notes });
+    }
+
+    public async Task<dynamic?> ReturnReturnBookAsync(int bookId, string? notes = null)
+    {
+        return await PostAsync($"return-book-series/books/{bookId}/return", new { Notes = notes });
+    }
+
+    public async Task<dynamic?> VerifyReturnBookAsync(int bookId, string? notes = null)
+    {
+        return await PostAsync($"return-book-series/books/{bookId}/verify", new { Notes = notes });
+    }
+
+    public async Task<string?> GetReturnBookMovementsJsonAsync(int bookId)
+    {
+        return await GetAsync($"return-book-series/books/{bookId}/movements");
+    }
+
+    public async Task<string?> GetAllReturnBooksJsonAsync()
+    {
+        // Get all series, then get books for each
+        var seriesJson = await GetAsync("return-book-series");
+        if (seriesJson == null) return null;
+        var series = Newtonsoft.Json.Linq.JArray.Parse(seriesJson);
+        var allBooks = new Newtonsoft.Json.Linq.JArray();
+        foreach (var s in series)
+        {
+            int sid = s["seriesId"]!.Value<int>();
+            var booksJson = await GetAsync($"return-book-series/{sid}/books?status=Assigned");
+            if (booksJson != null)
+            {
+                var books = Newtonsoft.Json.Linq.JArray.Parse(booksJson);
+                foreach (var b in books) allBooks.Add(b);
+            }
+        }
+        return allBooks.ToString();
+    }
+
+    // ══════════════════════════════════════
+    // Goods Returns (المرتجعات)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetGoodsReturnsJsonAsync(int? driverId = null, string? status = null, string? from = null, string? to = null)
+    {
+        var url = "goods-returns?";
+        if (driverId.HasValue) url += $"driverId={driverId.Value}&";
+        if (!string.IsNullOrEmpty(status)) url += $"status={status}&";
+        if (!string.IsNullOrEmpty(from)) url += $"from={from}&";
+        if (!string.IsNullOrEmpty(to)) url += $"to={to}&";
+        return await GetAsync(url.TrimEnd('&', '?'));
+    }
+
+    public async Task<string?> GetGoodsReturnJsonAsync(int id)
+    {
+        return await GetAsync($"goods-returns/{id}");
+    }
+
+    public async Task<dynamic?> CreateGoodsReturnAsync(object returnData)
+    {
+        return await PostAsync("goods-returns", returnData);
+    }
+
+    public async Task<bool> UpdateGoodsReturnAsync(int id, int reasonId, string? customerName, string? notes, string status)
+    {
+        return await PutAsync($"goods-returns/{id}", new { ReasonId = reasonId, CustomerName = customerName, Notes = notes, Status = status });
+    }
+
+    public async Task<bool> DeleteGoodsReturnAsync(int id)
+    {
+        return await DeleteAsync($"goods-returns/{id}");
+    }
+
+    // ══════════════════════════════════════
+    // Camera Audits (مراجعة الكاميرا)
+    // ══════════════════════════════════════
+
+    public async Task<string?> GetCameraAuditsJsonAsync(int? driverId = null, string? status = null, string? from = null, string? to = null)
+    {
+        var url = "camera-audits?";
+        if (driverId.HasValue) url += $"driverId={driverId.Value}&";
+        if (!string.IsNullOrEmpty(status)) url += $"status={status}&";
+        if (!string.IsNullOrEmpty(from)) url += $"from={from}&";
+        if (!string.IsNullOrEmpty(to)) url += $"to={to}&";
+        return await GetAsync(url.TrimEnd('&', '?'));
+    }
+
+    public async Task<string?> GetCameraAuditJsonAsync(int id)
+    {
+        return await GetAsync($"camera-audits/{id}");
+    }
+
+    public async Task<dynamic?> CreateCameraAuditAsync(object auditData)
+    {
+        return await PostAsync("camera-audits", auditData);
+    }
+
+    public async Task<dynamic?> AddDiscrepancyAsync(int auditId, object discrepancyData)
+    {
+        return await PostAsync($"camera-audits/{auditId}/discrepancies", discrepancyData);
+    }
+
+    public async Task<bool> UpdateDiscrepancyStatusAsync(int discrepancyId, string status, string? resolution = null, string? noteText = null)
+    {
+        return await PutAsync($"camera-audits/discrepancies/{discrepancyId}/status",
+            new { Status = status, Resolution = resolution, NoteText = noteText });
+    }
+
+    public async Task<string?> GetCaseNotesJsonAsync(int discrepancyId)
+    {
+        return await GetAsync($"camera-audits/discrepancies/{discrepancyId}/notes");
+    }
+
+    public async Task<dynamic?> AddCaseNoteAsync(int discrepancyId, string noteText)
+    {
+        return await PostAsync($"camera-audits/discrepancies/{discrepancyId}/notes", new { NoteText = noteText });
+    }
+
+    public async Task<bool> DeleteCameraAuditAsync(int id)
+    {
+        return await DeleteAsync($"camera-audits/{id}");
+    }
 }

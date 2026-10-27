@@ -36,6 +36,25 @@ public class AppDbContext : DbContext
     // No-Receipt Collections
     public DbSet<NoReceiptCollection> NoReceiptCollections => Set<NoReceiptCollection>();
 
+    // Module 4: Product Catalog
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();
+    public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
+    public DbSet<ReturnReasonCategory> ReturnReasonCategories => Set<ReturnReasonCategory>();
+
+    // Module 5: Return Receipt Books & Goods Returns
+    public DbSet<ReturnBookSeries> ReturnBookSeries => Set<ReturnBookSeries>();
+    public DbSet<ReturnReceiptBook> ReturnReceiptBooks => Set<ReturnReceiptBook>();
+    public DbSet<ReturnBookMovement> ReturnBookMovements => Set<ReturnBookMovement>();
+    public DbSet<GoodsReturn> GoodsReturns => Set<GoodsReturn>();
+    public DbSet<GoodsReturnItem> GoodsReturnItems => Set<GoodsReturnItem>();
+
+    // Module 6: Camera Audit
+    public DbSet<LoadingAudit> LoadingAudits => Set<LoadingAudit>();
+    public DbSet<LoadingDiscrepancy> LoadingDiscrepancies => Set<LoadingDiscrepancy>();
+    public DbSet<CaseNote> CaseNotes => Set<CaseNote>();
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         base.OnModelCreating(mb);
@@ -518,5 +537,214 @@ public class AppDbContext : DbContext
             );
             entryId++;
         }
+
+        // ══════════════════════════════════
+        // MODULE 4 SEED DATA: Product Catalog
+        // ══════════════════════════════════
+
+        // Units of Measure
+        mb.Entity<UnitOfMeasure>().HasData(
+            new UnitOfMeasure { UnitId = 1, UnitName = "شيكارة", UnitAbbreviation = "شيك", SortOrder = 1 },
+            new UnitOfMeasure { UnitId = 2, UnitName = "كرتونة", UnitAbbreviation = "كرت", SortOrder = 2 },
+            new UnitOfMeasure { UnitId = 3, UnitName = "لفة", UnitAbbreviation = "لفة", SortOrder = 3 },
+            new UnitOfMeasure { UnitId = 4, UnitName = "كيلو", UnitAbbreviation = "كجم", SortOrder = 4 },
+            new UnitOfMeasure { UnitId = 5, UnitName = "علبة", UnitAbbreviation = "علبة", SortOrder = 5 },
+            new UnitOfMeasure { UnitId = 6, UnitName = "باكو", UnitAbbreviation = "باكو", SortOrder = 6 },
+            new UnitOfMeasure { UnitId = 7, UnitName = "قطعة", UnitAbbreviation = "قطعة", SortOrder = 7 }
+        );
+
+        // Return Reason Categories
+        mb.Entity<ReturnReasonCategory>().HasData(
+            new ReturnReasonCategory { ReasonId = 1, ReasonName = "مرتجع عميل", ReasonNameEn = "Customer Return", IsSystemDefault = true, SortOrder = 1, CreatedAt = now, CreatedByUserId = 1 },
+            new ReturnReasonCategory { ReasonId = 2, ReasonName = "لم يحمل", ReasonNameEn = "Not Loaded", IsSystemDefault = true, SortOrder = 2, CreatedAt = now, CreatedByUserId = 1 },
+            new ReturnReasonCategory { ReasonId = 3, ReasonName = "تالف أثناء النقل", ReasonNameEn = "Damaged During Transport", IsSystemDefault = true, SortOrder = 3, CreatedAt = now, CreatedByUserId = 1 },
+            new ReturnReasonCategory { ReasonId = 4, ReasonName = "منتج خاطئ", ReasonNameEn = "Wrong Product", IsSystemDefault = true, SortOrder = 4, CreatedAt = now, CreatedByUserId = 1 },
+            new ReturnReasonCategory { ReasonId = 5, ReasonName = "رفض العميل", ReasonNameEn = "Customer Refusal", IsSystemDefault = true, SortOrder = 5, CreatedAt = now, CreatedByUserId = 1 },
+            new ReturnReasonCategory { ReasonId = 6, ReasonName = "إضافة", ReasonNameEn = "Addition / Surplus Sold", IsSystemDefault = true, SortOrder = 6, CreatedAt = now, CreatedByUserId = 1 },
+            new ReturnReasonCategory { ReasonId = 7, ReasonName = "أخرى", ReasonNameEn = "Other", IsSystemDefault = true, SortOrder = 7, CreatedAt = now, CreatedByUserId = 1 }
+        );
+
+        // ══════════════════════════════════
+        // MODULE 4 ENTITY CONFIG: Product Catalog
+        // ══════════════════════════════════
+
+        // ── ProductCategory ──
+        mb.Entity<ProductCategory>(e =>
+        {
+            e.HasKey(c => c.CategoryId);
+            e.HasIndex(c => c.CategoryName).IsUnique();
+            e.Property(c => c.CategoryName).HasMaxLength(200).IsRequired();
+            e.Property(c => c.IsActive).HasDefaultValue(true);
+            e.Property(c => c.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(c => c.CreatedByUser).WithMany().HasForeignKey(c => c.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Product ──
+        mb.Entity<Product>(e =>
+        {
+            e.HasKey(p => p.ProductId);
+            e.HasIndex(p => new { p.CategoryId, p.ProductName }).IsUnique();
+            e.HasIndex(p => p.ProductCode);
+            e.Property(p => p.ProductName).HasMaxLength(300).IsRequired();
+            e.Property(p => p.ProductCode).HasMaxLength(50);
+            e.Property(p => p.IsActive).HasDefaultValue(true);
+            e.Property(p => p.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(p => p.Category).WithMany(c => c.Products).HasForeignKey(p => p.CategoryId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.CreatedByUser).WithMany().HasForeignKey(p => p.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── UnitOfMeasure ──
+        mb.Entity<UnitOfMeasure>(e =>
+        {
+            e.HasKey(u => u.UnitId);
+            e.HasIndex(u => u.UnitName).IsUnique();
+            e.Property(u => u.UnitName).HasMaxLength(50).IsRequired();
+            e.Property(u => u.UnitAbbreviation).HasMaxLength(20);
+            e.Property(u => u.IsActive).HasDefaultValue(true);
+        });
+
+        // ── ProductUnit ──
+        mb.Entity<ProductUnit>(e =>
+        {
+            e.HasKey(pu => pu.ProductUnitId);
+            e.HasIndex(pu => new { pu.ProductId, pu.UnitId }).IsUnique();
+            e.Property(pu => pu.IsDefault).HasDefaultValue(false);
+            e.Property(pu => pu.ConversionToBaseQty).HasColumnType("decimal(18,4)");
+            e.Property(pu => pu.Notes).HasMaxLength(300);
+            e.HasOne(pu => pu.Product).WithMany(p => p.ProductUnits).HasForeignKey(pu => pu.ProductId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(pu => pu.Unit).WithMany().HasForeignKey(pu => pu.UnitId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(pu => pu.BaseUnit).WithMany().HasForeignKey(pu => pu.BaseUnitId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+        });
+
+        // ── ReturnReasonCategory ──
+        mb.Entity<ReturnReasonCategory>(e =>
+        {
+            e.HasKey(r => r.ReasonId);
+            e.HasIndex(r => r.ReasonName).IsUnique();
+            e.Property(r => r.ReasonName).HasMaxLength(100).IsRequired();
+            e.Property(r => r.ReasonNameEn).HasMaxLength(100);
+            e.Property(r => r.IsActive).HasDefaultValue(true);
+            e.Property(r => r.IsSystemDefault).HasDefaultValue(false);
+            e.Property(r => r.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(r => r.CreatedByUser).WithMany().HasForeignKey(r => r.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ══════════════════════════════════
+        // MODULE 5: Return Receipt Books & Goods Returns
+        // ══════════════════════════════════
+
+        // ── ReturnBookSeries ──
+        mb.Entity<ReturnBookSeries>(e =>
+        {
+            e.HasKey(s => s.SeriesId);
+            e.HasIndex(s => s.SeriesCode).IsUnique();
+            e.Property(s => s.SeriesCode).HasMaxLength(20).IsRequired();
+            e.Property(s => s.Status).HasMaxLength(20).HasDefaultValue("Active");
+            e.Property(s => s.Notes).HasMaxLength(500);
+            e.Property(s => s.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(s => s.CreatedByUser).WithMany().HasForeignKey(s => s.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── ReturnReceiptBook ──
+        mb.Entity<ReturnReceiptBook>(e =>
+        {
+            e.HasKey(b => b.BookId);
+            e.HasIndex(b => new { b.SeriesId, b.BookNumber }).IsUnique();
+            e.Property(b => b.Status).HasMaxLength(20).HasDefaultValue("Available");
+            e.Property(b => b.Notes).HasMaxLength(500);
+            e.Property(b => b.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.Property(b => b.IsVerified).HasDefaultValue(false);
+            e.HasOne(b => b.Series).WithMany(s => s.Books).HasForeignKey(b => b.SeriesId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.AssignedToDriver).WithMany(d => d.AssignedReturnBooks).HasForeignKey(b => b.AssignedToDriverId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.AssignedByUser).WithMany().HasForeignKey(b => b.AssignedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.ReturnedToUser).WithMany().HasForeignKey(b => b.ReturnedToUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.VerifiedByUser).WithMany().HasForeignKey(b => b.VerifiedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── ReturnBookMovement ──
+        mb.Entity<ReturnBookMovement>(e =>
+        {
+            e.HasKey(m => m.MovementId);
+            e.Property(m => m.ActionType).HasMaxLength(30).IsRequired();
+            e.Property(m => m.Notes).HasMaxLength(1000);
+            e.Property(m => m.PerformedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(m => m.Book).WithMany(b => b.Movements).HasForeignKey(m => m.BookId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.FromDriver).WithMany().HasForeignKey(m => m.FromDriverId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(m => m.ToDriver).WithMany().HasForeignKey(m => m.ToDriverId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(m => m.PerformedByUser).WithMany().HasForeignKey(m => m.PerformedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── GoodsReturn ──
+        mb.Entity<GoodsReturn>(e =>
+        {
+            e.HasKey(r => r.ReturnId);
+            e.Property(r => r.Status).HasMaxLength(30).HasDefaultValue("Open");
+            e.Property(r => r.CustomerName).HasMaxLength(200);
+            e.Property(r => r.Notes).HasMaxLength(1000);
+            e.Property(r => r.TotalAmount).HasColumnType("decimal(18,2)");
+            e.Property(r => r.EnteredAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(r => r.Book).WithMany(b => b.GoodsReturns).HasForeignKey(r => r.BookId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(r => r.Driver).WithMany(d => d.GoodsReturns).HasForeignKey(r => r.DriverId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(r => r.Reason).WithMany().HasForeignKey(r => r.ReasonId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(r => r.EnteredByUser).WithMany().HasForeignKey(r => r.EnteredByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── GoodsReturnItem ──
+        mb.Entity<GoodsReturnItem>(e =>
+        {
+            e.HasKey(i => i.ItemId);
+            e.Property(i => i.Quantity).HasColumnType("decimal(18,4)");
+            e.Property(i => i.UnitPrice).HasColumnType("decimal(18,2)");
+            e.Property(i => i.TotalPrice).HasColumnType("decimal(18,2)");
+            e.Property(i => i.Notes).HasMaxLength(500);
+            e.HasOne(i => i.Return).WithMany(r => r.Items).HasForeignKey(i => i.ReturnId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(i => i.Product).WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(i => i.ProductUnit).WithMany().HasForeignKey(i => i.ProductUnitId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ══════════════════════════════════
+        // MODULE 6: Camera Audit
+        // ══════════════════════════════════
+
+        // ── LoadingAudit ──
+        mb.Entity<LoadingAudit>(e =>
+        {
+            e.HasKey(a => a.AuditId);
+            e.Property(a => a.TripReference).HasMaxLength(100);
+            e.Property(a => a.Status).HasMaxLength(30).HasDefaultValue("Draft");
+            e.Property(a => a.Notes).HasMaxLength(2000);
+            e.Property(a => a.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(a => a.Driver).WithMany(d => d.LoadingAudits).HasForeignKey(a => a.DriverId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(a => a.ReviewedByUser).WithMany().HasForeignKey(a => a.ReviewedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── LoadingDiscrepancy ──
+        mb.Entity<LoadingDiscrepancy>(e =>
+        {
+            e.HasKey(d => d.DiscrepancyId);
+            e.Property(d => d.ExpectedQty).HasColumnType("decimal(18,4)");
+            e.Property(d => d.ActualQty).HasColumnType("decimal(18,4)");
+            e.Property(d => d.DifferenceQty).HasColumnType("decimal(18,4)");
+            e.Property(d => d.DiscrepancyType).HasMaxLength(30).HasDefaultValue("Shortage");
+            e.Property(d => d.Status).HasMaxLength(30).HasDefaultValue("Open");
+            e.Property(d => d.Resolution).HasMaxLength(2000);
+            e.Property(d => d.Notes).HasMaxLength(2000);
+            e.Property(d => d.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(d => d.Audit).WithMany(a => a.Discrepancies).HasForeignKey(d => d.AuditId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(d => d.Product).WithMany().HasForeignKey(d => d.ProductId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.ProductUnit).WithMany().HasForeignKey(d => d.ProductUnitId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.ResolvedByUser).WithMany().HasForeignKey(d => d.ResolvedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── CaseNote ──
+        mb.Entity<CaseNote>(e =>
+        {
+            e.HasKey(n => n.NoteId);
+            e.Property(n => n.NoteText).HasMaxLength(4000).IsRequired();
+            e.Property(n => n.StatusChange).HasMaxLength(100);
+            e.Property(n => n.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(n => n.Discrepancy).WithMany(d => d.CaseNotes).HasForeignKey(n => n.DiscrepancyId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(n => n.CreatedByUser).WithMany().HasForeignKey(n => n.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

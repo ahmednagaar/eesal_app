@@ -41,6 +41,8 @@ public partial class UserManagementPage : UserControl
                     "Admin" => "مدير",
                     "Treasury" => "خزينة",
                     "CallCenter" => "مركز اتصال",
+                    "Camera" => "مراجع كاميرا",
+                    "Returns" => "مرتجعات",
                     _ => u["role"]?.ToString() ?? ""
                 },
                 isActive = u["isActive"]?.Value<bool>() ?? false,
@@ -95,6 +97,8 @@ public partial class UserManagementPage : UserControl
         roleCombo.Items.Add(new ComboBoxItem { Content = "مدير", Tag = "Admin" });
         roleCombo.Items.Add(new ComboBoxItem { Content = "خزينة", Tag = "Treasury" });
         roleCombo.Items.Add(new ComboBoxItem { Content = "مركز اتصال", Tag = "CallCenter" });
+        roleCombo.Items.Add(new ComboBoxItem { Content = "مراجع كاميرا", Tag = "Camera" });
+        roleCombo.Items.Add(new ComboBoxItem { Content = "مرتجعات", Tag = "Returns" });
         if (isEdit)
         {
             for (int i = 0; i < roleCombo.Items.Count; i++)

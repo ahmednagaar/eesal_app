@@ -1,0 +1,173 @@
+<UserControl x:Class="ReceiptSystem.Desktop.Views.GoodsReturnsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft"
+             Loaded="Page_Loaded">
+
+    <Grid Background="{StaticResource BgSurfaceBrush}">
+        <DockPanel Margin="24,20">
+
+            <!-- Header -->
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+                <TextBlock Text="🔄  المرتجعات" FontSize="22" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                <Button Content="➕ مرتجع جديد" Style="{StaticResource PrimaryButton}"
+                        Click="AddReturn_Click" HorizontalAlignment="Left" Padding="20,10" FontSize="13"/>
+            </Grid>
+
+            <!-- Filters -->
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="DriverFilter" Grid.Column="0"
+                          DisplayMemberPath="fullName" SelectedValuePath="driverId"
+                          SelectionChanged="Filter_Changed" FontSize="14" Padding="10,8"/>
+                <ComboBox x:Name="ReturnStatusFilter" Grid.Column="2" FontSize="14" Padding="10,8"
+                          SelectionChanged="Filter_Changed">
+                    <ComboBoxItem Content="كل الحالات" Tag="" IsSelected="True"/>
+                    <ComboBoxItem Content="مفتوح" Tag="Open"/>
+                    <ComboBoxItem Content="تم المعالجة" Tag="Processed"/>
+                    <ComboBoxItem Content="مغلق" Tag="Closed"/>
+                </ComboBox>
+                <DatePicker x:Name="FromDate" Grid.Column="4" FontSize="13" SelectedDateChanged="Filter_Changed"/>
+                <DatePicker x:Name="ToDate" Grid.Column="6" FontSize="13" SelectedDateChanged="Filter_Changed"/>
+                <Button Grid.Column="8" Content="🔄 تحديث" Style="{StaticResource SecondaryButton}"
+                        Click="Refresh_Click" Padding="16,8" FontSize="13"/>
+            </Grid>
+
+            <!-- Returns Grid -->
+            <Border CornerRadius="12" Background="{StaticResource BgCardBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                <DataGrid x:Name="ReturnsGrid"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                          BorderThickness="0" GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                          RowBackground="Transparent" AlternatingRowBackground="#08FFFFFF"
+                          HeadersVisibility="Column" CanUserResizeRows="False"
+                          SelectionMode="Single" FontSize="14"
+                          MouseDoubleClick="ReturnsGrid_DoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="رقم الإيصال" Binding="{Binding [returnReceiptNumber]}" Width="100"/>
+                        <DataGridTextColumn Header="السائق" Binding="{Binding [driverName]}" Width="150"/>
+                        <DataGridTextColumn Header="السبب" Binding="{Binding [reasonName]}" Width="140"/>
+                        <DataGridTextColumn Header="العميل" Binding="{Binding [customerName]}" Width="140"/>
+                        <DataGridTextColumn Header="التاريخ" Binding="{Binding [returnDate], StringFormat=\{0:yyyy-MM-dd\}}" Width="110"/>
+                        <DataGridTextColumn Header="المبلغ" Binding="{Binding [totalAmount], StringFormat=\{0:N2\}}" Width="100"/>
+                        <DataGridTextColumn Header="الأصناف" Binding="{Binding [itemCount]}" Width="70"/>
+                        <DataGridTextColumn Header="الحالة" Binding="{Binding [status]}" Width="90"/>
+                        <DataGridTemplateColumn Header="" Width="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="🗑️" Tag="{Binding}" Click="DeleteReturn_Click"
+                                            Style="{StaticResource SecondaryButton}" Padding="6,3" FontSize="12"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </DockPanel>
+
+        <!-- ═══ CREATE RETURN DIALOG ═══ -->
+        <Grid x:Name="ReturnDialog" Visibility="Collapsed" Background="#88000000">
+            <Border CornerRadius="16" Background="{StaticResource BgCardBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                    Width="700" MaxHeight="650" VerticalAlignment="Center" Padding="28,24">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="تسجيل مرتجع جديد" FontSize="20" FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+
+                    <!-- Header fields -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="رقم الإيصال:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <TextBox x:Name="ReturnReceiptNumBox" Grid.Row="1" Grid.Column="0" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="السائق:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <ComboBox x:Name="ReturnDriverCombo" Grid.Row="1" Grid.Column="2" DisplayMemberPath="fullName" SelectedValuePath="driverId" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="0" Grid.Column="4" Text="السبب:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <ComboBox x:Name="ReturnReasonCombo" Grid.Row="1" Grid.Column="4" DisplayMemberPath="reasonName" SelectedValuePath="reasonId" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="التاريخ:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <DatePicker x:Name="ReturnDatePicker" Grid.Row="3" Grid.Column="0" FontSize="13" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="اسم العميل:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <TextBox x:Name="CustomerNameBox" Grid.Row="3" Grid.Column="2" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="2" Grid.Column="4" Text="ملاحظات:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <TextBox x:Name="ReturnNotesBox" Grid.Row="3" Grid.Column="4" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="2" Grid.Column="6" Text="دفتر المرتجع:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <ComboBox x:Name="ReturnBookCombo" Grid.Row="3" Grid.Column="6" DisplayMemberPath="bookLabel" SelectedValuePath="bookId" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
+                    </Grid>
+
+                    <!-- Add item row -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="ItemProductCombo" Grid.Column="0" DisplayMemberPath="productName" SelectedValuePath="productId" FontSize="13" Padding="6,4" Margin="0,0,4,0"/>
+                        <TextBox x:Name="ItemQtyBox" Grid.Column="1" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="الكمية"/>
+                        <TextBox x:Name="ItemPriceBox" Grid.Column="2" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="السعر"/>
+                        <TextBox x:Name="ItemTotalBox" Grid.Column="3" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="الإجمالي"/>
+                        <Button Grid.Column="4" Content="➕" Style="{StaticResource PrimaryButton}" Click="AddItem_Click" Padding="10,4" FontSize="14" Margin="4,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock x:Name="ReturnDialogError" DockPanel.Dock="Top" Foreground="#FF6B6B" FontSize="13" Visibility="Collapsed" Margin="0,0,0,4"/>
+
+                    <!-- Buttons -->
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,12,0,0">
+                        <Button Content="حفظ المرتجع" Style="{StaticResource PrimaryButton}" Click="SaveReturn_Click" Padding="24,10" FontSize="14"/>
+                        <Button Content="إلغاء" Style="{StaticResource SecondaryButton}" Click="CancelReturnDialog_Click" Padding="24,10" FontSize="14" Margin="12,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- Items list -->
+                    <DataGrid x:Name="ReturnItemsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                              Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                              BorderThickness="0" GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="{StaticResource BorderSubtleBrush}"
+                              RowBackground="Transparent" HeadersVisibility="Column"
+                              CanUserResizeRows="False" FontSize="13">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="الصنف" Binding="{Binding ProductName}" Width="*"/>
+                            <DataGridTextColumn Header="الكمية" Binding="{Binding Quantity}" Width="80"/>
+                            <DataGridTextColumn Header="السعر" Binding="{Binding UnitPrice, StringFormat=\{0:N2\}}" Width="80"/>
+                            <DataGridTextColumn Header="الإجمالي" Binding="{Binding TotalPrice, StringFormat=\{0:N2\}}" Width="90"/>
+                            <DataGridTemplateColumn Header="" Width="50">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="✕" Tag="{Binding}" Click="RemoveItem_Click"
+                                                Style="{StaticResource SecondaryButton}" Padding="4,2" FontSize="11"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

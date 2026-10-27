@@ -17,4 +17,7 @@ public class Driver
     public ICollection<Receipt> Receipts { get; set; } = new List<Receipt>();
     public ICollection<ReceiptGap> Gaps { get; set; } = new List<ReceiptGap>();
     public ICollection<AjalSession> AjalSessions { get; set; } = new List<AjalSession>();
+    public ICollection<ReturnReceiptBook> AssignedReturnBooks { get; set; } = new List<ReturnReceiptBook>();
+    public ICollection<GoodsReturn> GoodsReturns { get; set; } = new List<GoodsReturn>();
+    public ICollection<LoadingAudit> LoadingAudits { get; set; } = new List<LoadingAudit>();
 }

@@ -37,6 +37,14 @@ public partial class MainWindow : Window
     private AjalSearchPage? _ajalSearchPage;
     private AjalSettingsPage? _ajalSettingsPage;
 
+    // Cached Module 4: Product Catalog pages
+    private ProductsPage? _productsPage;
+
+    // Cached Module 5-6: Returns & Camera pages
+    private ReturnBooksPage? _returnBooksPage;
+    private GoodsReturnsPage? _goodsReturnsPage;
+    private CameraAuditPage? _cameraAuditPage;
+
     // Cached Admin pages
     private UserManagementPage? _userManagementPage;
     private AuditLogPage? _auditLogPage;
@@ -75,6 +83,12 @@ public partial class MainWindow : Window
             NavReceiptSection.Visibility = Visibility.Collapsed;
         }
 
+        // Product Catalog: only Admin, Camera, Returns can see
+        if (role != "Admin" && role != "Camera" && role != "Returns")
+        {
+            NavProductSection.Visibility = Visibility.Collapsed;
+        }
+
         // Non-Admin: hide admin section (user management)
         if (role != "Admin")
         {
@@ -88,6 +102,8 @@ public partial class MainWindow : Window
         return role switch
         {
             "CallCenter" => "AjalDaily",
+            "Camera" => "CameraAudit",
+            "Returns" => "GoodsReturns",
             _ => "ReceiptDashboard"
         };
     }
@@ -268,6 +284,32 @@ public partial class MainWindow : Window
                 _ajalSettingsPage ??= new AjalSettingsPage(_api);
                 PageContent.Content = _ajalSettingsPage;
                 PageTitle.Text = "⚙️ إعدادات البادئة";
+                break;
+
+            // ── Module 4: Product Catalog ──
+            case "Products":
+                _productsPage ??= new ProductsPage(_api);
+                PageContent.Content = _productsPage;
+                PageTitle.Text = "📦 الأصناف والوحدات";
+                break;
+
+            // ── Module 5: Return Books ──
+            case "ReturnBooks":
+                _returnBooksPage ??= new ReturnBooksPage(_api);
+                PageContent.Content = _returnBooksPage;
+                PageTitle.Text = "📗 دفاتر المرتجعات";
+                break;
+            case "GoodsReturns":
+                _goodsReturnsPage ??= new GoodsReturnsPage(_api);
+                PageContent.Content = _goodsReturnsPage;
+                PageTitle.Text = "🔄 المرتجعات";
+                break;
+
+            // ── Module 6: Camera Audit ──
+            case "CameraAudit":
+                _cameraAuditPage ??= new CameraAuditPage(_api);
+                PageContent.Content = _cameraAuditPage;
+                PageTitle.Text = "📹 مراجعة الكاميرا";
                 break;
 
             // ── Admin ──

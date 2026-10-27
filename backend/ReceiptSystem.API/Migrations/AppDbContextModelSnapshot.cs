@@ -17,7 +17,7 @@ namespace ReceiptSystem.API.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.28")
+                .HasAnnotation("ProductVersion", "8.0.32")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -541,6 +541,43 @@ namespace ReceiptSystem.API.Migrations
                     b.ToTable("BookSeries");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.CaseNote", b =>
+                {
+                    b.Property<int>("NoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NoteId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DiscrepancyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NoteText")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("StatusChange")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("NoteId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DiscrepancyId");
+
+                    b.ToTable("CaseNotes");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.CollectionSession", b =>
                 {
                     b.Property<int>("SessionId")
@@ -919,6 +956,230 @@ namespace ReceiptSystem.API.Migrations
                     b.ToTable("ExcelImportRows");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.GoodsReturn", b =>
+                {
+                    b.Property<int>("ReturnId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReturnId"));
+
+                    b.Property<int?>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnteredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("EnteredByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("ReasonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ReturnReceiptNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Open");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ReturnId");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("EnteredByUserId");
+
+                    b.HasIndex("ReasonId");
+
+                    b.ToTable("GoodsReturns");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.GoodsReturnItem", b =>
+                {
+                    b.Property<int>("ItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ItemId"));
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductUnitId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ReturnId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ItemId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductUnitId");
+
+                    b.HasIndex("ReturnId");
+
+                    b.ToTable("GoodsReturnItems");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.LoadingAudit", b =>
+                {
+                    b.Property<int>("AuditId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditId"));
+
+                    b.Property<DateTime>("AuditDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("DriverId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Draft");
+
+                    b.Property<string>("TripReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("AuditId");
+
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.ToTable("LoadingAudits");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.LoadingDiscrepancy", b =>
+                {
+                    b.Property<int>("DiscrepancyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DiscrepancyId"));
+
+                    b.Property<decimal>("ActualQty")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("AuditId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<decimal>("DifferenceQty")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("DiscrepancyType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Shortage");
+
+                    b.Property<decimal>("ExpectedQty")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductUnitId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ResolvedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Open");
+
+                    b.HasKey("DiscrepancyId");
+
+                    b.HasIndex("AuditId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductUnitId");
+
+                    b.HasIndex("ResolvedByUserId");
+
+                    b.ToTable("LoadingDiscrepancies");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.Merchant", b =>
                 {
                     b.Property<int>("MerchantId")
@@ -1207,6 +1468,134 @@ namespace ReceiptSystem.API.Migrations
                     b.HasIndex("SessionId");
 
                     b.ToTable("NoReceiptCollections");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.Product", b =>
+                {
+                    b.Property<int>("ProductId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductId"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("ProductCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProductId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ProductCode");
+
+                    b.HasIndex("CategoryId", "ProductName")
+                        .IsUnique();
+
+                    b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ProductCategory", b =>
+                {
+                    b.Property<int>("CategoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoryId"));
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("CategoryId");
+
+                    b.HasIndex("CategoryName")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("ProductCategories");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ProductUnit", b =>
+                {
+                    b.Property<int>("ProductUnitId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductUnitId"));
+
+                    b.Property<int?>("BaseUnitId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("ConversionToBaseQty")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnitId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProductUnitId");
+
+                    b.HasIndex("BaseUnitId");
+
+                    b.HasIndex("UnitId");
+
+                    b.HasIndex("ProductId", "UnitId")
+                        .IsUnique();
+
+                    b.ToTable("ProductUnits");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Receipt", b =>
@@ -2448,6 +2837,316 @@ namespace ReceiptSystem.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnBookMovement", b =>
+                {
+                    b.Property<int>("MovementId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MovementId"));
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("FromDriverId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("PerformedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("PerformedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ToDriverId")
+                        .HasColumnType("int");
+
+                    b.HasKey("MovementId");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("FromDriverId");
+
+                    b.HasIndex("PerformedByUserId");
+
+                    b.HasIndex("ToDriverId");
+
+                    b.ToTable("ReturnBookMovements");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnBookSeries", b =>
+                {
+                    b.Property<int>("SeriesId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SeriesId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EndReceiptNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ReceiptsPerBook")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SeriesCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("StartReceiptNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Active");
+
+                    b.Property<int>("TotalBooks")
+                        .HasColumnType("int");
+
+                    b.HasKey("SeriesId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("SeriesCode")
+                        .IsUnique();
+
+                    b.ToTable("ReturnBookSeries");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnReasonCategory", b =>
+                {
+                    b.Property<int>("ReasonId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReasonId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsSystemDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("ReasonName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReasonNameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("ReasonId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ReasonName")
+                        .IsUnique();
+
+                    b.ToTable("ReturnReasonCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            ReasonId = 1,
+                            CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedByUserId = 1,
+                            IsActive = true,
+                            IsSystemDefault = true,
+                            ReasonName = "مرتجع عميل",
+                            ReasonNameEn = "Customer Return",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            ReasonId = 2,
+                            CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedByUserId = 1,
+                            IsActive = true,
+                            IsSystemDefault = true,
+                            ReasonName = "لم يحمل",
+                            ReasonNameEn = "Not Loaded",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            ReasonId = 3,
+                            CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedByUserId = 1,
+                            IsActive = true,
+                            IsSystemDefault = true,
+                            ReasonName = "تالف أثناء النقل",
+                            ReasonNameEn = "Damaged During Transport",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            ReasonId = 4,
+                            CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedByUserId = 1,
+                            IsActive = true,
+                            IsSystemDefault = true,
+                            ReasonName = "منتج خاطئ",
+                            ReasonNameEn = "Wrong Product",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            ReasonId = 5,
+                            CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedByUserId = 1,
+                            IsActive = true,
+                            IsSystemDefault = true,
+                            ReasonName = "رفض العميل",
+                            ReasonNameEn = "Customer Refusal",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            ReasonId = 6,
+                            CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedByUserId = 1,
+                            IsActive = true,
+                            IsSystemDefault = true,
+                            ReasonName = "إضافة",
+                            ReasonNameEn = "Addition / Surplus Sold",
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            ReasonId = 7,
+                            CreatedAt = new DateTime(2026, 6, 22, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedByUserId = 1,
+                            IsActive = true,
+                            IsSystemDefault = true,
+                            ReasonName = "أخرى",
+                            ReasonNameEn = "Other",
+                            SortOrder = 7
+                        });
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnReceiptBook", b =>
+                {
+                    b.Property<int>("BookId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BookId"));
+
+                    b.Property<int?>("AssignedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("AssignedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("AssignedToDriverId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BookNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("EndReceiptNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReturnedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReturnedToUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SeriesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StartReceiptNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Available");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("BookId");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("AssignedToDriverId");
+
+                    b.HasIndex("ReturnedToUserId");
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.HasIndex("SeriesId", "BookNumber")
+                        .IsUnique()
+                        .HasFilter("[SeriesId] IS NOT NULL");
+
+                    b.ToTable("ReturnReceiptBooks");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.Route", b =>
                 {
                     b.Property<int>("RouteId")
@@ -2985,6 +3684,97 @@ namespace ReceiptSystem.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.UnitOfMeasure", b =>
+                {
+                    b.Property<int>("UnitId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UnitId"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UnitAbbreviation")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UnitName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("UnitId");
+
+                    b.HasIndex("UnitName")
+                        .IsUnique();
+
+                    b.ToTable("UnitsOfMeasure");
+
+                    b.HasData(
+                        new
+                        {
+                            UnitId = 1,
+                            IsActive = true,
+                            SortOrder = 1,
+                            UnitAbbreviation = "شيك",
+                            UnitName = "شيكارة"
+                        },
+                        new
+                        {
+                            UnitId = 2,
+                            IsActive = true,
+                            SortOrder = 2,
+                            UnitAbbreviation = "كرت",
+                            UnitName = "كرتونة"
+                        },
+                        new
+                        {
+                            UnitId = 3,
+                            IsActive = true,
+                            SortOrder = 3,
+                            UnitAbbreviation = "لفة",
+                            UnitName = "لفة"
+                        },
+                        new
+                        {
+                            UnitId = 4,
+                            IsActive = true,
+                            SortOrder = 4,
+                            UnitAbbreviation = "كجم",
+                            UnitName = "كيلو"
+                        },
+                        new
+                        {
+                            UnitId = 5,
+                            IsActive = true,
+                            SortOrder = 5,
+                            UnitAbbreviation = "علبة",
+                            UnitName = "علبة"
+                        },
+                        new
+                        {
+                            UnitId = 6,
+                            IsActive = true,
+                            SortOrder = 6,
+                            UnitAbbreviation = "باكو",
+                            UnitName = "باكو"
+                        },
+                        new
+                        {
+                            UnitId = 7,
+                            IsActive = true,
+                            SortOrder = 7,
+                            UnitAbbreviation = "قطعة",
+                            UnitName = "قطعة"
+                        });
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -3046,7 +3836,7 @@ namespace ReceiptSystem.API.Migrations
                             FullName = "مدير النظام",
                             IsActive = true,
                             MustChangePassword = true,
-                            PasswordHash = "$2a$11$HMJi6oCnkdy9ENg9d8P2T.VIxDWl3p3P4FfARjwa.FS.8pilfbxSq",
+                            PasswordHash = "$2a$11$6M1X9d/votkomS6pEm2qEe/GaTxtl4PUWeBw1QzdmNn66OUMXUDsa",
                             Role = "Admin",
                             Username = "admin"
                         },
@@ -3057,7 +3847,7 @@ namespace ReceiptSystem.API.Migrations
                             FullName = "أمين الخزينة",
                             IsActive = true,
                             MustChangePassword = true,
-                            PasswordHash = "$2a$11$z.XixqtlWbVYr7oatl7VHuJKrGWvTe2EfoCL1AIyTOjP.qoPJA6Wi",
+                            PasswordHash = "$2a$11$7sXUsZqcMr3Ir6uM3HfBEOip3CwBVS0ad5XF7Zzfcn9ihldmq8sw6",
                             Role = "Treasury",
                             Username = "خزينة"
                         },
@@ -3068,7 +3858,7 @@ namespace ReceiptSystem.API.Migrations
                             FullName = "موظف الكول سنتر",
                             IsActive = true,
                             MustChangePassword = true,
-                            PasswordHash = "$2a$11$IlmNxenhjGL3Sfu4VsOO..Tsr6Y2MTwyNSojRgXAJ5bTrL9sxoOeK",
+                            PasswordHash = "$2a$11$oQGFlRMrivAD1MIvrzeYEOl1pKoSgJNy0Pf8x4uemJtthRNiZnQQq",
                             Role = "CallCenter",
                             Username = "callcenter"
                         });
@@ -3189,6 +3979,25 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("CreatedByUser");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.CaseNote", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.LoadingDiscrepancy", "Discrepancy")
+                        .WithMany("CaseNotes")
+                        .HasForeignKey("DiscrepancyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Discrepancy");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.CollectionSession", b =>
                 {
                     b.HasOne("ReceiptSystem.API.Models.User", "ConfirmedByUser")
@@ -3269,6 +4078,120 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("MatchedMerchant");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.GoodsReturn", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.ReturnReceiptBook", "Book")
+                        .WithMany("GoodsReturns")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.Driver", "Driver")
+                        .WithMany("GoodsReturns")
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "EnteredByUser")
+                        .WithMany()
+                        .HasForeignKey("EnteredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.ReturnReasonCategory", "Reason")
+                        .WithMany()
+                        .HasForeignKey("ReasonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("EnteredByUser");
+
+                    b.Navigation("Reason");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.GoodsReturnItem", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.ProductUnit", "ProductUnit")
+                        .WithMany()
+                        .HasForeignKey("ProductUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.GoodsReturn", "Return")
+                        .WithMany("Items")
+                        .HasForeignKey("ReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ProductUnit");
+
+                    b.Navigation("Return");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.LoadingAudit", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.Driver", "Driver")
+                        .WithMany("LoadingAudits")
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("ReviewedByUser");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.LoadingDiscrepancy", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.LoadingAudit", "Audit")
+                        .WithMany("Discrepancies")
+                        .HasForeignKey("AuditId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.ProductUnit", "ProductUnit")
+                        .WithMany()
+                        .HasForeignKey("ProductUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "ResolvedByUser")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Audit");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ProductUnit");
+
+                    b.Navigation("ResolvedByUser");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.NoReceiptCollection", b =>
                 {
                     b.HasOne("ReceiptSystem.API.Models.ExcelImportBatch", "Batch")
@@ -3313,6 +4236,62 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("Merchant");
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.Product", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.ProductCategory", "Category")
+                        .WithMany("Products")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ProductCategory", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ProductUnit", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.UnitOfMeasure", "BaseUnit")
+                        .WithMany()
+                        .HasForeignKey("BaseUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.Product", "Product")
+                        .WithMany("ProductUnits")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.UnitOfMeasure", "Unit")
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BaseUnit");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Receipt", b =>
@@ -3441,6 +4420,99 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("ResolvedByUser");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnBookMovement", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.ReturnReceiptBook", "Book")
+                        .WithMany("Movements")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.Driver", "FromDriver")
+                        .WithMany()
+                        .HasForeignKey("FromDriverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "PerformedByUser")
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.Driver", "ToDriver")
+                        .WithMany()
+                        .HasForeignKey("ToDriverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Book");
+
+                    b.Navigation("FromDriver");
+
+                    b.Navigation("PerformedByUser");
+
+                    b.Navigation("ToDriver");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnBookSeries", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnReasonCategory", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnReceiptBook", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.Driver", "AssignedToDriver")
+                        .WithMany("AssignedReturnBooks")
+                        .HasForeignKey("AssignedToDriverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "ReturnedToUser")
+                        .WithMany()
+                        .HasForeignKey("ReturnedToUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.ReturnBookSeries", "Series")
+                        .WithMany("Books")
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "VerifiedByUser")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("AssignedToDriver");
+
+                    b.Navigation("ReturnedToUser");
+
+                    b.Navigation("Series");
+
+                    b.Navigation("VerifiedByUser");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.Route", b =>
                 {
                     b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
@@ -3512,7 +4584,13 @@ namespace ReceiptSystem.API.Migrations
 
                     b.Navigation("AssignedBooks");
 
+                    b.Navigation("AssignedReturnBooks");
+
                     b.Navigation("Gaps");
+
+                    b.Navigation("GoodsReturns");
+
+                    b.Navigation("LoadingAudits");
 
                     b.Navigation("Receipts");
 
@@ -3524,11 +4602,36 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("Rows");
                 });
 
+            modelBuilder.Entity("ReceiptSystem.API.Models.GoodsReturn", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.LoadingAudit", b =>
+                {
+                    b.Navigation("Discrepancies");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.LoadingDiscrepancy", b =>
+                {
+                    b.Navigation("CaseNotes");
+                });
+
             modelBuilder.Entity("ReceiptSystem.API.Models.Merchant", b =>
                 {
                     b.Navigation("Receipts");
 
                     b.Navigation("RouteMerchants");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.Product", b =>
+                {
+                    b.Navigation("ProductUnits");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ProductCategory", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.ReceiptBook", b =>
@@ -3538,6 +4641,18 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("Movements");
 
                     b.Navigation("Receipts");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnBookSeries", b =>
+                {
+                    b.Navigation("Books");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.ReturnReceiptBook", b =>
+                {
+                    b.Navigation("GoodsReturns");
+
+                    b.Navigation("Movements");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Route", b =>
