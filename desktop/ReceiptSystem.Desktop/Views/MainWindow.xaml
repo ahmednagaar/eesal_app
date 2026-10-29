@@ -1,7 +1,7 @@
 <Window x:Class="ReceiptSystem.Desktop.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="نظام البستاوي"
+        Title="نظام البسطاوي"
         Width="1200" Height="750"
         MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
@@ -24,7 +24,7 @@
                         BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
                     <StackPanel>
                         <TextBlock Text="📦" FontSize="32" HorizontalAlignment="Center"/>
-                        <TextBlock Text="نظام البستاوي" FontSize="18" FontWeight="Bold"
+                        <TextBlock Text="نظام البسطاوي" FontSize="18" FontWeight="Bold"
                                    HorizontalAlignment="Center" Margin="0,6,0,2"
                                    Foreground="{StaticResource TextPrimaryBrush}"/>
                         <TextBlock x:Name="UserNameText" Text="مرحباً" FontSize="12"

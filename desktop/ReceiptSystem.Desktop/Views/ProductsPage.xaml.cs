@@ -10,8 +10,8 @@ public partial class ProductsPage : UserControl
 {
     private readonly ApiClient _api;
     private JArray _allProducts = new();
-    private JArray _categories = new();
-    private JArray _units = new();
+    private List<CategoryComboItem> _categories = new();
+    private List<UnitComboItem> _units = new();
     private int? _editingProductId;
     private int? _editingCategoryId;
     private int _managingProductId;
@@ -46,11 +46,18 @@ public partial class ProductsPage : UserControl
         {
             var json = await _api.GetProductCategoriesJsonAsync();
             if (json == null) return;
-            _categories = JArray.Parse(json);
+            var jArray = JArray.Parse(json);
+            _categories = jArray.Select(c => new CategoryComboItem
+            {
+                categoryId = c["categoryId"]?.Value<int>() ?? 0,
+                categoryName = c["categoryName"]?.ToString() ?? ""
+            }).ToList();
 
-            var filterItems = new JArray(_categories);
-            var allItem = new JObject { ["categoryId"] = 0, ["categoryName"] = "— الكل —" };
-            filterItems.Insert(0, allItem);
+            var filterItems = new List<CategoryComboItem>
+            {
+                new CategoryComboItem { categoryId = 0, categoryName = "— الكل —" }
+            };
+            filterItems.AddRange(_categories);
 
             CategoryFilter.ItemsSource = filterItems;
             CategoryFilter.SelectedIndex = 0;
@@ -67,7 +74,12 @@ public partial class ProductsPage : UserControl
         {
             var json = await _api.GetUnitsOfMeasureJsonAsync();
             if (json == null) return;
-            _units = JArray.Parse(json);
+            var jArray = JArray.Parse(json);
+            _units = jArray.Select(u => new UnitComboItem
+            {
+                unitId = u["unitId"]?.Value<int>() ?? 0,
+                unitName = u["unitName"]?.ToString() ?? ""
+            }).ToList();
         }
         catch { }
     }
@@ -342,7 +354,7 @@ public partial class ProductsPage : UserControl
     private void RefreshAvailableUnitsCombo()
     {
         var assignedUnitIds = _productUnits.Select(pu => pu["unitId"]?.Value<int>() ?? 0).ToHashSet();
-        var available = _units.Where(u => !assignedUnitIds.Contains(u["unitId"]?.Value<int>() ?? 0)).ToList();
+        var available = _units.Where(u => !assignedUnitIds.Contains(u.unitId)).ToList();
         AddUnitCombo.ItemsSource = available;
         AddUnitCombo.SelectedIndex = available.Count > 0 ? 0 : -1;
     }

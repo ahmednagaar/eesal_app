@@ -12,6 +12,7 @@ public partial class GoodsReturnsPage : UserControl
 {
     private readonly ApiClient _api;
     private ObservableCollection<ReturnItemRow> _items = new();
+    private bool _isLoaded = false;
 
     public GoodsReturnsPage(ApiClient api)
     {
@@ -23,6 +24,7 @@ public partial class GoodsReturnsPage : UserControl
     {
         await LoadDriversAsync();
         await LoadReturnsAsync();
+        _isLoaded = true;
     }
 
     private async Task LoadDriversAsync()
@@ -66,7 +68,7 @@ public partial class GoodsReturnsPage : UserControl
         catch (Exception ex) { MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
-    private async void Filter_Changed(object sender, object e) => await LoadReturnsAsync();
+    private async void Filter_Changed(object sender, object e) { if (_isLoaded) await LoadReturnsAsync(); }
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await LoadReturnsAsync();
 
     private void ReturnsGrid_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

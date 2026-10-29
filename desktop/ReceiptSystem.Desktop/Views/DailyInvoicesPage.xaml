@@ -72,13 +72,17 @@
             <StackPanel>
                 <!-- Counter Row -->
                 <Grid Margin="0,0,0,12">
-                    <TextBlock x:Name="CounterText" Text="✅ تم تحديد 0 من 0 تاجر"
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" x:Name="CounterText" Text="✅ تم تحديد 0 من 0 تاجر"
                                FontSize="15" FontWeight="Bold"
                                Foreground="{StaticResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-                    <Button Content="↩  رجوع" Style="{StaticResource SecondaryButton}"
-                            Click="Back_Click" HorizontalAlignment="Left"
-                            Padding="16,8" FontSize="12"/>
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    <Button Grid.Column="1" Content="↩  رجوع" Style="{StaticResource SecondaryButton}"
+                            Click="Back_Click"
+                            Padding="16,8" FontSize="12" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- Quick Add Search -->

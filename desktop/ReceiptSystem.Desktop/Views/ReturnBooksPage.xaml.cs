@@ -11,6 +11,7 @@ public partial class ReturnBooksPage : UserControl
 {
     private readonly ApiClient _api;
     private int _selectedBookId;
+    private bool _isLoaded = false;
 
     public ReturnBooksPage(ApiClient api)
     {
@@ -20,7 +21,19 @@ public partial class ReturnBooksPage : UserControl
 
     private async void Page_Loaded(object sender, RoutedEventArgs e)
     {
-        await LoadSeriesAsync();
+        try
+        {
+            if (!_isLoaded)
+            {
+                await LoadSeriesAsync();
+                _isLoaded = true;
+                await LoadBooksAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task LoadSeriesAsync()
@@ -45,7 +58,13 @@ public partial class ReturnBooksPage : UserControl
         if (SeriesCombo.SelectedValue == null) return;
         try
         {
-            int seriesId = (int)SeriesCombo.SelectedValue;
+            int seriesId;
+            if (SeriesCombo.SelectedValue is int sid)
+                seriesId = sid;
+            else if (int.TryParse(SeriesCombo.SelectedValue?.ToString(), out int parsed))
+                seriesId = parsed;
+            else
+                return;
             string? statusFilter = null;
             if (StatusFilter.SelectedItem is ComboBoxItem item && item.Tag is string tag && !string.IsNullOrEmpty(tag))
                 statusFilter = tag;
@@ -68,8 +87,8 @@ public partial class ReturnBooksPage : UserControl
         catch (Exception ex) { MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
-    private async void SeriesCombo_Changed(object sender, SelectionChangedEventArgs e) => await LoadBooksAsync();
-    private async void StatusFilter_Changed(object sender, SelectionChangedEventArgs e) => await LoadBooksAsync();
+    private async void SeriesCombo_Changed(object sender, SelectionChangedEventArgs e) { if (_isLoaded) await LoadBooksAsync(); }
+    private async void StatusFilter_Changed(object sender, SelectionChangedEventArgs e) { if (_isLoaded) await LoadBooksAsync(); }
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await LoadBooksAsync();
 
     // ═══ CREATE SERIES ═══

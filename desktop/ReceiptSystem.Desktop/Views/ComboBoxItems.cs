@@ -32,3 +32,17 @@ public class BatchComboItem
     public string display { get; set; } = string.Empty;
     public override string ToString() => display;
 }
+
+public class CategoryComboItem
+{
+    public int categoryId { get; set; }
+    public string categoryName { get; set; } = string.Empty;
+    public override string ToString() => categoryName;
+}
+
+public class UnitComboItem
+{
+    public int unitId { get; set; }
+    public string unitName { get; set; } = string.Empty;
+    public override string ToString() => unitName;
+}

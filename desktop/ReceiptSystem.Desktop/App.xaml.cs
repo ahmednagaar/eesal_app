@@ -22,7 +22,7 @@ public partial class App : Application
 
             var fullMsg = $"{arabicMsg}\n\n———— التفاصيل الفنية ————\n{technical}";
 
-            MessageBox.Show(fullMsg, "خطأ — نظام البستاوي", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(fullMsg, "خطأ — نظام البسطاوي", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true; // Prevent crash
         };
     }

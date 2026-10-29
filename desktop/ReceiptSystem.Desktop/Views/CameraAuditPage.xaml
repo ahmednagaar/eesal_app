@@ -9,10 +9,15 @@
 
             <!-- Header -->
             <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
-                <TextBlock Text="📹  مراجعة الكاميرا" FontSize="22" FontWeight="Bold"
-                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                <Button Content="➕ مراجعة جديدة" Style="{StaticResource PrimaryButton}"
-                        Click="AddAudit_Click" HorizontalAlignment="Left" Padding="20,10" FontSize="13"/>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="📹  مراجعة الكاميرا" FontSize="22" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <Button Grid.Column="1" Content="➕ مراجعة جديدة" Style="{StaticResource PrimaryButton}"
+                        Click="AddAudit_Click" Padding="20,10" FontSize="13" VerticalAlignment="Center"/>
             </Grid>
 
             <!-- Filters -->
@@ -114,10 +119,15 @@
                     Width="800" MaxHeight="600" VerticalAlignment="Center" Padding="28,24">
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
-                        <TextBlock x:Name="DetailTitle" Text="تفاصيل المراجعة" FontSize="20" FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <Button Content="✕ إغلاق" Style="{StaticResource SecondaryButton}" Click="CloseDetail_Click"
-                                HorizontalAlignment="Left" Padding="12,6" FontSize="13"/>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" x:Name="DetailTitle" Text="تفاصيل المراجعة" FontSize="20" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Button Grid.Column="1" Content="✕ إغلاق" Style="{StaticResource SecondaryButton}" Click="CloseDetail_Click"
+                                Padding="12,6" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                     <DataGrid x:Name="DiscrepanciesGrid" AutoGenerateColumns="False" IsReadOnly="True"
                               Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"

@@ -9,10 +9,15 @@
 
             <!-- Header -->
             <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
-                <TextBlock Text="📗  دفاتر المرتجعات" FontSize="22" FontWeight="Bold"
-                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                <Button Content="➕ سلسلة جديدة" Style="{StaticResource PrimaryButton}"
-                        Click="AddSeries_Click" HorizontalAlignment="Left" Padding="20,10" FontSize="13"/>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="📗  دفاتر المرتجعات" FontSize="22" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <Button Grid.Column="1" Content="➕ سلسلة جديدة" Style="{StaticResource PrimaryButton}"
+                        Click="AddSeries_Click" Padding="20,10" FontSize="13" VerticalAlignment="Center"/>
             </Grid>
 
             <!-- Series Selection -->

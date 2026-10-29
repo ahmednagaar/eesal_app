@@ -10,6 +10,7 @@ namespace ReceiptSystem.Desktop.Views;
 public partial class CameraAuditPage : UserControl
 {
     private readonly ApiClient _api;
+    private bool _isLoaded = false;
 
     public CameraAuditPage(ApiClient api)
     {
@@ -21,6 +22,7 @@ public partial class CameraAuditPage : UserControl
     {
         await LoadDriversAsync();
         await LoadAuditsAsync();
+        _isLoaded = true;
     }
 
     private async Task LoadDriversAsync()
@@ -64,7 +66,7 @@ public partial class CameraAuditPage : UserControl
         catch (Exception ex) { MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
-    private async void Filter_Changed(object sender, object e) => await LoadAuditsAsync();
+    private async void Filter_Changed(object sender, object e) { if (_isLoaded) await LoadAuditsAsync(); }
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await LoadAuditsAsync();
 
     private void AuditsGrid_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
