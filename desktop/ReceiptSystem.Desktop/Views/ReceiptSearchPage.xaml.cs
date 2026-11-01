@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 using ReceiptSystem.Desktop.Helpers;
@@ -15,16 +12,23 @@ using ReceiptSystem.Desktop.Services;
 
 namespace ReceiptSystem.Desktop.Views;
 
-
-
 public partial class ReceiptSearchPage : UserControl
 {
     private readonly ApiClient _api;
     private int _currentPage = 1;
     private const int PageSize = 50;
 
-    private ICollectionView? _driversView;
-    private ICollectionView? _merchantsView;
+    // Full lists for search
+    private List<MerchantComboItem> _allMerchants = new();
+    private List<DriverComboItem> _allDrivers = new();
+
+    // Selected items
+    private MerchantComboItem? _selectedMerchant;
+    private DriverComboItem? _selectedDriver;
+
+    // Prevent recursive TextChanged events during programmatic text updates
+    private bool _suppressMerchantSearch;
+    private bool _suppressDriverSearch;
 
     public ReceiptSearchPage(ApiClient api)
     {
@@ -37,6 +41,10 @@ public partial class ReceiptSearchPage : UserControl
         };
     }
 
+    // ══════════════════════════════════════
+    // LOAD DATA
+    // ══════════════════════════════════════
+
     private async Task LoadDriversAsync()
     {
         try
@@ -44,22 +52,11 @@ public partial class ReceiptSearchPage : UserControl
             var json = await _api.GetDriversJsonAsync();
             if (json == null) return;
             var drivers = JArray.Parse(json);
-            var list = drivers.Select(d => new DriverComboItem
+            _allDrivers = drivers.Select(d => new DriverComboItem
             {
                 driverId = d["driverId"]?.Value<int>() ?? 0,
                 fullName = d["fullName"]?.ToString() ?? ""
             }).ToList();
-            list.Insert(0, new DriverComboItem { driverId = 0, fullName = "— الكل —" });
-            
-            _driversView = CollectionViewSource.GetDefaultView(list);
-            _driversView.Filter = (obj) =>
-            {
-                if (string.IsNullOrWhiteSpace(FilterDriver.Text)) return true;
-                return ((DriverComboItem)obj).fullName.Contains(FilterDriver.Text, StringComparison.OrdinalIgnoreCase);
-            };
-            
-            FilterDriver.ItemsSource = _driversView;
-            FilterDriver.SelectedIndex = 0;
         }
         catch { }
     }
@@ -74,37 +71,167 @@ public partial class ReceiptSearchPage : UserControl
             var merchants = obj["data"] as JArray;
             if (merchants == null) return;
 
-            var list = merchants.Select(m => new MerchantComboItem
+            _allMerchants = merchants.Select(m => new MerchantComboItem
             {
                 merchantId = m["merchantId"]?.Value<int>() ?? 0,
                 merchantName = m["merchantName"]?.ToString() ?? ""
             }).ToList();
-            
-            _merchantsView = CollectionViewSource.GetDefaultView(list);
-            _merchantsView.Filter = (obj) =>
-            {
-                if (string.IsNullOrWhiteSpace(FilterMerchant.Text)) return true;
-                return ((MerchantComboItem)obj).merchantName.Contains(FilterMerchant.Text, StringComparison.OrdinalIgnoreCase);
-            };
-            
-            FilterMerchant.ItemsSource = _merchantsView;
         }
         catch { }
     }
 
-    private void FilterMerchant_KeyUp(object sender, KeyEventArgs e)
+    // ══════════════════════════════════════
+    // MERCHANT SEARCH
+    // ══════════════════════════════════════
+
+    private void MerchantSearch_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape) return;
-        _merchantsView?.Refresh();
-        FilterMerchant.IsDropDownOpen = true;
+        if (_suppressMerchantSearch) return;
+
+        var query = MerchantSearchBox.Text.Trim();
+
+        // If text was cleared, deselect
+        if (string.IsNullOrEmpty(query))
+        {
+            _selectedMerchant = null;
+            ClearMerchantBtn.Visibility = Visibility.Collapsed;
+            MerchantPopup.IsOpen = false;
+            return;
+        }
+
+        // If text matches selected, don't re-search
+        if (_selectedMerchant != null && query == _selectedMerchant.merchantName)
+            return;
+
+        // Clear selection since user is typing something new
+        _selectedMerchant = null;
+
+        // Filter merchants
+        var filtered = _allMerchants
+            .Where(m => m.merchantName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Take(50)
+            .ToList();
+
+        if (filtered.Count > 0)
+        {
+            MerchantResults.ItemsSource = filtered;
+            MerchantPopup.IsOpen = true;
+        }
+        else
+        {
+            MerchantPopup.IsOpen = false;
+        }
     }
 
-    private void FilterDriver_KeyUp(object sender, KeyEventArgs e)
+    private void MerchantSearch_GotFocus(object sender, RoutedEventArgs e)
     {
-        if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape) return;
-        _driversView?.Refresh();
-        FilterDriver.IsDropDownOpen = true;
+        // Show all if empty, or show current filtered results
+        if (string.IsNullOrWhiteSpace(MerchantSearchBox.Text) && _allMerchants.Count > 0)
+        {
+            MerchantResults.ItemsSource = _allMerchants.Take(50).ToList();
+            MerchantPopup.IsOpen = true;
+        }
     }
+
+    private void MerchantResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MerchantResults.SelectedItem is MerchantComboItem item)
+        {
+            _selectedMerchant = item;
+            _suppressMerchantSearch = true;
+            MerchantSearchBox.Text = item.merchantName;
+            _suppressMerchantSearch = false;
+            ClearMerchantBtn.Visibility = Visibility.Visible;
+            MerchantPopup.IsOpen = false;
+            MerchantResults.SelectedItem = null; // Reset for next time
+        }
+    }
+
+    private void ClearMerchant_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedMerchant = null;
+        _suppressMerchantSearch = true;
+        MerchantSearchBox.Text = "";
+        _suppressMerchantSearch = false;
+        ClearMerchantBtn.Visibility = Visibility.Collapsed;
+        MerchantSearchBox.Focus();
+    }
+
+    // ══════════════════════════════════════
+    // DRIVER SEARCH
+    // ══════════════════════════════════════
+
+    private void DriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressDriverSearch) return;
+
+        var query = DriverSearchBox.Text.Trim();
+
+        if (string.IsNullOrEmpty(query))
+        {
+            _selectedDriver = null;
+            ClearDriverBtn.Visibility = Visibility.Collapsed;
+            DriverPopup.IsOpen = false;
+            return;
+        }
+
+        if (_selectedDriver != null && query == _selectedDriver.fullName)
+            return;
+
+        _selectedDriver = null;
+
+        var filtered = _allDrivers
+            .Where(d => d.fullName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Take(50)
+            .ToList();
+
+        if (filtered.Count > 0)
+        {
+            DriverResults.ItemsSource = filtered;
+            DriverPopup.IsOpen = true;
+        }
+        else
+        {
+            DriverPopup.IsOpen = false;
+        }
+    }
+
+    private void DriverSearch_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(DriverSearchBox.Text) && _allDrivers.Count > 0)
+        {
+            DriverResults.ItemsSource = _allDrivers.Take(50).ToList();
+            DriverPopup.IsOpen = true;
+        }
+    }
+
+    private void DriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DriverResults.SelectedItem is DriverComboItem item)
+        {
+            _selectedDriver = item;
+            _suppressDriverSearch = true;
+            DriverSearchBox.Text = item.fullName;
+            _suppressDriverSearch = false;
+            ClearDriverBtn.Visibility = Visibility.Visible;
+            DriverPopup.IsOpen = false;
+            DriverResults.SelectedItem = null;
+        }
+    }
+
+    private void ClearDriver_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedDriver = null;
+        _suppressDriverSearch = true;
+        DriverSearchBox.Text = "";
+        _suppressDriverSearch = false;
+        ClearDriverBtn.Visibility = Visibility.Collapsed;
+        DriverSearchBox.Focus();
+    }
+
+    // ══════════════════════════════════════
+    // SEARCH
+    // ══════════════════════════════════════
 
     private async Task SearchAsync()
     {
@@ -112,8 +239,11 @@ public partial class ReceiptSearchPage : UserControl
         EmptyState.Visibility = Visibility.Collapsed;
         try
         {
-            string? merchantName = string.IsNullOrWhiteSpace(FilterMerchant.Text) ? null : FilterMerchant.Text.Trim();
-            int? driverId = FilterDriver.SelectedValue is int did && did > 0 ? did : null;
+            // Use selected item ID if available, otherwise use text for merchant name search
+            string? merchantName = _selectedMerchant != null
+                ? _selectedMerchant.merchantName
+                : (string.IsNullOrWhiteSpace(MerchantSearchBox.Text) ? null : MerchantSearchBox.Text.Trim());
+            int? driverId = _selectedDriver?.driverId > 0 ? _selectedDriver.driverId : null;
             string? dateFrom = FilterDateFrom.SelectedDate?.ToString("yyyy-MM-dd");
             string? dateTo = FilterDateTo.SelectedDate?.ToString("yyyy-MM-dd");
             int? receiptNum = int.TryParse(FilterReceiptNum.Text, out int rn) ? rn : null;
@@ -184,12 +314,20 @@ public partial class ReceiptSearchPage : UserControl
 
     private void ClearFilters_Click(object sender, RoutedEventArgs e)
     {
-        FilterMerchant.Text = "";
-        _merchantsView?.Refresh();
-        
-        if (FilterDriver.Items.Count > 0) FilterDriver.SelectedIndex = 0;
-        _driversView?.Refresh();
-        
+        // Clear merchant
+        _selectedMerchant = null;
+        _suppressMerchantSearch = true;
+        MerchantSearchBox.Text = "";
+        _suppressMerchantSearch = false;
+        ClearMerchantBtn.Visibility = Visibility.Collapsed;
+
+        // Clear driver
+        _selectedDriver = null;
+        _suppressDriverSearch = true;
+        DriverSearchBox.Text = "";
+        _suppressDriverSearch = false;
+        ClearDriverBtn.Visibility = Visibility.Collapsed;
+
         FilterDateFrom.SelectedDate = null;
         FilterDateTo.SelectedDate = null;
         FilterReceiptNum.Text = "";
@@ -225,8 +363,9 @@ public partial class ReceiptSearchPage : UserControl
         LoadingOverlay.Visibility = Visibility.Visible;
         try
         {
-            string? merchantName = string.IsNullOrWhiteSpace(FilterMerchant.Text) ? null : FilterMerchant.Text.Trim();
-            int? driverId = FilterDriver.SelectedValue is int did && did > 0 ? did : null;
+            string? merchantName = _selectedMerchant?.merchantName
+                ?? (string.IsNullOrWhiteSpace(MerchantSearchBox.Text) ? null : MerchantSearchBox.Text.Trim());
+            int? driverId = _selectedDriver?.driverId > 0 ? _selectedDriver.driverId : null;
             string? dateFrom = FilterDateFrom.SelectedDate?.ToString("yyyy-MM-dd");
             string? dateTo = FilterDateTo.SelectedDate?.ToString("yyyy-MM-dd");
             int? receiptNum = int.TryParse(FilterReceiptNum.Text, out int rn) ? rn : null;

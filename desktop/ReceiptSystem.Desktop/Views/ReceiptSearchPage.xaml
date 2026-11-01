@@ -20,18 +20,78 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- Merchant search box -->
                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
                         <TextBlock Text="التاجر" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <ComboBox x:Name="FilterMerchant" Height="34" IsEditable="True" StaysOpenOnEdit="True"
-                                  DisplayMemberPath="merchantName" SelectedValuePath="merchantId"
-                                  KeyUp="FilterMerchant_KeyUp"/>
+                        <Grid>
+                            <TextBox x:Name="MerchantSearchBox" Style="{StaticResource ModernTextBox}" Height="34"
+                                     TextChanged="MerchantSearch_TextChanged" GotFocus="MerchantSearch_GotFocus"
+                                     Tag="اكتب اسم التاجر للبحث..." />
+                            <Button x:Name="ClearMerchantBtn" Content="✕" FontSize="10" Visibility="Collapsed"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0"
+                                    Width="20" Height="20" Padding="0" Cursor="Hand"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="{StaticResource TextMutedBrush}"
+                                    Click="ClearMerchant_Click"/>
+                            <Popup x:Name="MerchantPopup" PlacementTarget="{Binding ElementName=MerchantSearchBox}"
+                                   Placement="Bottom" StaysOpen="False" Width="280" AllowsTransparency="True">
+                                <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                        BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                        Padding="0" Margin="0,2,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/>
+                                    </Border.Effect>
+                                    <ListBox x:Name="MerchantResults" MaxHeight="250" BorderThickness="0"
+                                             Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                             FontSize="13" SelectionChanged="MerchantResults_SelectionChanged">
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem">
+                                                <Setter Property="Padding" Value="10,7"/>
+                                                <Setter Property="Cursor" Value="Hand"/>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+                        </Grid>
                     </StackPanel>
+
+                    <!-- Driver search box -->
                     <StackPanel Grid.Column="1" Margin="0,0,10,0">
                         <TextBlock Text="السائق" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <ComboBox x:Name="FilterDriver" Height="34" IsEditable="True" StaysOpenOnEdit="True"
-                                  DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                                  KeyUp="FilterDriver_KeyUp"/>
+                        <Grid>
+                            <TextBox x:Name="DriverSearchBox" Style="{StaticResource ModernTextBox}" Height="34"
+                                     TextChanged="DriverSearch_TextChanged" GotFocus="DriverSearch_GotFocus"
+                                     Tag="اكتب اسم السائق للبحث..." />
+                            <Button x:Name="ClearDriverBtn" Content="✕" FontSize="10" Visibility="Collapsed"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0"
+                                    Width="20" Height="20" Padding="0" Cursor="Hand"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="{StaticResource TextMutedBrush}"
+                                    Click="ClearDriver_Click"/>
+                            <Popup x:Name="DriverPopup" PlacementTarget="{Binding ElementName=DriverSearchBox}"
+                                   Placement="Bottom" StaysOpen="False" Width="280" AllowsTransparency="True">
+                                <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                        BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                        Padding="0" Margin="0,2,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/>
+                                    </Border.Effect>
+                                    <ListBox x:Name="DriverResults" MaxHeight="250" BorderThickness="0"
+                                             Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                             FontSize="13" SelectionChanged="DriverResults_SelectionChanged">
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem">
+                                                <Setter Property="Padding" Value="10,7"/>
+                                                <Setter Property="Cursor" Value="Hand"/>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+                        </Grid>
                     </StackPanel>
+
                     <StackPanel Grid.Column="2" Margin="0,0,10,0">
                         <TextBlock Text="من تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                         <DatePicker x:Name="FilterDateFrom" Height="34" FlowDirection="LeftToRight"/>
