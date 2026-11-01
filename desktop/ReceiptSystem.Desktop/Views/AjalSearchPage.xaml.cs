@@ -1,12 +1,10 @@
 using System;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 using ReceiptSystem.Desktop.Helpers;
@@ -20,7 +18,10 @@ public partial class AjalSearchPage : UserControl
     private int _currentPage = 1;
     private int _totalCount = 0;
     private const int PAGE_SIZE = 50;
-    private ICollectionView? _merchantsView;
+
+    private List<MerchantComboItem> _allMerchants = new();
+    private MerchantComboItem? _selectedMerchant;
+    private bool _suppressMerchantSearch;
 
     public AjalSearchPage(ApiClient api)
     {
@@ -39,30 +40,90 @@ public partial class AjalSearchPage : UserControl
             var merchants = obj["data"] as JArray;
             if (merchants == null) return;
 
-            var list = merchants.Select(m => new MerchantComboItem
+            _allMerchants = merchants.Select(m => new MerchantComboItem
             {
                 merchantId = m["merchantId"]?.Value<int>() ?? 0,
                 merchantName = m["merchantName"]?.ToString() ?? ""
             }).ToList();
-            
-            _merchantsView = CollectionViewSource.GetDefaultView(list);
-            _merchantsView.Filter = (obj) =>
-            {
-                if (string.IsNullOrWhiteSpace(FilterMerchant.Text)) return true;
-                return ((MerchantComboItem)obj).merchantName.Contains(FilterMerchant.Text, StringComparison.OrdinalIgnoreCase);
-            };
-            
-            FilterMerchant.ItemsSource = _merchantsView;
         }
         catch { }
     }
 
-    private void FilterMerchant_KeyUp(object sender, KeyEventArgs e)
+    // ══════════════════════════════════════
+    // MERCHANT SEARCH
+    // ══════════════════════════════════════
+
+    private void MerchantSearch_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Enter || e.Key == Key.Escape) return;
-        _merchantsView?.Refresh();
-        FilterMerchant.IsDropDownOpen = true;
+        if (_suppressMerchantSearch) return;
+
+        var query = MerchantSearchBox.Text.Trim();
+
+        if (string.IsNullOrEmpty(query))
+        {
+            _selectedMerchant = null;
+            ClearMerchantBtn.Visibility = Visibility.Collapsed;
+            MerchantPopup.IsOpen = false;
+            return;
+        }
+
+        if (_selectedMerchant != null && query == _selectedMerchant.merchantName)
+            return;
+
+        _selectedMerchant = null;
+
+        var filtered = _allMerchants
+            .Where(m => m.merchantName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Take(50)
+            .ToList();
+
+        if (filtered.Count > 0)
+        {
+            MerchantResults.ItemsSource = filtered;
+            MerchantPopup.IsOpen = true;
+        }
+        else
+        {
+            MerchantPopup.IsOpen = false;
+        }
     }
+
+    private void MerchantSearch_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(MerchantSearchBox.Text) && _allMerchants.Count > 0)
+        {
+            MerchantResults.ItemsSource = _allMerchants.Take(50).ToList();
+            MerchantPopup.IsOpen = true;
+        }
+    }
+
+    private void MerchantResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MerchantResults.SelectedItem is MerchantComboItem item)
+        {
+            _selectedMerchant = item;
+            _suppressMerchantSearch = true;
+            MerchantSearchBox.Text = item.merchantName;
+            _suppressMerchantSearch = false;
+            ClearMerchantBtn.Visibility = Visibility.Visible;
+            MerchantPopup.IsOpen = false;
+            MerchantResults.SelectedItem = null;
+        }
+    }
+
+    private void ClearMerchant_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedMerchant = null;
+        _suppressMerchantSearch = true;
+        MerchantSearchBox.Text = "";
+        _suppressMerchantSearch = false;
+        ClearMerchantBtn.Visibility = Visibility.Collapsed;
+        MerchantSearchBox.Focus();
+    }
+
+    // ══════════════════════════════════════
+    // SEARCH
+    // ══════════════════════════════════════
 
     private async void Search_Click(object sender, RoutedEventArgs e)
     {
@@ -72,9 +133,12 @@ public partial class AjalSearchPage : UserControl
 
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
-        FilterMerchant.Text = "";
-        _merchantsView?.Refresh();
-        
+        _selectedMerchant = null;
+        _suppressMerchantSearch = true;
+        MerchantSearchBox.Text = "";
+        _suppressMerchantSearch = false;
+        ClearMerchantBtn.Visibility = Visibility.Collapsed;
+
         FilterInvoiceNum.Text = "";
         FilterEmployee.Text = ""; FilterStatus.SelectedIndex = 0;
         FilterDateFrom.SelectedDate = null; FilterDateTo.SelectedDate = null;
@@ -90,8 +154,11 @@ public partial class AjalSearchPage : UserControl
             string? reviewStatus = null;
             if (FilterStatus.SelectedItem is ComboBoxItem si && si.Tag is string st) reviewStatus = st;
 
+            string? merchantName = _selectedMerchant?.merchantName
+                ?? (string.IsNullOrWhiteSpace(MerchantSearchBox.Text) ? null : MerchantSearchBox.Text.Trim());
+
             var json = await _api.SearchAjalJsonAsync(
-                merchantName: string.IsNullOrWhiteSpace(FilterMerchant.Text) ? null : FilterMerchant.Text.Trim(),
+                merchantName: merchantName,
                 invoiceNumber: string.IsNullOrWhiteSpace(FilterInvoiceNum.Text) ? null : FilterInvoiceNum.Text.Trim(),
                 reviewStatus: reviewStatus,
                 dateFrom: FilterDateFrom.SelectedDate?.ToString("yyyy-MM-dd"),
@@ -149,8 +216,11 @@ public partial class AjalSearchPage : UserControl
             string? reviewStatus = null;
             if (FilterStatus.SelectedItem is ComboBoxItem si2 && si2.Tag is string st2) reviewStatus = st2;
 
+            string? merchantName = _selectedMerchant?.merchantName
+                ?? (string.IsNullOrWhiteSpace(MerchantSearchBox.Text) ? null : MerchantSearchBox.Text.Trim());
+
             var bytes = await _api.ExportAjalSearchAsync(
-                merchantName: string.IsNullOrWhiteSpace(FilterMerchant.Text) ? null : FilterMerchant.Text.Trim(),
+                merchantName: merchantName,
                 invoiceNumber: string.IsNullOrWhiteSpace(FilterInvoiceNum.Text) ? null : FilterInvoiceNum.Text.Trim(),
                 reviewStatus: reviewStatus,
                 dateFrom: FilterDateFrom.SelectedDate?.ToString("yyyy-MM-dd"),

@@ -260,9 +260,37 @@
                              FlowDirection="LeftToRight" TextAlignment="Right"/>
 
                     <TextBlock Text="التاجر:" FontSize="13" Margin="0,12,0,6"/>
-                    <ComboBox x:Name="EditMerchantCombo" Height="38" Width="396"
-                              DisplayMemberPath="merchantName" SelectedValuePath="merchantId"
-                              IsEditable="True" IsTextSearchEnabled="True"/>
+                    <Grid>
+                        <TextBox x:Name="EditMerchantSearchBox" Style="{StaticResource ModernTextBox}" Height="38"
+                                 Width="396" FontSize="14"
+                                 TextChanged="EditMerchantSearch_TextChanged" GotFocus="EditMerchantSearch_GotFocus"/>
+                        <Button x:Name="ClearEditMerchantBtn" Content="✕" FontSize="10" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0"
+                                Width="20" Height="20" Padding="0" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource TextMutedBrush}"
+                                Click="ClearEditMerchant_Click"/>
+                        <Popup x:Name="EditMerchantPopup" PlacementTarget="{Binding ElementName=EditMerchantSearchBox}"
+                               Placement="Bottom" StaysOpen="False" Width="396" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                    Padding="0" Margin="0,2,0,0">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/>
+                                </Border.Effect>
+                                <ListBox x:Name="EditMerchantResults" MaxHeight="200" BorderThickness="0"
+                                         Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                         FontSize="13" SelectionChanged="EditMerchantResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Padding" Value="10,6"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
 
                     <CheckBox x:Name="EditPartialCheck" Content="دفعة جزئية" FontSize="13" Margin="0,12,0,0"/>
 

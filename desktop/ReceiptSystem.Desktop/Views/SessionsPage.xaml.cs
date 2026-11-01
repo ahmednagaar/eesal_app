@@ -373,23 +373,9 @@ public partial class SessionsPage : UserControl
         EditReceiptTitle.Text = $"✏️ تعديل الإيصال {row.receiptNumber}";
 
         // Load merchants list (once)
-        if (!_merchantsLoadedForEdit)
+        if (_allMerchants.Count == 0)
         {
-            try
-            {
-                var merchantsJson = await _api.SearchMerchantsJsonAsync("");
-                if (merchantsJson != null)
-                {
-                    var merchants = JArray.Parse(merchantsJson);
-                    EditMerchantCombo.ItemsSource = merchants.Select(m => new MerchantComboItem
-                    {
-                        merchantId = m["merchantId"]?.Value<int>() ?? 0,
-                        merchantName = m["merchantName"]?.ToString() ?? ""
-                    }).ToList();
-                    _merchantsLoadedForEdit = true;
-                }
-            }
-            catch { }
+            await LoadMerchantsAsync();
         }
 
         // Pre-populate fields with current values
@@ -399,17 +385,22 @@ public partial class SessionsPage : UserControl
 
         // Try to select current merchant
         string currentMerchant = (string)row.merchantName;
-        if (EditMerchantCombo.ItemsSource != null)
+        var matchedMerchant = _allMerchants.FirstOrDefault(m => m.merchantName == currentMerchant);
+        if (matchedMerchant != null)
         {
-            foreach (var item in EditMerchantCombo.ItemsSource)
-            {
-                dynamic m = item;
-                if ((string)m.merchantName == currentMerchant)
-                {
-                    EditMerchantCombo.SelectedItem = item;
-                    break;
-                }
-            }
+            _editSelectedMerchant = matchedMerchant;
+            _suppressEditMerchantSearch = true;
+            EditMerchantSearchBox.Text = matchedMerchant.merchantName;
+            _suppressEditMerchantSearch = false;
+            ClearEditMerchantBtn.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            _editSelectedMerchant = null;
+            _suppressEditMerchantSearch = true;
+            EditMerchantSearchBox.Text = "";
+            _suppressEditMerchantSearch = false;
+            ClearEditMerchantBtn.Visibility = Visibility.Collapsed;
         }
 
         EditReceiptDialog.Visibility = Visibility.Visible;
@@ -425,7 +416,7 @@ public partial class SessionsPage : UserControl
             return;
         }
 
-        int? merchantId = EditMerchantCombo.SelectedValue as int?;
+        int? merchantId = _editSelectedMerchant?.merchantId;
         if (merchantId == null || merchantId <= 0)
         {
             ToastHelper.ShowError(RootGrid, "اختر التاجر");
@@ -487,5 +478,74 @@ public partial class SessionsPage : UserControl
             ToastHelper.ShowError(RootGrid, ex.Message);
         }
         finally { btn.IsEnabled = true; }
+    }
+
+    // ══════════════════════════════════════
+    // EDIT RECEIPT DIALOG — merchant search
+    // ══════════════════════════════════════
+
+    private List<MerchantComboItem> _allMerchants = new();
+    private MerchantComboItem? _editSelectedMerchant;
+    private bool _suppressEditMerchantSearch;
+    private int _editReceiptId;
+
+    private async Task LoadMerchantsAsync()
+    {
+        try
+        {
+            var json = await _api.GetMerchantsJsonAsync(1, 10000);
+            if (json == null) return;
+            var obj = JObject.Parse(json);
+            var merchants = obj["data"] as JArray;
+            if (merchants == null) return;
+            _allMerchants = merchants.Select(m => new MerchantComboItem
+            {
+                merchantId = m["merchantId"]?.Value<int>() ?? 0,
+                merchantName = m["merchantName"]?.ToString() ?? ""
+            }).ToList();
+        }
+        catch { }
+    }
+
+    private void EditMerchantSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressEditMerchantSearch) return;
+        var query = EditMerchantSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(query)) { _editSelectedMerchant = null; ClearEditMerchantBtn.Visibility = Visibility.Collapsed; EditMerchantPopup.IsOpen = false; return; }
+        if (_editSelectedMerchant != null && query == _editSelectedMerchant.merchantName) return;
+        _editSelectedMerchant = null;
+        var filtered = _allMerchants.Where(m => m.merchantName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        EditMerchantResults.ItemsSource = filtered;
+        EditMerchantPopup.IsOpen = filtered.Count > 0;
+    }
+
+    private void EditMerchantSearch_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(EditMerchantSearchBox.Text) && _allMerchants.Count > 0)
+        { EditMerchantResults.ItemsSource = _allMerchants.Take(50).ToList(); EditMerchantPopup.IsOpen = true; }
+    }
+
+    private void EditMerchantResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (EditMerchantResults.SelectedItem is MerchantComboItem item)
+        {
+            _editSelectedMerchant = item;
+            _suppressEditMerchantSearch = true;
+            EditMerchantSearchBox.Text = item.merchantName;
+            _suppressEditMerchantSearch = false;
+            ClearEditMerchantBtn.Visibility = Visibility.Visible;
+            EditMerchantPopup.IsOpen = false;
+            EditMerchantResults.SelectedItem = null;
+        }
+    }
+
+    private void ClearEditMerchant_Click(object sender, RoutedEventArgs e)
+    {
+        _editSelectedMerchant = null;
+        _suppressEditMerchantSearch = true;
+        EditMerchantSearchBox.Text = "";
+        _suppressEditMerchantSearch = false;
+        ClearEditMerchantBtn.Visibility = Visibility.Collapsed;
+        EditMerchantSearchBox.Focus();
     }
 }

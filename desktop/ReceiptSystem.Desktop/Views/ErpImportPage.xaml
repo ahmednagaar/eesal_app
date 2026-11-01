@@ -160,11 +160,36 @@
                                        Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
 
                             <TextBlock Text="السائق" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <ComboBox x:Name="BlockDriverCombo" Height="34" Margin="0,0,0,4"
-                                      IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
-                                      DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                                      SelectionChanged="BlockDriverCombo_SelectionChanged"
-                                      TextBoxBase.TextChanged="SearchableComboBox_TextChanged"/>
+                            <Grid Margin="0,0,0,4">
+                                <TextBox x:Name="DriverSearchBox" Style="{StaticResource ModernTextBox}" Height="34"
+                                         TextChanged="DriverSearch_TextChanged" GotFocus="DriverSearch_GotFocus"/>
+                                <Button x:Name="ClearDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                        Width="18" Height="18" Padding="0" Cursor="Hand"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="{StaticResource TextMutedBrush}"
+                                        Click="ClearDriver_Click"/>
+                                <Popup x:Name="DriverPopup" PlacementTarget="{Binding ElementName=DriverSearchBox}"
+                                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                                    <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                            BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                            Padding="0" Margin="0,2,0,0" MaxWidth="280">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/>
+                                        </Border.Effect>
+                                        <ListBox x:Name="DriverResults" MaxHeight="200" BorderThickness="0"
+                                                 Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                                 FontSize="12" SelectionChanged="DriverResults_SelectionChanged">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Padding" Value="8,6"/>
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                        </ListBox>
+                                    </Border>
+                                </Popup>
+                            </Grid>
 
                             <!-- Driver's Current Books Display -->
                             <Border x:Name="DriverBooksPanel" Background="#1A667eea" CornerRadius="6"
@@ -187,10 +212,36 @@
                             <TextBox x:Name="BlockEndReceipt" Style="{StaticResource ModernTextBox}" Height="34" Margin="0,0,0,8"/>
 
                             <TextBlock Text="المنطقة / الخط" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                            <ComboBox x:Name="BlockRouteArea" Height="34" Margin="0,0,0,8"
-                                      IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
-                                      DisplayMemberPath="RouteName" SelectedValuePath="RouteName"
-                                      TextBoxBase.TextChanged="SearchableComboBox_TextChanged"/>
+                            <Grid Margin="0,0,0,8">
+                                <TextBox x:Name="RouteSearchBox" Style="{StaticResource ModernTextBox}" Height="34"
+                                         TextChanged="RouteSearch_TextChanged" GotFocus="RouteSearch_GotFocus"/>
+                                <Button x:Name="ClearRouteBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                        Width="18" Height="18" Padding="0" Cursor="Hand"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="{StaticResource TextMutedBrush}"
+                                        Click="ClearRoute_Click"/>
+                                <Popup x:Name="RoutePopup" PlacementTarget="{Binding ElementName=RouteSearchBox}"
+                                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                                    <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                            BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                            Padding="0" Margin="0,2,0,0" MaxWidth="280">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/>
+                                        </Border.Effect>
+                                        <ListBox x:Name="RouteResults" MaxHeight="200" BorderThickness="0"
+                                                 Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                                 FontSize="12" SelectionChanged="RouteResults_SelectionChanged">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Padding" Value="8,6"/>
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                        </ListBox>
+                                    </Border>
+                                </Popup>
+                            </Grid>
 
                             <!-- Count validation display -->
                             <Border x:Name="CountValidationPanel" Background="#33FBBF24" CornerRadius="6"

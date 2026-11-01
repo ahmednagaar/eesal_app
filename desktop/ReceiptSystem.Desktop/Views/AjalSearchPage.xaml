@@ -13,12 +13,40 @@
         <!-- ═══ FILTERS BAR ═══ -->
         <Border Grid.Row="0" Background="{StaticResource BgCardBrush}" CornerRadius="12" Padding="16,12" Margin="24,20,24,0">
             <WrapPanel>
+                <!-- Searchable merchant -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="اسم التاجر:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <ComboBox x:Name="FilterMerchant" Height="32" Width="150" FontSize="12" Padding="6,0"
-                              IsEditable="True" StaysOpenOnEdit="True"
-                              DisplayMemberPath="merchantName" SelectedValuePath="merchantId"
-                              KeyUp="FilterMerchant_KeyUp"/>
+                    <Grid>
+                        <TextBox x:Name="MerchantSearchBox" Style="{StaticResource ModernTextBox}" Height="32" Width="180"
+                                 FontSize="12" Padding="6,4"
+                                 TextChanged="MerchantSearch_TextChanged" GotFocus="MerchantSearch_GotFocus"/>
+                        <Button x:Name="ClearMerchantBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                Width="18" Height="18" Padding="0" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource TextMutedBrush}"
+                                Click="ClearMerchant_Click"/>
+                        <Popup x:Name="MerchantPopup" PlacementTarget="{Binding ElementName=MerchantSearchBox}"
+                               Placement="Bottom" StaysOpen="False" Width="280" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                    Padding="0" Margin="0,2,0,0">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/>
+                                </Border.Effect>
+                                <ListBox x:Name="MerchantResults" MaxHeight="250" BorderThickness="0"
+                                         Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                         FontSize="12" SelectionChanged="MerchantResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Padding" Value="10,6"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
                     <TextBlock Text="رقم الفاتورة:" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
