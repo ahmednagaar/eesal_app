@@ -50,6 +50,7 @@
                     <ComboBoxItem Content="قيد التحقيق" Tag="UnderInvestigation"/>
                     <ComboBoxItem Content="تم الحل" Tag="Resolved"/>
                     <ComboBoxItem Content="مُوضّحة" Tag="Explained"/>
+                    <ComboBoxItem Content="ملغي (لاغي)" Tag="Cancelled"/>
                 </ComboBox>
                 <Button Content="⟳  تحديث" Style="{StaticResource SecondaryButton}" Padding="12,6" FontSize="12"
                         Margin="12,0,0,0" Click="Refresh_Click" Height="34"/>

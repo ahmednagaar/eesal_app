@@ -12,6 +12,7 @@ public partial class GoodsReturnsPage : UserControl
 {
     private readonly ApiClient _api;
     private ObservableCollection<ReturnItemRow> _items = new();
+    private List<ProductComboItem> _productsList = new();
     private bool _isLoaded = false;
 
     public GoodsReturnsPage(ApiClient api)
@@ -34,10 +35,19 @@ public partial class GoodsReturnsPage : UserControl
             var json = await _api.GetDriversJsonAsync();
             if (json != null)
             {
-                var drivers = JsonConvert.DeserializeObject<JArray>(json);
-                var allDrivers = new JArray();
-                allDrivers.Add(JObject.FromObject(new { driverId = 0, fullName = "كل السائقين" }));
-                if (drivers != null) foreach (var d in drivers) allDrivers.Add(d);
+                var drivers = JArray.Parse(json);
+                var allDrivers = new List<DriverComboItem>
+                {
+                    new DriverComboItem { driverId = 0, fullName = "كل السائقين" }
+                };
+                foreach (var d in drivers)
+                {
+                    allDrivers.Add(new DriverComboItem
+                    {
+                        driverId = d["driverId"]?.Value<int>() ?? 0,
+                        fullName = d["fullName"]?.ToString() ?? ""
+                    });
+                }
                 DriverFilter.ItemsSource = allDrivers;
                 DriverFilter.SelectedIndex = 0;
             }
@@ -92,37 +102,89 @@ public partial class GoodsReturnsPage : UserControl
         ReturnDialogError.Visibility = Visibility.Collapsed;
         ReturnItemsGrid.ItemsSource = _items;
 
-        // Load dropdowns
+        // Load dropdowns with strongly-typed items
         try
         {
+            // Drivers
             var driversJson = await _api.GetDriversJsonAsync();
-            if (driversJson != null) ReturnDriverCombo.ItemsSource = JsonConvert.DeserializeObject<JArray>(driversJson);
+            if (driversJson != null)
+            {
+                var drivers = JArray.Parse(driversJson);
+                ReturnDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
+                {
+                    driverId = d["driverId"]?.Value<int>() ?? 0,
+                    fullName = d["fullName"]?.ToString() ?? ""
+                }).ToList();
+            }
 
+            // Return reasons
             var reasonsJson = await _api.GetReturnReasonsJsonAsync();
-            if (reasonsJson != null) ReturnReasonCombo.ItemsSource = JsonConvert.DeserializeObject<JArray>(reasonsJson);
+            if (reasonsJson != null)
+            {
+                var reasons = JArray.Parse(reasonsJson);
+                ReturnReasonCombo.ItemsSource = reasons.Select(r => new ReasonComboItem
+                {
+                    reasonId = r["reasonId"]?.Value<int>() ?? 0,
+                    reasonName = r["reasonName"]?.ToString() ?? ""
+                }).ToList();
+            }
 
-            var productsJson = await _api.GetProductsJsonAsync();
-            if (productsJson != null) ItemProductCombo.ItemsSource = JsonConvert.DeserializeObject<JArray>(productsJson);
+            // Products (use search endpoint to get units)
+            var productsJson = await _api.SearchProductsJsonAsync("");
+            // Search with empty query returns empty — use GetAll instead
+            if (productsJson == null || productsJson == "[]")
+                productsJson = await _api.GetProductsJsonAsync();
 
-            // Load return books for linking
+            if (productsJson != null)
+            {
+                var products = JArray.Parse(productsJson);
+                _productsList = products.Select(p =>
+                {
+                    var item = new ProductComboItem
+                    {
+                        productId = p["productId"]?.Value<int>() ?? 0,
+                        productName = p["productName"]?.ToString() ?? "",
+                        categoryName = p["categoryName"]?.ToString(),
+                        productCode = p["productCode"]?.ToString()
+                    };
+                    // If the response includes units (from search endpoint)
+                    var units = p["units"] as JArray;
+                    if (units != null)
+                    {
+                        item.units = units.Select(u => new ProductUnitComboItem
+                        {
+                            productUnitId = u["productUnitId"]?.Value<int>() ?? 0,
+                            unitId = u["unitId"]?.Value<int>() ?? 0,
+                            unitName = u["unitName"]?.ToString() ?? "",
+                            isDefault = u["isDefault"]?.Value<bool>() ?? false
+                        }).ToList();
+                    }
+                    return item;
+                }).ToList();
+                ItemProductCombo.ItemsSource = _productsList;
+            }
+
+            // Return books
             try
             {
                 var booksJson = await _api.GetAllReturnBooksJsonAsync();
                 if (booksJson != null)
                 {
-                    var books = JsonConvert.DeserializeObject<JArray>(booksJson);
-                    if (books != null)
+                    var books = JArray.Parse(booksJson);
+                    var bookList = new List<ReturnBookComboItem>
                     {
-                        var bookList = new JArray();
-                        bookList.Add(JObject.FromObject(new { bookId = 0, bookLabel = "— بدون دفتر —" }));
-                        foreach (var b in books)
+                        new ReturnBookComboItem { bookId = 0, bookLabel = "— بدون دفتر —" }
+                    };
+                    foreach (var b in books)
+                    {
+                        bookList.Add(new ReturnBookComboItem
                         {
-                            b["bookLabel"] = $"دفتر {b["bookNumber"]} ({b["startReceiptNumber"]}-{b["endReceiptNumber"]})"; 
-                            bookList.Add(b);
-                        }
-                        ReturnBookCombo.ItemsSource = bookList;
-                        ReturnBookCombo.SelectedIndex = 0;
+                            bookId = b["bookId"]?.Value<int>() ?? 0,
+                            bookLabel = $"دفتر {b["bookNumber"]} ({b["startReceiptNumber"]}-{b["endReceiptNumber"]})"
+                        });
                     }
+                    ReturnBookCombo.ItemsSource = bookList;
+                    ReturnBookCombo.SelectedIndex = 0;
                 }
             }
             catch { }
@@ -132,23 +194,87 @@ public partial class GoodsReturnsPage : UserControl
         ReturnDialog.Visibility = Visibility.Visible;
     }
 
+    /// <summary>
+    /// When a product is selected, load its available units into ItemUnitCombo.
+    /// If the product was loaded without units (from list endpoint), fetch them individually.
+    /// </summary>
+    private async void ItemProductCombo_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        ItemUnitCombo.ItemsSource = null;
+        ItemUnitCombo.SelectedIndex = -1;
+
+        if (ItemProductCombo.SelectedItem is not ProductComboItem product) return;
+
+        var units = product.units;
+
+        // If units weren't loaded (product came from list endpoint without units), fetch individually
+        if (units == null || units.Count == 0)
+        {
+            try
+            {
+                var json = await _api.GetProductJsonAsync(product.productId);
+                if (json != null)
+                {
+                    var prod = JObject.Parse(json);
+                    var unitsArr = prod["units"] as JArray;
+                    if (unitsArr != null)
+                    {
+                        units = unitsArr.Select(u => new ProductUnitComboItem
+                        {
+                            productUnitId = u["productUnitId"]?.Value<int>() ?? 0,
+                            unitId = u["unitId"]?.Value<int>() ?? 0,
+                            unitName = u["unitName"]?.ToString() ?? "",
+                            isDefault = u["isDefault"]?.Value<bool>() ?? false
+                        }).ToList();
+                        product.units = units; // Cache for subsequent selections
+                    }
+                }
+            }
+            catch { }
+        }
+
+        if (units != null && units.Count > 0)
+        {
+            ItemUnitCombo.ItemsSource = units;
+            // Select the default unit if available, otherwise the first
+            var defaultUnit = units.FirstOrDefault(u => u.isDefault);
+            ItemUnitCombo.SelectedItem = defaultUnit ?? units[0];
+        }
+    }
+
     private void AddItem_Click(object sender, RoutedEventArgs e)
     {
-        if (ItemProductCombo.SelectedItem is not JObject product) return;
-        if (!decimal.TryParse(ItemQtyBox.Text.Trim(), out decimal qty) || qty <= 0) return;
-        if (!decimal.TryParse(ItemPriceBox.Text.Trim(), out decimal price)) price = 0;
-        if (!decimal.TryParse(ItemTotalBox.Text.Trim(), out decimal total)) total = qty * price;
+        if (ItemProductCombo.SelectedItem is not ProductComboItem product)
+        {
+            ShowReturnError("اختر صنف");
+            return;
+        }
+        if (ItemUnitCombo.SelectedItem is not ProductUnitComboItem unit)
+        {
+            ShowReturnError("اختر وحدة الصنف");
+            return;
+        }
+        if (!decimal.TryParse(ItemQtyBox.Text.Trim(), out decimal qty) || qty <= 0)
+        {
+            ShowReturnError("أدخل كمية صحيحة");
+            return;
+        }
+        decimal.TryParse(ItemPriceBox.Text.Trim(), out decimal price);
+        decimal.TryParse(ItemTotalBox.Text.Trim(), out decimal total);
+        if (total == 0 && price > 0) total = qty * price;
 
         _items.Add(new ReturnItemRow
         {
-            ProductId = product["productId"]!.Value<int>(),
-            ProductName = product["productName"]!.ToString(),
-            ProductUnitId = product["defaultUnitId"]?.Value<int>() ?? 0,
+            ProductId = product.productId,
+            ProductName = product.productName,
+            ProductUnitId = unit.productUnitId,
+            UnitName = unit.unitName,
             Quantity = qty,
             UnitPrice = price,
             TotalPrice = total
         });
 
+        ReturnDialogError.Visibility = Visibility.Collapsed;
         ItemQtyBox.Text = "";
         ItemPriceBox.Text = "";
         ItemTotalBox.Text = "";
@@ -164,37 +290,37 @@ public partial class GoodsReturnsPage : UserControl
     {
         if (!int.TryParse(ReturnReceiptNumBox.Text.Trim(), out int receiptNum))
         {
-            ReturnDialogError.Text = "أدخل رقم الإيصال";
-            ReturnDialogError.Visibility = Visibility.Visible;
+            ShowReturnError("أدخل رقم الإيصال");
             return;
         }
-        if (ReturnDriverCombo.SelectedValue == null)
+        if (ReturnDriverCombo.SelectedValue is not int driverId || driverId <= 0)
         {
-            ReturnDialogError.Text = "اختر السائق";
-            ReturnDialogError.Visibility = Visibility.Visible;
+            ShowReturnError("اختر السائق");
             return;
         }
-        if (ReturnReasonCombo.SelectedValue == null)
+        if (ReturnReasonCombo.SelectedValue is not int reasonId || reasonId <= 0)
         {
-            ReturnDialogError.Text = "اختر السبب";
-            ReturnDialogError.Visibility = Visibility.Visible;
+            ShowReturnError("اختر السبب");
             return;
         }
         if (_items.Count == 0)
         {
-            ReturnDialogError.Text = "أضف صنف واحد على الأقل";
-            ReturnDialogError.Visibility = Visibility.Visible;
+            ShowReturnError("أضف صنف واحد على الأقل");
             return;
         }
 
         try
         {
+            int? bookId = null;
+            if (ReturnBookCombo.SelectedValue is int bid && bid > 0)
+                bookId = bid;
+
             var data = new
             {
                 ReturnReceiptNumber = receiptNum,
-                DriverId = (int)ReturnDriverCombo.SelectedValue,
-                ReasonId = (int)ReturnReasonCombo.SelectedValue,
-                BookId = ReturnBookCombo.SelectedValue is int bid && bid > 0 ? (int?)bid : null,
+                DriverId = driverId,
+                ReasonId = reasonId,
+                BookId = bookId,
                 ReturnDate = ReturnDatePicker.SelectedDate ?? DateTime.Today,
                 CustomerName = CustomerNameBox.Text.Trim(),
                 Notes = ReturnNotesBox.Text.Trim(),
@@ -217,9 +343,14 @@ public partial class GoodsReturnsPage : UserControl
         }
         catch (Exception ex)
         {
-            ReturnDialogError.Text = ex.Message;
-            ReturnDialogError.Visibility = Visibility.Visible;
+            ShowReturnError(ex.Message);
         }
+    }
+
+    private void ShowReturnError(string msg)
+    {
+        ReturnDialogError.Text = msg;
+        ReturnDialogError.Visibility = Visibility.Visible;
     }
 
     private void CancelReturnDialog_Click(object sender, RoutedEventArgs e) => ReturnDialog.Visibility = Visibility.Collapsed;
@@ -246,6 +377,7 @@ public class ReturnItemRow
     public int ProductId { get; set; }
     public string ProductName { get; set; } = "";
     public int ProductUnitId { get; set; }
+    public string UnitName { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal TotalPrice { get; set; }

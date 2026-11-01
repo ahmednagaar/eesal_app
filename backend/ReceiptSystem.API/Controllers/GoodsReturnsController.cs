@@ -121,63 +121,86 @@ public class GoodsReturnsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateGoodsReturnDto dto)
     {
-        // Validate driver
-        var driver = await _db.Drivers.FindAsync(dto.DriverId);
-        if (driver == null || !driver.IsActive)
-            return BadRequest(new { message = "السائق غير موجود أو غير نشط" });
-
-        // Validate reason
-        var reason = await _db.ReturnReasonCategories.FindAsync(dto.ReasonId);
-        if (reason == null || !reason.IsActive)
-            return BadRequest(new { message = "سبب المرتجع غير موجود أو غير نشط" });
-
-        // Validate book (optional)
-        if (dto.BookId.HasValue)
+        try
         {
-            var book = await _db.ReturnReceiptBooks.FindAsync(dto.BookId.Value);
-            if (book == null) return BadRequest(new { message = "دفتر المرتجعات غير موجود" });
-        }
+            // Validate driver
+            var driver = await _db.Drivers.FindAsync(dto.DriverId);
+            if (driver == null || !driver.IsActive)
+                return BadRequest(new { message = "السائق غير موجود أو غير نشط" });
 
-        if (dto.Items == null || dto.Items.Count == 0)
-            return BadRequest(new { message = "يجب إضافة صنف واحد على الأقل" });
+            // Validate reason
+            var reason = await _db.ReturnReasonCategories.FindAsync(dto.ReasonId);
+            if (reason == null || !reason.IsActive)
+                return BadRequest(new { message = "سبب المرتجع غير موجود أو غير نشط" });
 
-        // Calculate total
-        decimal totalAmount = dto.Items.Sum(i => i.TotalPrice);
-
-        var goodsReturn = new GoodsReturn
-        {
-            ReturnReceiptNumber = dto.ReturnReceiptNumber,
-            BookId = dto.BookId,
-            DriverId = dto.DriverId,
-            ReasonId = dto.ReasonId,
-            ReturnDate = dto.ReturnDate,
-            CustomerName = dto.CustomerName,
-            Notes = dto.Notes,
-            TotalAmount = totalAmount,
-            EnteredByUserId = UserId
-        };
-
-        foreach (var itemDto in dto.Items)
-        {
-            goodsReturn.Items.Add(new GoodsReturnItem
+            // Validate book (optional)
+            if (dto.BookId.HasValue)
             {
-                ProductId = itemDto.ProductId,
-                ProductUnitId = itemDto.ProductUnitId,
-                Quantity = itemDto.Quantity,
-                UnitPrice = itemDto.UnitPrice,
-                TotalPrice = itemDto.TotalPrice,
-                Notes = itemDto.Notes
-            });
+                var book = await _db.ReturnReceiptBooks.FindAsync(dto.BookId.Value);
+                if (book == null) return BadRequest(new { message = "دفتر المرتجعات غير موجود" });
+            }
+
+            if (dto.Items == null || dto.Items.Count == 0)
+                return BadRequest(new { message = "يجب إضافة صنف واحد على الأقل" });
+
+            // Validate each item's product and unit
+            foreach (var itemDto in dto.Items)
+            {
+                var product = await _db.Products.FindAsync(itemDto.ProductId);
+                if (product == null)
+                    return BadRequest(new { message = $"الصنف رقم {itemDto.ProductId} غير موجود" });
+
+                var productUnit = await _db.ProductUnits.FindAsync(itemDto.ProductUnitId);
+                if (productUnit == null)
+                    return BadRequest(new { message = $"وحدة الصنف رقم {itemDto.ProductUnitId} غير موجودة" });
+
+                if (productUnit.ProductId != itemDto.ProductId)
+                    return BadRequest(new { message = $"الوحدة {itemDto.ProductUnitId} لا تنتمي للصنف {product.ProductName}" });
+            }
+
+            // Calculate total — use item TotalPrice if provided, otherwise calculate from qty * price
+            decimal totalAmount = dto.Items.Sum(i => i.TotalPrice > 0 ? i.TotalPrice : i.Quantity * i.UnitPrice);
+
+            var goodsReturn = new GoodsReturn
+            {
+                ReturnReceiptNumber = dto.ReturnReceiptNumber,
+                BookId = dto.BookId,
+                DriverId = dto.DriverId,
+                ReasonId = dto.ReasonId,
+                ReturnDate = dto.ReturnDate,
+                CustomerName = dto.CustomerName,
+                Notes = dto.Notes,
+                TotalAmount = totalAmount,
+                EnteredByUserId = UserId
+            };
+
+            foreach (var itemDto in dto.Items)
+            {
+                var itemTotal = itemDto.TotalPrice > 0 ? itemDto.TotalPrice : itemDto.Quantity * itemDto.UnitPrice;
+                goodsReturn.Items.Add(new GoodsReturnItem
+                {
+                    ProductId = itemDto.ProductId,
+                    ProductUnitId = itemDto.ProductUnitId,
+                    Quantity = itemDto.Quantity,
+                    UnitPrice = itemDto.UnitPrice,
+                    TotalPrice = itemTotal,
+                    Notes = itemDto.Notes
+                });
+            }
+
+            _db.GoodsReturns.Add(goodsReturn);
+            await _db.SaveChangesAsync();
+
+            await _audit.LogAsync(UserId, "إضافة مرتجع", "GoodsReturn", goodsReturn.ReturnId,
+                newValues: new { dto.ReturnReceiptNumber, dto.DriverId, DriverName = driver.FullName, dto.ReasonId, ItemCount = dto.Items.Count, totalAmount });
+
+            return CreatedAtAction(nameof(Get), new { id = goodsReturn.ReturnId },
+                new { goodsReturn.ReturnId, goodsReturn.ReturnReceiptNumber, goodsReturn.TotalAmount });
         }
-
-        _db.GoodsReturns.Add(goodsReturn);
-        await _db.SaveChangesAsync();
-
-        await _audit.LogAsync(UserId, "إضافة مرتجع", "GoodsReturn", goodsReturn.ReturnId,
-            newValues: new { dto.ReturnReceiptNumber, dto.DriverId, DriverName = driver.FullName, dto.ReasonId, ItemCount = dto.Items.Count, totalAmount });
-
-        return CreatedAtAction(nameof(Get), new { id = goodsReturn.ReturnId },
-            new { goodsReturn.ReturnId, goodsReturn.ReturnReceiptNumber, goodsReturn.TotalAmount });
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"خطأ أثناء حفظ المرتجع: {ex.InnerException?.Message ?? ex.Message}" });
+        }
     }
 
     // PUT api/goods-returns/5

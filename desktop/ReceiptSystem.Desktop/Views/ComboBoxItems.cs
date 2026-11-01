@@ -46,3 +46,36 @@ public class UnitComboItem
     public string unitName { get; set; } = string.Empty;
     public override string ToString() => unitName;
 }
+
+public class ReasonComboItem
+{
+    public int reasonId { get; set; }
+    public string reasonName { get; set; } = string.Empty;
+    public override string ToString() => reasonName;
+}
+
+public class ReturnBookComboItem
+{
+    public int bookId { get; set; }
+    public string bookLabel { get; set; } = string.Empty;
+    public override string ToString() => bookLabel;
+}
+
+public class ProductComboItem
+{
+    public int productId { get; set; }
+    public string productName { get; set; } = string.Empty;
+    public string? categoryName { get; set; }
+    public string? productCode { get; set; }
+    public List<ProductUnitComboItem> units { get; set; } = new();
+    public override string ToString() => productName;
+}
+
+public class ProductUnitComboItem
+{
+    public int productUnitId { get; set; }
+    public int unitId { get; set; }
+    public string unitName { get; set; } = string.Empty;
+    public bool isDefault { get; set; }
+    public override string ToString() => unitName;
+}

@@ -41,10 +41,10 @@ public partial class GapReviewPage : UserControl
             var json = await _api.GetGapSummaryJsonAsync();
             if (json == null) return;
             var summary = JObject.Parse(json);
-            StatOpen.Text = (summary["open"]?.Value<int>() ?? 0).ToString();
-            StatInvestigation.Text = (summary["underInvestigation"]?.Value<int>() ?? 0).ToString();
-            StatResolved.Text = (summary["resolved"]?.Value<int>() ?? 0).ToString();
-            StatTotal.Text = (summary["total"]?.Value<int>() ?? 0).ToString();
+            StatOpen.Text = (summary["openCount"]?.Value<int>() ?? 0).ToString();
+            StatInvestigation.Text = (summary["underInvestigationCount"]?.Value<int>() ?? 0).ToString();
+            StatResolved.Text = (summary["resolvedCount"]?.Value<int>() ?? 0).ToString();
+            StatTotal.Text = (summary["totalCount"]?.Value<int>() ?? 0).ToString();
         }
         catch { }
     }
@@ -78,6 +78,7 @@ public partial class GapReviewPage : UserControl
                         "UnderInvestigation" => "🟡 قيد التحقيق",
                         "Resolved" => "🟢 تم الحل",
                         "Explained" => "🔵 مُوضّحة",
+                        "Cancelled" => "⚫ ملغي (لاغي)",
                         _ => st
                     },
                     resolution = g["resolution"]?.ToString() ?? "",

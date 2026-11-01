@@ -127,9 +127,9 @@ public partial class ReceiptSearchPage : UserControl
             if (json != null)
             {
                 var result = JObject.Parse(json);
-                var items = result["items"] as JArray ?? result["receipts"] as JArray;
+                var items = result["results"] as JArray ?? result["items"] as JArray ?? result["receipts"] as JArray;
                 var total = result["totalCount"]?.Value<int>() ?? result["total"]?.Value<int>() ?? 0;
-                var totalAmt = result["totalAmount"]?.Value<decimal>() ?? 0;
+                var totalAmt = result["totals"]?["totalAmount"]?.Value<decimal>() ?? result["totalAmount"]?.Value<decimal>() ?? 0;
 
                 if (items != null && items.Count > 0)
                 {
@@ -139,7 +139,9 @@ public partial class ReceiptSearchPage : UserControl
                         merchantName = r["merchantName"]?.ToString() ?? "",
                         driverName = r["driverName"]?.ToString() ?? "",
                         amount = (r["amount"]?.Value<decimal>() ?? 0).ToString("N2"),
-                        date = r["sessionDate"]?.ToString()?.Substring(0, 10) ?? "",
+                        date = (r["collectionDate"]?.ToString() ?? r["sessionDate"]?.ToString() ?? "").Length >= 10
+                            ? (r["collectionDate"]?.ToString() ?? r["sessionDate"]?.ToString() ?? "").Substring(0, 10)
+                            : "",
                         source = r["importSource"]?.ToString() ?? "يدوي",
                         sessionId = r["sessionId"]?.Value<int>() ?? 0
                     }).ToList();

@@ -61,7 +61,7 @@ public partial class SessionsPage : UserControl
             if (json != null)
             {
                 var result = JObject.Parse(json);
-                var sessions = result["items"] as JArray ?? result["sessions"] as JArray;
+                var sessions = result["data"] as JArray ?? result["items"] as JArray ?? result["sessions"] as JArray;
                 var total = result["totalCount"]?.Value<int>() ?? result["total"]?.Value<int>() ?? 0;
 
                 if (sessions != null && sessions.Count > 0)

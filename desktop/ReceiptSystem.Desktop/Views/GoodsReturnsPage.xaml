@@ -129,16 +129,19 @@
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="ItemProductCombo" Grid.Column="0" DisplayMemberPath="productName" SelectedValuePath="productId" FontSize="13" Padding="6,4" Margin="0,0,4,0"/>
-                        <TextBox x:Name="ItemQtyBox" Grid.Column="1" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="الكمية"/>
-                        <TextBox x:Name="ItemPriceBox" Grid.Column="2" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="السعر"/>
-                        <TextBox x:Name="ItemTotalBox" Grid.Column="3" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="الإجمالي"/>
-                        <Button Grid.Column="4" Content="➕" Style="{StaticResource PrimaryButton}" Click="AddItem_Click" Padding="10,4" FontSize="14" Margin="4,0,0,0"/>
+                        <ComboBox x:Name="ItemProductCombo" Grid.Column="0" DisplayMemberPath="productName" SelectedValuePath="productId" FontSize="13" Padding="6,4" Margin="0,0,4,0"
+                                  SelectionChanged="ItemProductCombo_Changed"/>
+                        <ComboBox x:Name="ItemUnitCombo" Grid.Column="1" DisplayMemberPath="unitName" SelectedValuePath="productUnitId" FontSize="13" Padding="6,4" Margin="0,0,4,0"/>
+                        <TextBox x:Name="ItemQtyBox" Grid.Column="2" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="الكمية"/>
+                        <TextBox x:Name="ItemPriceBox" Grid.Column="3" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="السعر"/>
+                        <TextBox x:Name="ItemTotalBox" Grid.Column="4" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="الإجمالي"/>
+                        <Button Grid.Column="5" Content="➕" Style="{StaticResource PrimaryButton}" Click="AddItem_Click" Padding="10,4" FontSize="14" Margin="4,0,0,0"/>
                     </Grid>
 
                     <TextBlock x:Name="ReturnDialogError" DockPanel.Dock="Top" Foreground="#FF6B6B" FontSize="13" Visibility="Collapsed" Margin="0,0,0,4"/>
@@ -158,6 +161,7 @@
                               CanUserResizeRows="False" FontSize="13">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="الصنف" Binding="{Binding ProductName}" Width="*"/>
+                            <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName}" Width="90"/>
                             <DataGridTextColumn Header="الكمية" Binding="{Binding Quantity}" Width="80"/>
                             <DataGridTextColumn Header="السعر" Binding="{Binding UnitPrice, StringFormat=\{0:N2\}}" Width="80"/>
                             <DataGridTextColumn Header="الإجمالي" Binding="{Binding TotalPrice, StringFormat=\{0:N2\}}" Width="90"/>
