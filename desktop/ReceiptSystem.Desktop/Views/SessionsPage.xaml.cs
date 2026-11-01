@@ -16,6 +16,9 @@ public partial class SessionsPage : UserControl
     private const int PageSize = 20;
     private int _selectedSessionId;
     private decimal _selectedSessionAmount;
+    private List<DriverComboItem> _allDrivers = new();
+    private DriverComboItem? _selectedFilterDriver;
+    private bool _suppressFilterDriverSearch;
 
     public SessionsPage(ApiClient api)
     {
@@ -36,14 +39,11 @@ public partial class SessionsPage : UserControl
             var json = await _api.GetDriversJsonAsync();
             if (json == null) return;
             var drivers = JArray.Parse(json);
-            var list = drivers.Select(d => new DriverComboItem
+            _allDrivers = drivers.Select(d => new DriverComboItem
             {
                 driverId = d["driverId"]?.Value<int>() ?? 0,
                 fullName = d["fullName"]?.ToString() ?? ""
             }).ToList();
-            list.Insert(0, new DriverComboItem { driverId = 0, fullName = "— الكل —" });
-            FilterDriver.ItemsSource = list;
-            FilterDriver.SelectedIndex = 0;
         }
         catch { }
     }
@@ -55,7 +55,7 @@ public partial class SessionsPage : UserControl
         try
         {
             string? date = FilterDate.SelectedDate?.ToString("yyyy-MM-dd");
-            int? driverId = FilterDriver.SelectedValue is int did && did > 0 ? did : null;
+            int? driverId = _selectedFilterDriver?.driverId > 0 ? _selectedFilterDriver.driverId : null;
 
             var json = await _api.GetSessionsJsonAsync(_currentPage, PageSize, date, driverId);
             if (json != null)
@@ -117,7 +117,8 @@ public partial class SessionsPage : UserControl
     private async void ClearFilters_Click(object sender, RoutedEventArgs e)
     {
         FilterDate.SelectedDate = null;
-        if (FilterDriver.Items.Count > 0) FilterDriver.SelectedIndex = 0;
+        _selectedFilterDriver = null; _suppressFilterDriverSearch = true; DriverSearchBox.Text = ""; _suppressFilterDriverSearch = false;
+        ClearDriverBtn.Visibility = Visibility.Collapsed;
         _currentPage = 1;
         await LoadSessionsAsync();
     }
@@ -547,5 +548,47 @@ public partial class SessionsPage : UserControl
         _suppressEditMerchantSearch = false;
         ClearEditMerchantBtn.Visibility = Visibility.Collapsed;
         EditMerchantSearchBox.Focus();
+    }
+
+    // ══════════════════════════════════════
+    // DRIVER FILTER SEARCH
+    // ══════════════════════════════════════
+
+    private void DriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressFilterDriverSearch) return;
+        var query = DriverSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(query)) { _selectedFilterDriver = null; ClearDriverBtn.Visibility = Visibility.Collapsed; DriverPopup.IsOpen = false; return; }
+        if (_selectedFilterDriver != null && query == _selectedFilterDriver.fullName) return;
+        _selectedFilterDriver = null;
+        var filtered = _allDrivers.Where(d => d.fullName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        DriverResults.ItemsSource = filtered;
+        DriverPopup.IsOpen = filtered.Count > 0;
+    }
+
+    private void DriverSearch_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(DriverSearchBox.Text) && _allDrivers.Count > 0)
+        { DriverResults.ItemsSource = _allDrivers.Take(50).ToList(); DriverPopup.IsOpen = true; }
+    }
+
+    private void DriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DriverResults.SelectedItem is DriverComboItem item)
+        {
+            _selectedFilterDriver = item;
+            _suppressFilterDriverSearch = true;
+            DriverSearchBox.Text = item.fullName;
+            _suppressFilterDriverSearch = false;
+            ClearDriverBtn.Visibility = Visibility.Visible;
+            DriverPopup.IsOpen = false;
+            DriverResults.SelectedItem = null;
+        }
+    }
+
+    private void ClearDriver_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedFilterDriver = null; _suppressFilterDriverSearch = true; DriverSearchBox.Text = ""; _suppressFilterDriverSearch = false;
+        ClearDriverBtn.Visibility = Visibility.Collapsed; DriverSearchBox.Focus();
     }
 }

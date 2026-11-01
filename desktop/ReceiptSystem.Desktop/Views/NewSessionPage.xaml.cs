@@ -21,6 +21,9 @@ public partial class NewSessionPage : UserControl
     private int _nextReceiptNumber = 0;
     private int _selectedBookId = 0;
     private bool _isSaving = false;
+    private List<DriverComboItem> _allDrivers = new();
+    private DriverComboItem? _selectedDriver;
+    private bool _suppressDriverSearch;
 
     // Merchant search debounce
     private DispatcherTimer? _searchTimer;
@@ -52,7 +55,7 @@ public partial class NewSessionPage : UserControl
                     driverId = d["driverId"]?.Value<int>() ?? 0,
                     fullName = d["fullName"]?.ToString() ?? ""
                 }).ToList();
-                DriverCombo.ItemsSource = driverList;
+                _allDrivers = driverList;
             }
 
             // Books are loaded when a driver is selected (see DriverCombo_SelectionChanged)
@@ -72,10 +75,9 @@ public partial class NewSessionPage : UserControl
     // DRIVER SELECTION → RECEIPT HINT
     // ══════════════════════════════════════
 
-    private async void DriverCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void LoadDriverBooks(int driverId)
     {
-        if (DriverCombo.SelectedValue == null) return;
-        int driverId = (int)DriverCombo.SelectedValue;
+        if (driverId <= 0) return;
 
         try
         {
@@ -525,7 +527,7 @@ public partial class NewSessionPage : UserControl
         if (_isSaving) return;
 
         // Validation
-        if (DriverCombo.SelectedValue == null)
+        if (_selectedDriver == null || _selectedDriver.driverId <= 0)
         {
             ToastHelper.ShowError(RootGrid, "يرجى اختيار السائق");
             return;
@@ -564,7 +566,7 @@ public partial class NewSessionPage : UserControl
         // Build DTO
         var dto = new
         {
-            DriverId = (int)DriverCombo.SelectedValue,
+            DriverId = _selectedDriver!.driverId,
             SessionDate = SessionDate.SelectedDate!.Value.ToString("yyyy-MM-dd"),
             RouteArea = RouteAreaBox.Text.Trim(),
             Notes = (string?)null,
@@ -636,8 +638,8 @@ public partial class NewSessionPage : UserControl
         UpdateTotals();
 
         // Re-trigger driver hint to get next receipt number
-        if (DriverCombo.SelectedValue != null)
-            DriverCombo_SelectionChanged(DriverCombo, null!);
+        if (_selectedDriver != null && _selectedDriver.driverId > 0)
+            LoadDriverBooks(_selectedDriver.driverId);
 
         AddReceiptRow();
     }
@@ -687,5 +689,49 @@ public partial class NewSessionPage : UserControl
             parent = VisualTreeHelper.GetParent(parent);
         }
         return null;
+    }
+
+    // ══════════════════════════════════════
+    // SEARCHABLE DRIVER
+    // ══════════════════════════════════════
+
+    private void DriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressDriverSearch) return;
+        var query = DriverSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(query)) { _selectedDriver = null; ClearDriverBtn.Visibility = Visibility.Collapsed; DriverPopup.IsOpen = false; return; }
+        if (_selectedDriver != null && query == _selectedDriver.fullName) return;
+        _selectedDriver = null;
+        var filtered = _allDrivers.Where(d => d.fullName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        DriverResults.ItemsSource = filtered;
+        DriverPopup.IsOpen = filtered.Count > 0;
+    }
+
+    private void DriverSearch_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(DriverSearchBox.Text) && _allDrivers.Count > 0)
+        { DriverResults.ItemsSource = _allDrivers.Take(50).ToList(); DriverPopup.IsOpen = true; }
+    }
+
+    private void DriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DriverResults.SelectedItem is DriverComboItem item)
+        {
+            _selectedDriver = item;
+            _suppressDriverSearch = true;
+            DriverSearchBox.Text = item.fullName;
+            _suppressDriverSearch = false;
+            ClearDriverBtn.Visibility = Visibility.Visible;
+            DriverPopup.IsOpen = false;
+            DriverResults.SelectedItem = null;
+            // Load books for this driver
+            LoadDriverBooks(item.driverId);
+        }
+    }
+
+    private void ClearDriver_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedDriver = null; _suppressDriverSearch = true; DriverSearchBox.Text = ""; _suppressDriverSearch = false;
+        ClearDriverBtn.Visibility = Visibility.Collapsed; DriverSearchBox.Focus();
     }
 }

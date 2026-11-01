@@ -18,9 +18,30 @@
                 </StackPanel>
                 <StackPanel Margin="0,0,16,0">
                     <TextBlock Text="السائق" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="FilterDriver" Width="180" Height="36"
-                              DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                              SelectionChanged="Filter_Changed"/>
+                    <Grid>
+                        <TextBox x:Name="DriverSearchBox" Style="{StaticResource ModernTextBox}" Width="180" Height="36"
+                                 TextChanged="DriverSearch_TextChanged" GotFocus="DriverSearch_GotFocus"/>
+                        <Button x:Name="ClearDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                Width="18" Height="18" Padding="0" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource TextMutedBrush}" Click="ClearDriver_Click"/>
+                        <Popup x:Name="DriverPopup" PlacementTarget="{Binding ElementName=DriverSearchBox}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                    Padding="0" Margin="0,2,0,0" MinWidth="220">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="DriverResults" MaxHeight="200" BorderThickness="0"
+                                         Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                         FontSize="12" SelectionChanged="DriverResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
                 </StackPanel>
                 <Button Content="⟳  بحث" Style="{StaticResource PrimaryButton}" Padding="16,6" FontSize="13"
                         VerticalAlignment="Bottom" Click="Search_Click" Height="36"/>

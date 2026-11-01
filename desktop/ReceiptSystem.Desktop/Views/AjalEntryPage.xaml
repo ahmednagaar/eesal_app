@@ -41,18 +41,62 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Route -->
+                <!-- Route (searchable) -->
                 <StackPanel Grid.Column="0" Margin="0,0,12,0">
                     <TextBlock Text="الخط" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="cmbRoute" DisplayMemberPath="RouteName" SelectedValuePath="RouteId"
-                              />
+                    <Grid>
+                        <TextBox x:Name="RouteSearchBox" Style="{StaticResource ModernTextBox}" Height="34"
+                                 TextChanged="RouteSearch_TextChanged" GotFocus="RouteSearch_GotFocus"/>
+                        <Button x:Name="ClearRouteBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                Width="18" Height="18" Padding="0" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource TextMutedBrush}" Click="ClearRoute_Click"/>
+                        <Popup x:Name="RoutePopup" PlacementTarget="{Binding ElementName=RouteSearchBox}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                    Padding="0" Margin="0,2,0,0" MinWidth="200">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="RouteResults" MaxHeight="200" BorderThickness="0"
+                                         Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                         FontSize="12" SelectionChanged="RouteResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
                 </StackPanel>
 
-                <!-- Driver -->
+                <!-- Driver (searchable) -->
                 <StackPanel Grid.Column="1" Margin="0,0,12,0">
                     <TextBlock Text="السائق" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="cmbDriver" DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                              />
+                    <Grid>
+                        <TextBox x:Name="DriverSearchBox" Style="{StaticResource ModernTextBox}" Height="34"
+                                 TextChanged="DriverSearch_TextChanged" GotFocus="DriverSearch_GotFocus"/>
+                        <Button x:Name="ClearDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                Width="18" Height="18" Padding="0" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource TextMutedBrush}" Click="ClearDriver_Click"/>
+                        <Popup x:Name="DriverPopup" PlacementTarget="{Binding ElementName=DriverSearchBox}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                    Padding="0" Margin="0,2,0,0" MinWidth="200">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="DriverResults" MaxHeight="200" BorderThickness="0"
+                                         Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                         FontSize="12" SelectionChanged="DriverResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
                 </StackPanel>
 
                 <!-- Prefix -->
@@ -95,7 +139,7 @@
                     <TextBlock Grid.Column="0" Text="#" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="Bold" HorizontalAlignment="Center"/>
                     <TextBlock Grid.Column="1" Text="الرقم (آخر 3)" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="Bold"/>
                     <TextBlock Grid.Column="2" Text="الرقم الكامل" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="Bold"/>
-                    <TextBlock Grid.Column="3" Text="العميل" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="3" Text="العميل (اكتب للبحث)" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="Bold"/>
                     <TextBlock Grid.Column="4" Text="المبلغ" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="Bold"/>
                     <TextBlock Grid.Column="5" Text="ملاحظات" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="Bold"/>
                 </Grid>
