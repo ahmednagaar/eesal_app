@@ -195,6 +195,11 @@ public class ApiClient
         return await GetAsync($"merchants/search?q={Uri.EscapeDataString(query)}");
     }
 
+    public async Task<string?> GetCitiesJsonAsync()
+    {
+        return await GetAsync("merchants/cities");
+    }
+
     public async Task<dynamic?> CreateMerchantAsync(string name, string? city, string? phone, string? notes)
     {
         return await PostAsync("merchants", new { MerchantName = name, City = city, PhoneNumber = phone, Notes = notes });

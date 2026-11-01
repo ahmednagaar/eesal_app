@@ -152,7 +152,30 @@
 
                     <TextBlock Text="المدينة" FontSize="12" Margin="0,0,0,6"
                                Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBox x:Name="CityBox" Style="{StaticResource ModernTextBox}" Margin="0,0,0,14"/>
+                    <Grid Margin="0,0,0,14">
+                        <TextBox x:Name="CitySearchBox" Style="{StaticResource ModernTextBox}"
+                                 TextChanged="CitySearch_TextChanged" GotFocus="CitySearch_GotFocus"/>
+                        <Button x:Name="ClearCityBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                Width="18" Height="18" Padding="0" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource TextMutedBrush}" Click="ClearCity_Click"/>
+                        <Popup x:Name="CityPopup" PlacementTarget="{Binding ElementName=CitySearchBox}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                    Padding="0" Margin="0,2,0,0" MinWidth="300">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="CityResults" MaxHeight="200" BorderThickness="0"
+                                         Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                         FontSize="13" SelectionChanged="CityResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="10,7"/><Setter Property="Cursor" Value="Hand"/></Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
 
                     <TextBlock Text="الهاتف" FontSize="12" Margin="0,0,0,6"
                                Foreground="{StaticResource TextSecondaryBrush}"/>

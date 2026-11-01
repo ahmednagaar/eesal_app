@@ -14,12 +14,29 @@ public partial class MerchantsPage : UserControl
     private int _totalMerchants;
     private const int PageSize = 50;
     private string _searchQuery = "";
+    private List<string> _allCities = new();
+    private string? _selectedCity;
+    private bool _suppressCitySearch;
 
     public MerchantsPage(ApiClient api)
     {
         _api = api;
         InitializeComponent();
         LoadMerchants();
+        LoadCitiesAsync();
+    }
+
+    private async void LoadCitiesAsync()
+    {
+        try
+        {
+            var json = await _api.GetCitiesJsonAsync();
+            if (json != null)
+            {
+                _allCities = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(json) ?? new();
+            }
+        }
+        catch { }
     }
 
     private async void LoadMerchants()
@@ -108,7 +125,11 @@ public partial class MerchantsPage : UserControl
         _editingMerchant = null;
         DialogTitle.Text = "إضافة تاجر جديد";
         MerchantNameBox.Text = "";
-        CityBox.Text = "";
+        _suppressCitySearch = true;
+        CitySearchBox.Text = "";
+        _suppressCitySearch = false;
+        _selectedCity = null;
+        ClearCityBtn.Visibility = Visibility.Collapsed;
         MerchantPhoneBox.Text = "";
         MerchantNotesBox.Text = "";
         DialogError.Visibility = Visibility.Collapsed;
@@ -123,7 +144,11 @@ public partial class MerchantsPage : UserControl
             _editingMerchant = merchant;
             DialogTitle.Text = "تعديل تاجر";
             MerchantNameBox.Text = merchant["merchantName"]?.ToString() ?? "";
-            CityBox.Text = merchant["city"]?.ToString() ?? "";
+            _suppressCitySearch = true;
+            CitySearchBox.Text = merchant["city"]?.ToString() ?? "";
+            _selectedCity = merchant["city"]?.ToString();
+            _suppressCitySearch = false;
+            ClearCityBtn.Visibility = string.IsNullOrEmpty(_selectedCity) ? Visibility.Collapsed : Visibility.Visible;
             MerchantPhoneBox.Text = merchant["phoneNumber"]?.ToString() ?? "";
             MerchantNotesBox.Text = merchant["notes"]?.ToString() ?? "";
             DialogError.Visibility = Visibility.Collapsed;
@@ -135,7 +160,7 @@ public partial class MerchantsPage : UserControl
     private async void SaveMerchant_Click(object sender, RoutedEventArgs e)
     {
         var name = MerchantNameBox.Text.Trim();
-        var city = CityBox.Text.Trim();
+        var city = CitySearchBox.Text.Trim();
         var phone = MerchantPhoneBox.Text.Trim();
         var notes = MerchantNotesBox.Text.Trim();
 
@@ -175,5 +200,47 @@ public partial class MerchantsPage : UserControl
     private void CancelDialog_Click(object sender, RoutedEventArgs e)
     {
         DialogOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    // ══════════════════════════════════════
+    // SEARCHABLE CITY
+    // ══════════════════════════════════════
+
+    private void CitySearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressCitySearch) return;
+        var q = CitySearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(q)) { _selectedCity = null; ClearCityBtn.Visibility = Visibility.Collapsed; CityPopup.IsOpen = false; return; }
+        if (_selectedCity != null && q == _selectedCity) return;
+        _selectedCity = null;
+        var filtered = _allCities.Where(c => c.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+        CityResults.ItemsSource = filtered;
+        CityPopup.IsOpen = filtered.Count > 0;
+    }
+
+    private void CitySearch_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(CitySearchBox.Text) && _allCities.Count > 0)
+        { CityResults.ItemsSource = _allCities; CityPopup.IsOpen = true; }
+    }
+
+    private void CityResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CityResults.SelectedItem is string city)
+        {
+            _selectedCity = city;
+            _suppressCitySearch = true;
+            CitySearchBox.Text = city;
+            _suppressCitySearch = false;
+            ClearCityBtn.Visibility = Visibility.Visible;
+            CityPopup.IsOpen = false;
+            CityResults.SelectedItem = null;
+        }
+    }
+
+    private void ClearCity_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedCity = null; _suppressCitySearch = true; CitySearchBox.Text = ""; _suppressCitySearch = false;
+        ClearCityBtn.Visibility = Visibility.Collapsed; CitySearchBox.Focus();
     }
 }

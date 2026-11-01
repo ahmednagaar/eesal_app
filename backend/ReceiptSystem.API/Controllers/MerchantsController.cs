@@ -47,6 +47,28 @@ public class MerchantsController : ControllerBase
         return Ok(new { data = merchants, total, page, pageSize });
     }
 
+    [HttpGet("cities")]
+    public async Task<IActionResult> GetCities()
+    {
+        var defaultCities = new[]
+        {
+            "القاهرة", "الجيزة", "الإسكندرية", "بورسعيد", "السويس", "الإسماعيلية",
+            "دمياط", "الدقهلية", "الشرقية", "القليوبية", "كفر الشيخ", "الغربية",
+            "المنوفية", "البحيرة", "الفيوم", "بني سويف", "المنيا", "أسيوط",
+            "سوهاج", "قنا", "الأقصر", "أسوان", "البحر الأحمر", "الوادي الجديد",
+            "مطروح", "شمال سيناء", "جنوب سيناء"
+        };
+        var dbCities = await _db.Merchants
+            .Where(m => m.IsActive && m.City != null && m.City != "")
+            .Select(m => m.City!)
+            .Distinct()
+            .ToListAsync();
+        var merged = defaultCities.Union(dbCities, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c)
+            .ToList();
+        return Ok(merged);
+    }
+
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string q = "")
     {
