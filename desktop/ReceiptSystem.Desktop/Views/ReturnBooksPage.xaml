@@ -116,8 +116,21 @@
                     <TextBlock x:Name="AssignDialogTitle" Text="تسليم دفتر لسائق" FontSize="20" FontWeight="Bold"
                                Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
                     <TextBlock Text="السائق:" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="AssignDriverCombo" DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                              FontSize="14" Padding="10,8" Margin="0,0,0,12"/>
+                    <Grid Margin="0,0,0,12">
+                        <TextBox x:Name="AssignDriverSearchBox" FontSize="14" Padding="10,8"
+                                 TextChanged="AssignDriverSearch_TextChanged" GotFocus="AssignDriverSearch_GotFocus"/>
+                        <Button x:Name="ClearAssignDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                Width="18" Height="18" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMutedBrush}" Click="ClearAssignDriver_Click"/>
+                        <Popup x:Name="AssignDriverPopup" PlacementTarget="{Binding ElementName=AssignDriverSearchBox}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8" BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1" Padding="0" Margin="0,2,0,0" MinWidth="250">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="AssignDriverResults" MaxHeight="200" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" SelectionChanged="AssignDriverResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style></ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <TextBlock Text="ملاحظات:" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                     <TextBox x:Name="AssignNotesBox" FontSize="14" Padding="10,8" Margin="0,0,0,12"/>
                     <TextBlock x:Name="AssignDialogError" Foreground="#FF6B6B" FontSize="13" Visibility="Collapsed" Margin="0,0,0,8"/>

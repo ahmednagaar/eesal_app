@@ -33,9 +33,30 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <ComboBox x:Name="DriverFilter" Grid.Column="0"
-                          DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                          SelectionChanged="Filter_Changed" FontSize="14" Padding="10,8"/>
+                <Grid Grid.Column="0">
+                    <TextBox x:Name="DriverFilterSearchBox" FontSize="14" Padding="10,8"
+                             TextChanged="DriverFilterSearch_TextChanged" GotFocus="DriverFilterSearch_GotFocus"/>
+                    <Button x:Name="ClearDriverFilterBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                            Width="18" Height="18" Padding="0" Cursor="Hand"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{StaticResource TextMutedBrush}" Click="ClearDriverFilter_Click"/>
+                    <Popup x:Name="DriverFilterPopup" PlacementTarget="{Binding ElementName=DriverFilterSearchBox}"
+                           Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                        <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                Padding="0" Margin="0,2,0,0" MinWidth="200">
+                            <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                            <ListBox x:Name="DriverFilterResults" MaxHeight="200" BorderThickness="0"
+                                     Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                     FontSize="12" SelectionChanged="DriverFilterResults_SelectionChanged">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+                        </Border>
+                    </Popup>
+                </Grid>
                 <ComboBox x:Name="ReturnStatusFilter" Grid.Column="2" FontSize="14" Padding="10,8"
                           SelectionChanged="Filter_Changed">
                     <ComboBoxItem Content="كل الحالات" Tag="" IsSelected="True"/>
@@ -112,7 +133,30 @@
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="رقم الإيصال:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
                         <TextBox x:Name="ReturnReceiptNumBox" Grid.Row="1" Grid.Column="0" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
                         <TextBlock Grid.Row="0" Grid.Column="2" Text="السائق:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
-                        <ComboBox x:Name="ReturnDriverCombo" Grid.Row="1" Grid.Column="2" DisplayMemberPath="fullName" SelectedValuePath="driverId" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
+                        <Grid Grid.Row="1" Grid.Column="2" Margin="0,0,0,8">
+                            <TextBox x:Name="ReturnDriverSearchBox" FontSize="14" Padding="8,6"
+                                     TextChanged="ReturnDriverSearch_TextChanged" GotFocus="ReturnDriverSearch_GotFocus"/>
+                            <Button x:Name="ClearReturnDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                    Width="18" Height="18" Padding="0" Cursor="Hand"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="{StaticResource TextMutedBrush}" Click="ClearReturnDriver_Click"/>
+                            <Popup x:Name="ReturnDriverPopup" PlacementTarget="{Binding ElementName=ReturnDriverSearchBox}"
+                                   Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                                <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                        BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                        Padding="0" Margin="0,2,0,0" MinWidth="200">
+                                    <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                    <ListBox x:Name="ReturnDriverResults" MaxHeight="200" BorderThickness="0"
+                                             Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                             FontSize="12" SelectionChanged="ReturnDriverResults_SelectionChanged">
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+                        </Grid>
                         <TextBlock Grid.Row="0" Grid.Column="4" Text="السبب:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
                         <ComboBox x:Name="ReturnReasonCombo" Grid.Row="1" Grid.Column="4" DisplayMemberPath="reasonName" SelectedValuePath="reasonId" FontSize="14" Padding="8,6" Margin="0,0,0,8"/>
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="التاريخ:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
@@ -135,8 +179,30 @@
                             <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="ItemProductCombo" Grid.Column="0" DisplayMemberPath="productName" SelectedValuePath="productId" FontSize="13" Padding="6,4" Margin="0,0,4,0"
-                                  SelectionChanged="ItemProductCombo_Changed"/>
+                        <Grid Grid.Column="0" Margin="0,0,4,0">
+                            <TextBox x:Name="ProductSearchBox" FontSize="13" Padding="6,4"
+                                     TextChanged="ProductSearch_TextChanged" GotFocus="ProductSearch_GotFocus"/>
+                            <Button x:Name="ClearProductBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                    Width="18" Height="18" Padding="0" Cursor="Hand"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="{StaticResource TextMutedBrush}" Click="ClearProduct_Click"/>
+                            <Popup x:Name="ProductPopup" PlacementTarget="{Binding ElementName=ProductSearchBox}"
+                                   Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                                <Border Background="{StaticResource BgCardBrush}" CornerRadius="8"
+                                        BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1"
+                                        Padding="0" Margin="0,2,0,0" MinWidth="250">
+                                    <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                    <ListBox x:Name="ProductResults" MaxHeight="200" BorderThickness="0"
+                                             Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}"
+                                             FontSize="12" SelectionChanged="ProductResults_SelectionChanged">
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+                        </Grid>
                         <ComboBox x:Name="ItemUnitCombo" Grid.Column="1" DisplayMemberPath="unitName" SelectedValuePath="productUnitId" FontSize="13" Padding="6,4" Margin="0,0,4,0"/>
                         <TextBox x:Name="ItemQtyBox" Grid.Column="2" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="الكمية"/>
                         <TextBox x:Name="ItemPriceBox" Grid.Column="3" FontSize="13" Padding="6,4" Margin="0,0,4,0" Tag="السعر"/>

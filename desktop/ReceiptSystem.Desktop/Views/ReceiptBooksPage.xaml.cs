@@ -19,6 +19,13 @@ public partial class ReceiptBooksPage : UserControl
     private string _selectedBookStatus = "";
     private List<dynamic> _seriesData = new();
     private List<dynamic> _allBooks = new();
+    private List<DriverComboItem> _allDriversList = new();
+    private DriverComboItem? _selectedAssignDriver;
+    private bool _suppressAssignSearch;
+    private DriverComboItem? _selectedTransferDriver;
+    private bool _suppressTransferSearch;
+    private DriverComboItem? _selectedAssignNextDriver;
+    private bool _suppressAssignNextSearch;
 
     public ReceiptBooksPage(ApiClient api)
     {
@@ -49,7 +56,7 @@ public partial class ReceiptBooksPage : UserControl
             var json = await _api.GetDriversJsonAsync();
             if (json == null) return;
             var drivers = JArray.Parse(json);
-            AssignDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
+            _allDriversList = drivers.Select(d => new DriverComboItem
             {
                 driverId = d["driverId"]?.Value<int>() ?? 0,
                 fullName = d["fullName"]?.ToString() ?? ""
@@ -361,13 +368,13 @@ public partial class ReceiptBooksPage : UserControl
     private async void Assign_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedBookId <= 0) { ToastHelper.ShowError(RootGrid, "اختر دفتر أولاً"); return; }
-        if (AssignDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        if (_selectedAssignDriver == null || _selectedAssignDriver.driverId <= 0)
         { ToastHelper.ShowError(RootGrid, "اختر السائق"); return; }
 
         var btn = (Button)sender; btn.IsEnabled = false;
         try
         {
-            bool ok = await _api.AssignBookAsync(_selectedBookId, driverId, AssignDate.SelectedDate);
+            bool ok = await _api.AssignBookAsync(_selectedBookId, _selectedAssignDriver!.driverId, AssignDate.SelectedDate);
             if (ok)
             {
                 ToastHelper.ShowSuccess(RootGrid, "✓ تم تسليم الدفتر للسائق");
@@ -382,14 +389,14 @@ public partial class ReceiptBooksPage : UserControl
     private async void AssignBatch_Click(object sender, RoutedEventArgs e)
     {
         if (BooksGrid.SelectedItems.Count <= 1) { ToastHelper.ShowError(RootGrid, "اختر أكثر من دفتر"); return; }
-        if (AssignDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        if (_selectedAssignDriver == null || _selectedAssignDriver.driverId <= 0)
         { ToastHelper.ShowError(RootGrid, "اختر السائق"); return; }
 
         var bookIds = BooksGrid.SelectedItems.Cast<dynamic>().Select(b => (int)b.bookId).ToArray();
         var btn = (Button)sender; btn.IsEnabled = false;
         try
         {
-            var result = await _api.AssignBooksBatchAsync(bookIds, driverId, AssignDate.SelectedDate);
+            var result = await _api.AssignBooksBatchAsync(bookIds, _selectedAssignDriver!.driverId, AssignDate.SelectedDate);
             if (result != null)
             {
                 ToastHelper.ShowSuccess(RootGrid, $"✓ تم تسليم {bookIds.Length} دفتر للسائق");
@@ -529,8 +536,7 @@ public partial class ReceiptBooksPage : UserControl
         if (_selectedBookId <= 0) return;
         dynamic row = BooksGrid.SelectedItem;
         TransferBookLabel.Text = $"دفتر {row.displayName} — حالياً مع: {row.driverName}";
-        TransferDriverCombo.ItemsSource = AssignDriverCombo.ItemsSource;
-        TransferDriverCombo.SelectedIndex = -1;
+        _selectedTransferDriver = null; _suppressTransferSearch = true; TransferDriverSearchBox.Text = ""; _suppressTransferSearch = false; ClearTransferDriverBtn.Visibility = Visibility.Collapsed;
         TransferNotes.Text = "";
         TransferDialog.Visibility = Visibility.Visible;
     }
@@ -539,13 +545,13 @@ public partial class ReceiptBooksPage : UserControl
 
     private async void TransferConfirm_Click(object sender, RoutedEventArgs e)
     {
-        if (TransferDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        if (_selectedTransferDriver == null || _selectedTransferDriver.driverId <= 0)
         { ToastHelper.ShowError(RootGrid, "اختر السائق الجديد"); return; }
 
         TransferConfirmBtn.IsEnabled = false;
         try
         {
-            bool ok = await _api.TransferBookAsync(_selectedBookId, driverId, TransferNotes.Text.Trim());
+            bool ok = await _api.TransferBookAsync(_selectedBookId, _selectedTransferDriver!.driverId, TransferNotes.Text.Trim());
             if (ok)
             {
                 ToastHelper.ShowSuccess(RootGrid, "✓ تم نقل الدفتر بنجاح");
@@ -1073,8 +1079,7 @@ public partial class ReceiptBooksPage : UserControl
         if (series != null)
             AssignNextSeriesLabel.Text = $"الدورة: {series.seriesCode} — متاح: {series.availableBooks} دفتر";
 
-        AssignNextDriverCombo.ItemsSource = AssignDriverCombo.ItemsSource;
-        AssignNextDriverCombo.SelectedIndex = -1;
+        _selectedAssignNextDriver = null; _suppressAssignNextSearch = true; AssignNextDriverSearchBox.Text = ""; _suppressAssignNextSearch = false; ClearAssignNextDriverBtn.Visibility = Visibility.Collapsed;
         AssignNextDialog.Visibility = Visibility.Visible;
     }
 
@@ -1082,13 +1087,13 @@ public partial class ReceiptBooksPage : UserControl
 
     private async void AssignNextConfirm_Click(object sender, RoutedEventArgs e)
     {
-        if (AssignNextDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        if (_selectedAssignNextDriver == null || _selectedAssignNextDriver.driverId <= 0)
         { ToastHelper.ShowError(RootGrid, "اختر السائق"); return; }
 
         AssignNextConfirmBtn.IsEnabled = false;
         try
         {
-            var result = await _api.AssignNextBookAsync(_selectedSeriesId, driverId);
+            var result = await _api.AssignNextBookAsync(_selectedSeriesId, _selectedAssignNextDriver!.driverId);
             if (result != null)
             {
                 string msg = result["message"]?.ToString() ?? "✓ تم التسليم";
@@ -1181,4 +1186,31 @@ public partial class ReceiptBooksPage : UserControl
         if (_selectedSeriesId > 0)
             await LoadBooksForSeriesAsync(_selectedSeriesId);
     }
+
+    // ══════════════════════════════════════
+    // ASSIGN DRIVER SEARCH
+    // ══════════════════════════════════════
+    private void AssignDriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    { if (_suppressAssignSearch) return; var q = AssignDriverSearchBox.Text.Trim(); if (string.IsNullOrEmpty(q)) { _selectedAssignDriver = null; ClearAssignDriverBtn.Visibility = Visibility.Collapsed; AssignDriverPopup.IsOpen = false; return; } if (_selectedAssignDriver != null && q == _selectedAssignDriver.fullName) return; _selectedAssignDriver = null; var f = _allDriversList.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList(); AssignDriverResults.ItemsSource = f; AssignDriverPopup.IsOpen = f.Count > 0; }
+    private void AssignDriverSearch_GotFocus(object sender, RoutedEventArgs e) { if (string.IsNullOrWhiteSpace(AssignDriverSearchBox.Text) && _allDriversList.Count > 0) { AssignDriverResults.ItemsSource = _allDriversList.Take(50).ToList(); AssignDriverPopup.IsOpen = true; } }
+    private void AssignDriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (AssignDriverResults.SelectedItem is DriverComboItem item) { _selectedAssignDriver = item; _suppressAssignSearch = true; AssignDriverSearchBox.Text = item.fullName; _suppressAssignSearch = false; ClearAssignDriverBtn.Visibility = Visibility.Visible; AssignDriverPopup.IsOpen = false; AssignDriverResults.SelectedItem = null; } }
+    private void ClearAssignDriver_Click(object sender, RoutedEventArgs e) { _selectedAssignDriver = null; _suppressAssignSearch = true; AssignDriverSearchBox.Text = ""; _suppressAssignSearch = false; ClearAssignDriverBtn.Visibility = Visibility.Collapsed; }
+
+    // ══════════════════════════════════════
+    // TRANSFER DRIVER SEARCH
+    // ══════════════════════════════════════
+    private void TransferDriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    { if (_suppressTransferSearch) return; var q = TransferDriverSearchBox.Text.Trim(); if (string.IsNullOrEmpty(q)) { _selectedTransferDriver = null; ClearTransferDriverBtn.Visibility = Visibility.Collapsed; TransferDriverPopup.IsOpen = false; return; } if (_selectedTransferDriver != null && q == _selectedTransferDriver.fullName) return; _selectedTransferDriver = null; var f = _allDriversList.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList(); TransferDriverResults.ItemsSource = f; TransferDriverPopup.IsOpen = f.Count > 0; }
+    private void TransferDriverSearch_GotFocus(object sender, RoutedEventArgs e) { if (string.IsNullOrWhiteSpace(TransferDriverSearchBox.Text) && _allDriversList.Count > 0) { TransferDriverResults.ItemsSource = _allDriversList.Take(50).ToList(); TransferDriverPopup.IsOpen = true; } }
+    private void TransferDriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (TransferDriverResults.SelectedItem is DriverComboItem item) { _selectedTransferDriver = item; _suppressTransferSearch = true; TransferDriverSearchBox.Text = item.fullName; _suppressTransferSearch = false; ClearTransferDriverBtn.Visibility = Visibility.Visible; TransferDriverPopup.IsOpen = false; TransferDriverResults.SelectedItem = null; } }
+    private void ClearTransferDriver_Click(object sender, RoutedEventArgs e) { _selectedTransferDriver = null; _suppressTransferSearch = true; TransferDriverSearchBox.Text = ""; _suppressTransferSearch = false; ClearTransferDriverBtn.Visibility = Visibility.Collapsed; }
+
+    // ══════════════════════════════════════
+    // ASSIGN NEXT DRIVER SEARCH
+    // ══════════════════════════════════════
+    private void AssignNextDriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    { if (_suppressAssignNextSearch) return; var q = AssignNextDriverSearchBox.Text.Trim(); if (string.IsNullOrEmpty(q)) { _selectedAssignNextDriver = null; ClearAssignNextDriverBtn.Visibility = Visibility.Collapsed; AssignNextDriverPopup.IsOpen = false; return; } if (_selectedAssignNextDriver != null && q == _selectedAssignNextDriver.fullName) return; _selectedAssignNextDriver = null; var f = _allDriversList.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList(); AssignNextDriverResults.ItemsSource = f; AssignNextDriverPopup.IsOpen = f.Count > 0; }
+    private void AssignNextDriverSearch_GotFocus(object sender, RoutedEventArgs e) { if (string.IsNullOrWhiteSpace(AssignNextDriverSearchBox.Text) && _allDriversList.Count > 0) { AssignNextDriverResults.ItemsSource = _allDriversList.Take(50).ToList(); AssignNextDriverPopup.IsOpen = true; } }
+    private void AssignNextDriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (AssignNextDriverResults.SelectedItem is DriverComboItem item) { _selectedAssignNextDriver = item; _suppressAssignNextSearch = true; AssignNextDriverSearchBox.Text = item.fullName; _suppressAssignNextSearch = false; ClearAssignNextDriverBtn.Visibility = Visibility.Visible; AssignNextDriverPopup.IsOpen = false; AssignNextDriverResults.SelectedItem = null; } }
+    private void ClearAssignNextDriver_Click(object sender, RoutedEventArgs e) { _selectedAssignNextDriver = null; _suppressAssignNextSearch = true; AssignNextDriverSearchBox.Text = ""; _suppressAssignNextSearch = false; ClearAssignNextDriverBtn.Visibility = Visibility.Collapsed; }
 }

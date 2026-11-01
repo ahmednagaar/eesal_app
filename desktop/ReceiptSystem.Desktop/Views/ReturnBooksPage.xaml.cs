@@ -13,6 +13,9 @@ public partial class ReturnBooksPage : UserControl
     private readonly ApiClient _api;
     private int _selectedBookId;
     private bool _isLoaded = false;
+    private List<DriverComboItem> _assignDrivers = new();
+    private DriverComboItem? _selectedAssignDriver;
+    private bool _suppressAssignDriverSearch;
 
     public ReturnBooksPage(ApiClient api)
     {
@@ -171,11 +174,16 @@ public partial class ReturnBooksPage : UserControl
             if (driversJson != null)
             {
                 var drivers = JArray.Parse(driversJson);
-                AssignDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
+                _assignDrivers = drivers.Select(d => new DriverComboItem
                 {
                     driverId = d["driverId"]?.Value<int>() ?? 0,
                     fullName = d["fullName"]?.ToString() ?? ""
                 }).ToList();
+                _selectedAssignDriver = null;
+                _suppressAssignDriverSearch = true;
+                AssignDriverSearchBox.Text = "";
+                _suppressAssignDriverSearch = false;
+                ClearAssignDriverBtn.Visibility = Visibility.Collapsed;
             }
         }
         catch { }
@@ -185,7 +193,7 @@ public partial class ReturnBooksPage : UserControl
 
     private async void ConfirmAssign_Click(object sender, RoutedEventArgs e)
     {
-        if (AssignDriverCombo.SelectedValue == null)
+        if (_selectedAssignDriver == null)
         {
             AssignDialogError.Text = "اختر السائق";
             AssignDialogError.Visibility = Visibility.Visible;
@@ -194,7 +202,7 @@ public partial class ReturnBooksPage : UserControl
 
         try
         {
-            int driverId = (int)AssignDriverCombo.SelectedValue;
+            int driverId = _selectedAssignDriver!.driverId;
             var result = await _api.AssignReturnBookAsync(_selectedBookId, driverId, AssignNotesBox.Text.Trim());
             if (result != null)
             {
@@ -250,4 +258,27 @@ public partial class ReturnBooksPage : UserControl
         }
         catch (Exception ex) { MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
+
+    // ══════════════════════════════════════
+    // ASSIGN DRIVER SEARCH
+    // ══════════════════════════════════════
+    private void AssignDriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressAssignDriverSearch) return;
+        var q = AssignDriverSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(q)) { _selectedAssignDriver = null; ClearAssignDriverBtn.Visibility = Visibility.Collapsed; AssignDriverPopup.IsOpen = false; return; }
+        if (_selectedAssignDriver != null && q == _selectedAssignDriver.fullName) return;
+        _selectedAssignDriver = null;
+        var f = _assignDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        AssignDriverResults.ItemsSource = f; AssignDriverPopup.IsOpen = f.Count > 0;
+    }
+    private void AssignDriverSearch_GotFocus(object sender, RoutedEventArgs e)
+    { if (string.IsNullOrWhiteSpace(AssignDriverSearchBox.Text) && _assignDrivers.Count > 0) { AssignDriverResults.ItemsSource = _assignDrivers.Take(50).ToList(); AssignDriverPopup.IsOpen = true; } }
+    private void AssignDriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (AssignDriverResults.SelectedItem is DriverComboItem item)
+        { _selectedAssignDriver = item; _suppressAssignDriverSearch = true; AssignDriverSearchBox.Text = item.fullName; _suppressAssignDriverSearch = false; ClearAssignDriverBtn.Visibility = Visibility.Visible; AssignDriverPopup.IsOpen = false; AssignDriverResults.SelectedItem = null; }
+    }
+    private void ClearAssignDriver_Click(object sender, RoutedEventArgs e)
+    { _selectedAssignDriver = null; _suppressAssignDriverSearch = true; AssignDriverSearchBox.Text = ""; _suppressAssignDriverSearch = false; ClearAssignDriverBtn.Visibility = Visibility.Collapsed; }
 }

@@ -262,8 +262,19 @@
                 <StackPanel Orientation="Horizontal">
                     <!-- Assign -->
                     <StackPanel x:Name="AssignSection" Orientation="Horizontal" Margin="0,0,16,0">
-                        <ComboBox x:Name="AssignDriverCombo" Width="180" Height="34"
-                                  DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+                        <Grid Width="180" Height="34">
+                            <TextBox x:Name="AssignDriverSearchBox" Style="{StaticResource ModernTextBox}" FontSize="12"
+                                     TextChanged="AssignDriverSearch_TextChanged" GotFocus="AssignDriverSearch_GotFocus"/>
+                            <Button x:Name="ClearAssignDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" Width="18" Height="18" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMutedBrush}" Click="ClearAssignDriver_Click"/>
+                            <Popup x:Name="AssignDriverPopup" PlacementTarget="{Binding ElementName=AssignDriverSearchBox}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                                <Border Background="{StaticResource BgCardBrush}" CornerRadius="8" BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1" Padding="0" Margin="0,2,0,0" MinWidth="220">
+                                    <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                    <ListBox x:Name="AssignDriverResults" MaxHeight="200" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" SelectionChanged="AssignDriverResults_SelectionChanged">
+                                        <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style></ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+                        </Grid>
                         <DatePicker x:Name="AssignDate" Width="140" Height="34" FlowDirection="LeftToRight" Margin="8,0,0,0"/>
                         <Button x:Name="AssignBtn" Content="📋 تسليم للسائق"
                                 Style="{StaticResource PrimaryButton}" Padding="12,6" FontSize="12"
@@ -343,8 +354,19 @@
                                HorizontalAlignment="Center" Margin="0,0,0,16"/>
 
                     <TextBlock Text="نقل إلى السائق:" FontSize="13" Margin="0,0,0,6"/>
-                    <ComboBox x:Name="TransferDriverCombo" Height="36" FontSize="13"
-                              DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+                    <Grid Height="36">
+                        <TextBox x:Name="TransferDriverSearchBox" Style="{StaticResource ModernTextBox}" FontSize="13"
+                                 TextChanged="TransferDriverSearch_TextChanged" GotFocus="TransferDriverSearch_GotFocus"/>
+                        <Button x:Name="ClearTransferDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" Width="18" Height="18" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMutedBrush}" Click="ClearTransferDriver_Click"/>
+                        <Popup x:Name="TransferDriverPopup" PlacementTarget="{Binding ElementName=TransferDriverSearchBox}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8" BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1" Padding="0" Margin="0,2,0,0" MinWidth="250">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="TransferDriverResults" MaxHeight="200" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" SelectionChanged="TransferDriverResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style></ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
 
                     <TextBlock Text="سبب النقل (اختياري):" FontSize="13" Margin="0,12,0,6"/>
                     <TextBox x:Name="TransferNotes" Style="{StaticResource ModernTextBox}" Height="50"
@@ -836,8 +858,19 @@
                                HorizontalAlignment="Center" Margin="0,0,0,16"/>
 
                     <TextBlock Text="اختر السائق:" FontSize="13" Margin="0,0,0,6"/>
-                    <ComboBox x:Name="AssignNextDriverCombo" Height="36" FontSize="13"
-                              DisplayMemberPath="fullName" SelectedValuePath="driverId"/>
+                    <Grid Height="36">
+                        <TextBox x:Name="AssignNextDriverSearchBox" Style="{StaticResource ModernTextBox}" FontSize="13"
+                                 TextChanged="AssignNextDriverSearch_TextChanged" GotFocus="AssignNextDriverSearch_GotFocus"/>
+                        <Button x:Name="ClearAssignNextDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" Width="18" Height="18" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMutedBrush}" Click="ClearAssignNextDriver_Click"/>
+                        <Popup x:Name="AssignNextDriverPopup" PlacementTarget="{Binding ElementName=AssignNextDriverSearchBox}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8" BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1" Padding="0" Margin="0,2,0,0" MinWidth="250">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="AssignNextDriverResults" MaxHeight="200" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" SelectionChanged="AssignNextDriverResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style></ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
                         <Button x:Name="AssignNextConfirmBtn" Content="تسليم"

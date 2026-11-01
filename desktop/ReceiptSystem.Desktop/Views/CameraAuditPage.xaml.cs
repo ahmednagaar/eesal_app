@@ -12,6 +12,12 @@ public partial class CameraAuditPage : UserControl
 {
     private readonly ApiClient _api;
     private bool _isLoaded = false;
+    private List<DriverComboItem> _allDrivers = new();
+    private DriverComboItem? _selectedFilterDriver;
+    private bool _suppressFilterDriverSearch;
+    private List<DriverComboItem> _dialogDrivers = new();
+    private DriverComboItem? _selectedDialogDriver;
+    private bool _suppressDialogDriverSearch;
 
     public CameraAuditPage(ApiClient api)
     {
@@ -40,8 +46,7 @@ public partial class CameraAuditPage : UserControl
                     fullName = d["fullName"]?.ToString() ?? ""
                 }).ToList();
                 list.Insert(0, new DriverComboItem { driverId = 0, fullName = "كل السائقين" });
-                AuditDriverFilter.ItemsSource = list;
-                AuditDriverFilter.SelectedIndex = 0;
+                _allDrivers = list;
             }
         }
         catch { }
@@ -51,8 +56,7 @@ public partial class CameraAuditPage : UserControl
     {
         try
         {
-            int? driverId = null;
-            if (AuditDriverFilter.SelectedValue is int did && did > 0) driverId = did;
+            int? driverId = _selectedFilterDriver?.driverId > 0 ? _selectedFilterDriver.driverId : null;
             string? status = null;
             if (AuditStatusFilter.SelectedItem is ComboBoxItem item && item.Tag is string tag && !string.IsNullOrEmpty(tag))
                 status = tag;
@@ -93,11 +97,16 @@ public partial class CameraAuditPage : UserControl
             if (driversJson != null)
             {
                 var drivers = JArray.Parse(driversJson);
-                AuditDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
+                _dialogDrivers = drivers.Select(d => new DriverComboItem
                 {
                     driverId = d["driverId"]?.Value<int>() ?? 0,
                     fullName = d["fullName"]?.ToString() ?? ""
                 }).ToList();
+                _selectedDialogDriver = null;
+                _suppressDialogDriverSearch = true;
+                AuditDialogDriverSearchBox.Text = "";
+                _suppressDialogDriverSearch = false;
+                ClearAuditDialogDriverBtn.Visibility = Visibility.Collapsed;
             }
         }
         catch { }
@@ -107,7 +116,7 @@ public partial class CameraAuditPage : UserControl
 
     private async void CreateAudit_Click(object sender, RoutedEventArgs e)
     {
-        if (AuditDriverCombo.SelectedValue == null)
+        if (_selectedDialogDriver == null)
         {
             AuditDialogError.Text = "اختر السائق";
             AuditDialogError.Visibility = Visibility.Visible;
@@ -119,7 +128,7 @@ public partial class CameraAuditPage : UserControl
             var data = new
             {
                 AuditDate = AuditDatePicker.SelectedDate ?? DateTime.Today,
-                DriverId = (int)AuditDriverCombo.SelectedValue,
+                DriverId = _selectedDialogDriver!.driverId,
                 TripReference = TripRefBox.Text.Trim(),
                 Notes = AuditNotesBox.Text.Trim()
             };
@@ -228,4 +237,50 @@ public partial class CameraAuditPage : UserControl
         }
         catch (Exception ex) { MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
+
+    // ══════════════════════════════════════
+    // FILTER DRIVER SEARCH
+    // ══════════════════════════════════════
+    private void AuditDriverFilterSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressFilterDriverSearch) return;
+        var q = AuditDriverFilterSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(q)) { _selectedFilterDriver = null; ClearAuditDriverFilterBtn.Visibility = Visibility.Collapsed; AuditDriverFilterPopup.IsOpen = false; return; }
+        if (_selectedFilterDriver != null && q == _selectedFilterDriver.fullName) return;
+        _selectedFilterDriver = null;
+        var f = _allDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        AuditDriverFilterResults.ItemsSource = f; AuditDriverFilterPopup.IsOpen = f.Count > 0;
+    }
+    private void AuditDriverFilterSearch_GotFocus(object sender, RoutedEventArgs e)
+    { if (string.IsNullOrWhiteSpace(AuditDriverFilterSearchBox.Text) && _allDrivers.Count > 0) { AuditDriverFilterResults.ItemsSource = _allDrivers.Take(50).ToList(); AuditDriverFilterPopup.IsOpen = true; } }
+    private void AuditDriverFilterResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (AuditDriverFilterResults.SelectedItem is DriverComboItem item)
+        { _selectedFilterDriver = item; _suppressFilterDriverSearch = true; AuditDriverFilterSearchBox.Text = item.fullName; _suppressFilterDriverSearch = false; ClearAuditDriverFilterBtn.Visibility = Visibility.Visible; AuditDriverFilterPopup.IsOpen = false; AuditDriverFilterResults.SelectedItem = null; }
+    }
+    private void ClearAuditDriverFilter_Click(object sender, RoutedEventArgs e)
+    { _selectedFilterDriver = null; _suppressFilterDriverSearch = true; AuditDriverFilterSearchBox.Text = ""; _suppressFilterDriverSearch = false; ClearAuditDriverFilterBtn.Visibility = Visibility.Collapsed; }
+
+    // ══════════════════════════════════════
+    // DIALOG DRIVER SEARCH
+    // ══════════════════════════════════════
+    private void AuditDialogDriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressDialogDriverSearch) return;
+        var q = AuditDialogDriverSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(q)) { _selectedDialogDriver = null; ClearAuditDialogDriverBtn.Visibility = Visibility.Collapsed; AuditDialogDriverPopup.IsOpen = false; return; }
+        if (_selectedDialogDriver != null && q == _selectedDialogDriver.fullName) return;
+        _selectedDialogDriver = null;
+        var f = _dialogDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        AuditDialogDriverResults.ItemsSource = f; AuditDialogDriverPopup.IsOpen = f.Count > 0;
+    }
+    private void AuditDialogDriverSearch_GotFocus(object sender, RoutedEventArgs e)
+    { if (string.IsNullOrWhiteSpace(AuditDialogDriverSearchBox.Text) && _dialogDrivers.Count > 0) { AuditDialogDriverResults.ItemsSource = _dialogDrivers.Take(50).ToList(); AuditDialogDriverPopup.IsOpen = true; } }
+    private void AuditDialogDriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (AuditDialogDriverResults.SelectedItem is DriverComboItem item)
+        { _selectedDialogDriver = item; _suppressDialogDriverSearch = true; AuditDialogDriverSearchBox.Text = item.fullName; _suppressDialogDriverSearch = false; ClearAuditDialogDriverBtn.Visibility = Visibility.Visible; AuditDialogDriverPopup.IsOpen = false; AuditDialogDriverResults.SelectedItem = null; }
+    }
+    private void ClearAuditDialogDriver_Click(object sender, RoutedEventArgs e)
+    { _selectedDialogDriver = null; _suppressDialogDriverSearch = true; AuditDialogDriverSearchBox.Text = ""; _suppressDialogDriverSearch = false; ClearAuditDialogDriverBtn.Visibility = Visibility.Collapsed; }
 }

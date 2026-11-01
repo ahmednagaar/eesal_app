@@ -14,6 +14,17 @@ public partial class GoodsReturnsPage : UserControl
     private ObservableCollection<ReturnItemRow> _items = new();
     private List<ProductComboItem> _productsList = new();
     private bool _isLoaded = false;
+    // Searchable filter driver
+    private List<DriverComboItem> _allFilterDrivers = new();
+    private DriverComboItem? _selectedFilterDriver;
+    private bool _suppressFilterDriverSearch;
+    // Searchable return form driver
+    private List<DriverComboItem> _allReturnDrivers = new();
+    private DriverComboItem? _selectedReturnDriver;
+    private bool _suppressReturnDriverSearch;
+    // Searchable product
+    private ProductComboItem? _selectedProduct;
+    private bool _suppressProductSearch;
 
     public GoodsReturnsPage(ApiClient api)
     {
@@ -48,8 +59,8 @@ public partial class GoodsReturnsPage : UserControl
                         fullName = d["fullName"]?.ToString() ?? ""
                     });
                 }
-                DriverFilter.ItemsSource = allDrivers;
-                DriverFilter.SelectedIndex = 0;
+                DriverFilterSearchBox.Text = "";
+                _allFilterDrivers = allDrivers;
             }
         }
         catch { }
@@ -59,8 +70,7 @@ public partial class GoodsReturnsPage : UserControl
     {
         try
         {
-            int? driverId = null;
-            if (DriverFilter.SelectedValue is int did && did > 0) driverId = did;
+            int? driverId = _selectedFilterDriver?.driverId > 0 ? _selectedFilterDriver.driverId : null;
             string? status = null;
             if (ReturnStatusFilter.SelectedItem is ComboBoxItem item && item.Tag is string tag && !string.IsNullOrEmpty(tag))
                 status = tag;
@@ -110,7 +120,7 @@ public partial class GoodsReturnsPage : UserControl
             if (driversJson != null)
             {
                 var drivers = JArray.Parse(driversJson);
-                ReturnDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
+                _allReturnDrivers = drivers.Select(d => new DriverComboItem
                 {
                     driverId = d["driverId"]?.Value<int>() ?? 0,
                     fullName = d["fullName"]?.ToString() ?? ""
@@ -161,7 +171,7 @@ public partial class GoodsReturnsPage : UserControl
                     }
                     return item;
                 }).ToList();
-                ItemProductCombo.ItemsSource = _productsList;
+                // Products list loaded for search
             }
 
             // Return books
@@ -198,12 +208,12 @@ public partial class GoodsReturnsPage : UserControl
     /// When a product is selected, load its available units into ItemUnitCombo.
     /// If the product was loaded without units (from list endpoint), fetch them individually.
     /// </summary>
-    private async void ItemProductCombo_Changed(object sender, SelectionChangedEventArgs e)
+    private async void LoadProductUnits(ProductComboItem product)
     {
         ItemUnitCombo.ItemsSource = null;
         ItemUnitCombo.SelectedIndex = -1;
 
-        if (ItemProductCombo.SelectedItem is not ProductComboItem product) return;
+        if (product == null) return;
 
         var units = product.units;
 
@@ -244,11 +254,12 @@ public partial class GoodsReturnsPage : UserControl
 
     private void AddItem_Click(object sender, RoutedEventArgs e)
     {
-        if (ItemProductCombo.SelectedItem is not ProductComboItem product)
+        if (_selectedProduct == null)
         {
             ShowReturnError("اختر صنف");
             return;
         }
+        var product = _selectedProduct;
         if (ItemUnitCombo.SelectedItem is not ProductUnitComboItem unit)
         {
             ShowReturnError("اختر وحدة الصنف");
@@ -293,7 +304,7 @@ public partial class GoodsReturnsPage : UserControl
             ShowReturnError("أدخل رقم الإيصال");
             return;
         }
-        if (ReturnDriverCombo.SelectedValue is not int driverId || driverId <= 0)
+        if (_selectedReturnDriver == null || _selectedReturnDriver.driverId <= 0)
         {
             ShowReturnError("اختر السائق");
             return;
@@ -318,7 +329,7 @@ public partial class GoodsReturnsPage : UserControl
             var data = new
             {
                 ReturnReceiptNumber = receiptNum,
-                DriverId = driverId,
+                DriverId = _selectedReturnDriver!.driverId,
                 ReasonId = reasonId,
                 BookId = bookId,
                 ReturnDate = ReturnDatePicker.SelectedDate ?? DateTime.Today,
@@ -370,6 +381,75 @@ public partial class GoodsReturnsPage : UserControl
         }
         catch (Exception ex) { MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
+
+    // ══════════════════════════════════════
+    // DRIVER FILTER SEARCH
+    // ══════════════════════════════════════
+    private void DriverFilterSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressFilterDriverSearch) return;
+        var q = DriverFilterSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(q)) { _selectedFilterDriver = null; ClearDriverFilterBtn.Visibility = Visibility.Collapsed; DriverFilterPopup.IsOpen = false; return; }
+        if (_selectedFilterDriver != null && q == _selectedFilterDriver.fullName) return;
+        _selectedFilterDriver = null;
+        var f = _allFilterDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        DriverFilterResults.ItemsSource = f; DriverFilterPopup.IsOpen = f.Count > 0;
+    }
+    private void DriverFilterSearch_GotFocus(object sender, RoutedEventArgs e)
+    { if (string.IsNullOrWhiteSpace(DriverFilterSearchBox.Text) && _allFilterDrivers.Count > 0) { DriverFilterResults.ItemsSource = _allFilterDrivers.Take(50).ToList(); DriverFilterPopup.IsOpen = true; } }
+    private void DriverFilterResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DriverFilterResults.SelectedItem is DriverComboItem item)
+        { _selectedFilterDriver = item; _suppressFilterDriverSearch = true; DriverFilterSearchBox.Text = item.fullName; _suppressFilterDriverSearch = false; ClearDriverFilterBtn.Visibility = Visibility.Visible; DriverFilterPopup.IsOpen = false; DriverFilterResults.SelectedItem = null; }
+    }
+    private void ClearDriverFilter_Click(object sender, RoutedEventArgs e)
+    { _selectedFilterDriver = null; _suppressFilterDriverSearch = true; DriverFilterSearchBox.Text = ""; _suppressFilterDriverSearch = false; ClearDriverFilterBtn.Visibility = Visibility.Collapsed; }
+
+    // ══════════════════════════════════════
+    // RETURN DRIVER SEARCH
+    // ══════════════════════════════════════
+    private void ReturnDriverSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressReturnDriverSearch) return;
+        var q = ReturnDriverSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(q)) { _selectedReturnDriver = null; ClearReturnDriverBtn.Visibility = Visibility.Collapsed; ReturnDriverPopup.IsOpen = false; return; }
+        if (_selectedReturnDriver != null && q == _selectedReturnDriver.fullName) return;
+        _selectedReturnDriver = null;
+        var f = _allReturnDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        ReturnDriverResults.ItemsSource = f; ReturnDriverPopup.IsOpen = f.Count > 0;
+    }
+    private void ReturnDriverSearch_GotFocus(object sender, RoutedEventArgs e)
+    { if (string.IsNullOrWhiteSpace(ReturnDriverSearchBox.Text) && _allReturnDrivers.Count > 0) { ReturnDriverResults.ItemsSource = _allReturnDrivers.Take(50).ToList(); ReturnDriverPopup.IsOpen = true; } }
+    private void ReturnDriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ReturnDriverResults.SelectedItem is DriverComboItem item)
+        { _selectedReturnDriver = item; _suppressReturnDriverSearch = true; ReturnDriverSearchBox.Text = item.fullName; _suppressReturnDriverSearch = false; ClearReturnDriverBtn.Visibility = Visibility.Visible; ReturnDriverPopup.IsOpen = false; ReturnDriverResults.SelectedItem = null; }
+    }
+    private void ClearReturnDriver_Click(object sender, RoutedEventArgs e)
+    { _selectedReturnDriver = null; _suppressReturnDriverSearch = true; ReturnDriverSearchBox.Text = ""; _suppressReturnDriverSearch = false; ClearReturnDriverBtn.Visibility = Visibility.Collapsed; }
+
+    // ══════════════════════════════════════
+    // PRODUCT SEARCH
+    // ══════════════════════════════════════
+    private void ProductSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressProductSearch) return;
+        var q = ProductSearchBox.Text.Trim();
+        if (string.IsNullOrEmpty(q)) { _selectedProduct = null; ClearProductBtn.Visibility = Visibility.Collapsed; ProductPopup.IsOpen = false; return; }
+        if (_selectedProduct != null && q == _selectedProduct.productName) return;
+        _selectedProduct = null;
+        var f = _productsList.Where(p => p.productName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        ProductResults.ItemsSource = f; ProductPopup.IsOpen = f.Count > 0;
+    }
+    private void ProductSearch_GotFocus(object sender, RoutedEventArgs e)
+    { if (string.IsNullOrWhiteSpace(ProductSearchBox.Text) && _productsList.Count > 0) { ProductResults.ItemsSource = _productsList.Take(50).ToList(); ProductPopup.IsOpen = true; } }
+    private void ProductResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ProductResults.SelectedItem is ProductComboItem item)
+        { _selectedProduct = item; _suppressProductSearch = true; ProductSearchBox.Text = item.productName; _suppressProductSearch = false; ClearProductBtn.Visibility = Visibility.Visible; ProductPopup.IsOpen = false; ProductResults.SelectedItem = null; LoadProductUnits(item); }
+    }
+    private void ClearProduct_Click(object sender, RoutedEventArgs e)
+    { _selectedProduct = null; _suppressProductSearch = true; ProductSearchBox.Text = ""; _suppressProductSearch = false; ClearProductBtn.Visibility = Visibility.Collapsed; ItemUnitCombo.ItemsSource = null; }
 }
 
 public class ReturnItemRow

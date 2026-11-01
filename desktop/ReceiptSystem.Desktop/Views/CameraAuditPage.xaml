@@ -33,9 +33,21 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <ComboBox x:Name="AuditDriverFilter" Grid.Column="0"
-                          DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                          SelectionChanged="Filter_Changed" FontSize="14" Padding="10,8"/>
+                <Grid Grid.Column="0">
+                    <TextBox x:Name="AuditDriverFilterSearchBox" FontSize="14" Padding="10,8"
+                             TextChanged="AuditDriverFilterSearch_TextChanged" GotFocus="AuditDriverFilterSearch_GotFocus"/>
+                    <Button x:Name="ClearAuditDriverFilterBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                            Width="18" Height="18" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMutedBrush}" Click="ClearAuditDriverFilter_Click"/>
+                    <Popup x:Name="AuditDriverFilterPopup" PlacementTarget="{Binding ElementName=AuditDriverFilterSearchBox}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                        <Border Background="{StaticResource BgCardBrush}" CornerRadius="8" BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1" Padding="0" Margin="0,2,0,0" MinWidth="200">
+                            <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                            <ListBox x:Name="AuditDriverFilterResults" MaxHeight="200" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" SelectionChanged="AuditDriverFilterResults_SelectionChanged">
+                                <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style></ListBox.ItemContainerStyle>
+                            </ListBox>
+                        </Border>
+                    </Popup>
+                </Grid>
                 <ComboBox x:Name="AuditStatusFilter" Grid.Column="2" FontSize="14" Padding="10,8"
                           SelectionChanged="Filter_Changed">
                     <ComboBoxItem Content="كل الحالات" Tag="" IsSelected="True"/>
@@ -95,8 +107,21 @@
                     <TextBlock Text="مراجعة كاميرا جديدة" FontSize="20" FontWeight="Bold"
                                Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
                     <TextBlock Text="السائق:" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="AuditDriverCombo" DisplayMemberPath="fullName" SelectedValuePath="driverId"
-                              FontSize="14" Padding="10,8" Margin="0,0,0,12"/>
+                    <Grid Margin="0,0,0,12">
+                        <TextBox x:Name="AuditDialogDriverSearchBox" FontSize="14" Padding="10,8"
+                                 TextChanged="AuditDialogDriverSearch_TextChanged" GotFocus="AuditDialogDriverSearch_GotFocus"/>
+                        <Button x:Name="ClearAuditDialogDriverBtn" Content="✕" FontSize="9" Visibility="Collapsed"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0"
+                                Width="18" Height="18" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMutedBrush}" Click="ClearAuditDialogDriver_Click"/>
+                        <Popup x:Name="AuditDialogDriverPopup" PlacementTarget="{Binding ElementName=AuditDialogDriverSearchBox}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Background="{StaticResource BgCardBrush}" CornerRadius="8" BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="1" Padding="0" Margin="0,2,0,0" MinWidth="250">
+                                <Border.Effect><DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="4"/></Border.Effect>
+                                <ListBox x:Name="AuditDialogDriverResults" MaxHeight="200" BorderThickness="0" Background="Transparent" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" SelectionChanged="AuditDialogDriverResults_SelectionChanged">
+                                    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="8,6"/><Setter Property="Cursor" Value="Hand"/></Style></ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <TextBlock Text="التاريخ:" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                     <DatePicker x:Name="AuditDatePicker" FontSize="13" Margin="0,0,0,12"/>
                     <TextBlock Text="رقم الرحلة (اختياري):" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
