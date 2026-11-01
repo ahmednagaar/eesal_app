@@ -63,37 +63,6 @@ public partial class ReceiptDashboardPage : UserControl
                 }
             }
 
-            // Load missing drivers (after 3pm)
-            if (DateTime.Now.Hour >= 15)
-            {
-                try
-                {
-                    var missingJson = await _api.GetMissingDriversTodayJsonAsync();
-                    if (missingJson != null)
-                    {
-                        var missing = JArray.Parse(missingJson);
-                        if (missing.Count > 0)
-                        {
-                            var names = missing.Select(d =>
-                                $"{d["fullName"]} ({d["phoneNumber"]})").ToList();
-                            MissingDriversText.Text = string.Join("  •  ", names);
-                            MissingDriversBanner.Visibility = Visibility.Visible;
-                        }
-                        else
-                        {
-                            MissingDriversBanner.Visibility = Visibility.Collapsed;
-                        }
-                    }
-                }
-                catch
-                {
-                    MissingDriversBanner.Visibility = Visibility.Collapsed;
-                }
-            }
-            else
-            {
-                MissingDriversBanner.Visibility = Visibility.Collapsed;
-            }
 
             // Load low-stock alerts (from book-series alerts)
             try

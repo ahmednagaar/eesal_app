@@ -54,21 +54,6 @@
                 </UniformGrid>
 
                 <!-- ═══ ALERT BANNERS ═══ -->
-                <!-- Missing Drivers (after 3pm) -->
-                <Border x:Name="MissingDriversBanner" Visibility="Collapsed"
-                        Background="#33FBBF24" CornerRadius="10" Padding="16,12" Margin="0,0,0,10"
-                        BorderBrush="{StaticResource AccentWarningBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                                       Foreground="{StaticResource AccentWarningBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="سائقون لم يسلّموا اليوم" FontSize="14" FontWeight="Bold"
-                                       Foreground="{StaticResource AccentWarningBrush}"/>
-                        </StackPanel>
-                        <TextBlock x:Name="MissingDriversText" TextWrapping="Wrap" FontSize="13"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </StackPanel>
-                </Border>
 
                 <!-- Low Stock Books -->
                 <Border x:Name="LowStockBanner" Visibility="Collapsed"
