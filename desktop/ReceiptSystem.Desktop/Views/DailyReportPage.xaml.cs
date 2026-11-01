@@ -201,7 +201,7 @@ public partial class DailyReportPage : UserControl
         });
 
         // Per-driver tables
-        var drivers = report["drivers"] as JArray;
+        var drivers = report["driverReports"] as JArray ?? report["drivers"] as JArray;
         if (drivers != null)
         {
             foreach (var driver in drivers)

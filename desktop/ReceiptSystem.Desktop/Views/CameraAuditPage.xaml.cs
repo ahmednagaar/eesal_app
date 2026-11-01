@@ -33,11 +33,14 @@ public partial class CameraAuditPage : UserControl
             var json = await _api.GetDriversJsonAsync();
             if (json != null)
             {
-                var drivers = JsonConvert.DeserializeObject<JArray>(json);
-                var allDrivers = new JArray();
-                allDrivers.Add(JObject.FromObject(new { driverId = 0, fullName = "كل السائقين" }));
-                if (drivers != null) foreach (var d in drivers) allDrivers.Add(d);
-                AuditDriverFilter.ItemsSource = allDrivers;
+                var drivers = JArray.Parse(json);
+                var list = drivers.Select(d => new DriverComboItem
+                {
+                    driverId = d["driverId"]?.Value<int>() ?? 0,
+                    fullName = d["fullName"]?.ToString() ?? ""
+                }).ToList();
+                list.Insert(0, new DriverComboItem { driverId = 0, fullName = "كل السائقين" });
+                AuditDriverFilter.ItemsSource = list;
                 AuditDriverFilter.SelectedIndex = 0;
             }
         }
@@ -87,7 +90,15 @@ public partial class CameraAuditPage : UserControl
         try
         {
             var driversJson = await _api.GetDriversJsonAsync();
-            if (driversJson != null) AuditDriverCombo.ItemsSource = JsonConvert.DeserializeObject<JArray>(driversJson);
+            if (driversJson != null)
+            {
+                var drivers = JArray.Parse(driversJson);
+                AuditDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
+                {
+                    driverId = d["driverId"]?.Value<int>() ?? 0,
+                    fullName = d["fullName"]?.ToString() ?? ""
+                }).ToList();
+            }
         }
         catch { }
 

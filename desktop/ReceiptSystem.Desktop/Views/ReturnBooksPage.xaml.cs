@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Newtonsoft.Json;
@@ -43,9 +44,14 @@ public partial class ReturnBooksPage : UserControl
             var json = await _api.GetReturnBookSeriesJsonAsync();
             if (json != null)
             {
-                var series = JsonConvert.DeserializeObject<JArray>(json);
-                SeriesCombo.ItemsSource = series;
-                if (series != null && series.Count > 0)
+                var series = JArray.Parse(json);
+                var list = series.Select(s => new SeriesComboItem
+                {
+                    seriesId = s["seriesId"]?.Value<int>() ?? 0,
+                    seriesCode = s["seriesCode"]?.ToString() ?? ""
+                }).ToList();
+                SeriesCombo.ItemsSource = list;
+                if (list.Count > 0)
                     SeriesCombo.SelectedIndex = 0;
             }
         }
@@ -164,8 +170,12 @@ public partial class ReturnBooksPage : UserControl
             var driversJson = await _api.GetDriversJsonAsync();
             if (driversJson != null)
             {
-                var drivers = JsonConvert.DeserializeObject<JArray>(driversJson);
-                AssignDriverCombo.ItemsSource = drivers;
+                var drivers = JArray.Parse(driversJson);
+                AssignDriverCombo.ItemsSource = drivers.Select(d => new DriverComboItem
+                {
+                    driverId = d["driverId"]?.Value<int>() ?? 0,
+                    fullName = d["fullName"]?.ToString() ?? ""
+                }).ToList();
             }
         }
         catch { }

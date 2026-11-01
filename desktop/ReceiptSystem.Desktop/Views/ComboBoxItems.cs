@@ -79,3 +79,10 @@ public class ProductUnitComboItem
     public bool isDefault { get; set; }
     public override string ToString() => unitName;
 }
+
+public class SeriesComboItem
+{
+    public int seriesId { get; set; }
+    public string seriesCode { get; set; } = string.Empty;
+    public override string ToString() => seriesCode;
+}
