@@ -92,25 +92,30 @@ public class RouteService
         var oldPosition = rm.PositionOrder;
         if (oldPosition == newPosition) return;
 
+        // Use raw SQL to avoid EF Core circular dependency with unique index on {RouteId, PositionOrder}.
+        // Step 1: Move the target item to a sentinel position (-1) to free its slot
+        await _db.Database.ExecuteSqlRawAsync(
+            "UPDATE RouteMerchants SET PositionOrder = -1 WHERE RouteMerchantId = {0}", routeMerchantId);
+
+        // Step 2: Shift affected items
         if (newPosition > oldPosition)
         {
             // Moving down: shift items between old+1 and new UP by 1
-            var toShift = await _db.RouteMerchants
-                .Where(x => x.RouteId == routeId && x.IsActive && x.PositionOrder > oldPosition && x.PositionOrder <= newPosition && x.RouteMerchantId != routeMerchantId)
-                .ToListAsync();
-            foreach (var x in toShift) x.PositionOrder -= 1;
+            await _db.Database.ExecuteSqlRawAsync(
+                "UPDATE RouteMerchants SET PositionOrder = PositionOrder - 1 WHERE RouteId = {0} AND IsActive = 1 AND PositionOrder > {1} AND PositionOrder <= {2} AND RouteMerchantId != {3}",
+                routeId, oldPosition, newPosition, routeMerchantId);
         }
         else
         {
             // Moving up: shift items between new and old-1 DOWN by 1
-            var toShift = await _db.RouteMerchants
-                .Where(x => x.RouteId == routeId && x.IsActive && x.PositionOrder >= newPosition && x.PositionOrder < oldPosition && x.RouteMerchantId != routeMerchantId)
-                .ToListAsync();
-            foreach (var x in toShift) x.PositionOrder += 1;
+            await _db.Database.ExecuteSqlRawAsync(
+                "UPDATE RouteMerchants SET PositionOrder = PositionOrder + 1 WHERE RouteId = {0} AND IsActive = 1 AND PositionOrder >= {1} AND PositionOrder < {2} AND RouteMerchantId != {3}",
+                routeId, newPosition, oldPosition, routeMerchantId);
         }
 
-        rm.PositionOrder = newPosition;
-        await _db.SaveChangesAsync();
+        // Step 3: Place the target item at its final position
+        await _db.Database.ExecuteSqlRawAsync(
+            "UPDATE RouteMerchants SET PositionOrder = {0} WHERE RouteMerchantId = {1}", newPosition, routeMerchantId);
     }
 
     public async Task RemoveMerchantFromRouteAsync(int routeId, int routeMerchantId)
