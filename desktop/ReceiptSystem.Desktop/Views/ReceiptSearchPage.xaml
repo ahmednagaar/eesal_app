@@ -94,11 +94,11 @@
 
                     <StackPanel Grid.Column="2" Margin="0,0,10,0">
                         <TextBlock Text="من تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <DatePicker x:Name="FilterDateFrom" Height="34" FlowDirection="LeftToRight"/>
+                        <DatePicker x:Name="FilterDateFrom" Height="34" FlowDirection="LeftToRight" Foreground="White" TextElement.Foreground="White"/>
                     </StackPanel>
                     <StackPanel Grid.Column="3">
                         <TextBlock Text="إلى تاريخ" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <DatePicker x:Name="FilterDateTo" Height="34" FlowDirection="LeftToRight"/>
+                        <DatePicker x:Name="FilterDateTo" Height="34" FlowDirection="LeftToRight" Foreground="White" TextElement.Foreground="White"/>
                     </StackPanel>
                 </Grid>
 

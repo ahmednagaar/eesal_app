@@ -23,6 +23,35 @@ public partial class CameraAuditPage : UserControl
     {
         _api = api;
         InitializeComponent();
+
+        // Keyboard navigation for filter driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(AuditDriverFilterSearchBox, AuditDriverFilterResults, AuditDriverFilterPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _selectedFilterDriver = item;
+                _suppressFilterDriverSearch = true;
+                AuditDriverFilterSearchBox.Text = item.fullName;
+                _suppressFilterDriverSearch = false;
+                ClearAuditDriverFilterBtn.Visibility = System.Windows.Visibility.Visible;
+                AuditDriverFilterPopup.IsOpen = false;
+                AuditDriverFilterResults.SelectedItem = null;
+            }
+        });
+        // Keyboard navigation for dialog driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(AuditDialogDriverSearchBox, AuditDialogDriverResults, AuditDialogDriverPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _selectedDialogDriver = item;
+                _suppressDialogDriverSearch = true;
+                AuditDialogDriverSearchBox.Text = item.fullName;
+                _suppressDialogDriverSearch = false;
+                ClearAuditDialogDriverBtn.Visibility = System.Windows.Visibility.Visible;
+                AuditDialogDriverPopup.IsOpen = false;
+                AuditDialogDriverResults.SelectedItem = null;
+            }
+        });
     }
 
     private async void Page_Loaded(object sender, RoutedEventArgs e)
@@ -248,7 +277,7 @@ public partial class CameraAuditPage : UserControl
         if (string.IsNullOrEmpty(q)) { _selectedFilterDriver = null; ClearAuditDriverFilterBtn.Visibility = Visibility.Collapsed; AuditDriverFilterPopup.IsOpen = false; return; }
         if (_selectedFilterDriver != null && q == _selectedFilterDriver.fullName) return;
         _selectedFilterDriver = null;
-        var f = _allDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var f = _allDrivers.Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, q)).Take(50).ToList();
         AuditDriverFilterResults.ItemsSource = f; AuditDriverFilterPopup.IsOpen = f.Count > 0;
     }
     private void AuditDriverFilterSearch_GotFocus(object sender, RoutedEventArgs e)
@@ -271,7 +300,7 @@ public partial class CameraAuditPage : UserControl
         if (string.IsNullOrEmpty(q)) { _selectedDialogDriver = null; ClearAuditDialogDriverBtn.Visibility = Visibility.Collapsed; AuditDialogDriverPopup.IsOpen = false; return; }
         if (_selectedDialogDriver != null && q == _selectedDialogDriver.fullName) return;
         _selectedDialogDriver = null;
-        var f = _dialogDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var f = _dialogDrivers.Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, q)).Take(50).ToList();
         AuditDialogDriverResults.ItemsSource = f; AuditDialogDriverPopup.IsOpen = f.Count > 0;
     }
     private void AuditDialogDriverSearch_GotFocus(object sender, RoutedEventArgs e)

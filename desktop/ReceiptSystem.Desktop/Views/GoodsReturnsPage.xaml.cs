@@ -30,6 +30,43 @@ public partial class GoodsReturnsPage : UserControl
     {
         _api = api;
         InitializeComponent();
+
+        // Keyboard navigation for driver filter search
+        Helpers.SearchHelper.AttachKeyboardNavigation(DriverFilterSearchBox, DriverFilterResults, DriverFilterPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _selectedFilterDriver = item;
+                _suppressFilterDriverSearch = true;
+                DriverFilterSearchBox.Text = item.fullName;
+                _suppressFilterDriverSearch = false;
+                ClearDriverFilterBtn.Visibility = System.Windows.Visibility.Visible;
+                DriverFilterPopup.IsOpen = false;
+                DriverFilterResults.SelectedItem = null;
+            }
+        });
+        // Keyboard navigation for return driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(ReturnDriverSearchBox, ReturnDriverResults, ReturnDriverPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _selectedReturnDriver = item;
+                _suppressReturnDriverSearch = true;
+                ReturnDriverSearchBox.Text = item.fullName;
+                _suppressReturnDriverSearch = false;
+                ClearReturnDriverBtn.Visibility = System.Windows.Visibility.Visible;
+                ReturnDriverPopup.IsOpen = false;
+                ReturnDriverResults.SelectedItem = null;
+            }
+        });
+        // Keyboard navigation for product search
+        Helpers.SearchHelper.AttachKeyboardNavigation(ProductSearchBox, ProductResults, ProductPopup, selected =>
+        {
+            if (selected is ProductComboItem item)
+            {
+                ProductResults.SelectedItem = item;
+            }
+        });
     }
 
     private async void Page_Loaded(object sender, RoutedEventArgs e)
@@ -392,7 +429,7 @@ public partial class GoodsReturnsPage : UserControl
         if (string.IsNullOrEmpty(q)) { _selectedFilterDriver = null; ClearDriverFilterBtn.Visibility = Visibility.Collapsed; DriverFilterPopup.IsOpen = false; return; }
         if (_selectedFilterDriver != null && q == _selectedFilterDriver.fullName) return;
         _selectedFilterDriver = null;
-        var f = _allFilterDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var f = _allFilterDrivers.Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, q)).Take(50).ToList();
         DriverFilterResults.ItemsSource = f; DriverFilterPopup.IsOpen = f.Count > 0;
     }
     private void DriverFilterSearch_GotFocus(object sender, RoutedEventArgs e)
@@ -415,7 +452,7 @@ public partial class GoodsReturnsPage : UserControl
         if (string.IsNullOrEmpty(q)) { _selectedReturnDriver = null; ClearReturnDriverBtn.Visibility = Visibility.Collapsed; ReturnDriverPopup.IsOpen = false; return; }
         if (_selectedReturnDriver != null && q == _selectedReturnDriver.fullName) return;
         _selectedReturnDriver = null;
-        var f = _allReturnDrivers.Where(d => d.fullName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var f = _allReturnDrivers.Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, q)).Take(50).ToList();
         ReturnDriverResults.ItemsSource = f; ReturnDriverPopup.IsOpen = f.Count > 0;
     }
     private void ReturnDriverSearch_GotFocus(object sender, RoutedEventArgs e)
@@ -438,7 +475,7 @@ public partial class GoodsReturnsPage : UserControl
         if (string.IsNullOrEmpty(q)) { _selectedProduct = null; ClearProductBtn.Visibility = Visibility.Collapsed; ProductPopup.IsOpen = false; return; }
         if (_selectedProduct != null && q == _selectedProduct.productName) return;
         _selectedProduct = null;
-        var f = _productsList.Where(p => p.productName.Contains(q, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var f = _productsList.Where(p => Helpers.SearchHelper.MatchesMultiWord(p.productName, q)).Take(50).ToList();
         ProductResults.ItemsSource = f; ProductPopup.IsOpen = f.Count > 0;
     }
     private void ProductSearch_GotFocus(object sender, RoutedEventArgs e)

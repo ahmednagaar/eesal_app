@@ -88,15 +88,14 @@ public class DayInvoiceDto
     public int MerchantId { get; set; }
     public string MerchantName { get; set; } = string.Empty;
     public string? City { get; set; }
-    public int PositionOrder { get; set; }
+    public int SequenceNumber { get; set; }
     public string? InvoiceNumber { get; set; }
     public string? Quantity { get; set; }
     public decimal? Amount { get; set; }
     public string? Notes { get; set; }
-    public int? ManualPositionOverride { get; set; }
 }
 
-public class CreateDayInvoiceDto
+public class AddDayInvoiceDto
 {
     [Required] public int RouteMerchantId { get; set; }
     [Required] public int MerchantId { get; set; }
@@ -116,8 +115,8 @@ public class UpdateDayInvoiceDto
 
 public class ReorderInvoiceDto
 {
-    [Required] public int InvoiceId { get; set; }
-    [Required] public int NewPosition { get; set; }
+    [Required] public int DayInvoiceId { get; set; }
+    [Required] public int NewSequenceNumber { get; set; }
 }
 
 // ── Print Sheets ──
@@ -144,5 +143,12 @@ public class SheetLineDto
 
 public class UnlockDayDto
 {
+    public string Reason { get; set; } = string.Empty;
+}
+
+public class UnlockDeliveryDayDto
+{
+    [Required(ErrorMessage = "السبب مطلوب")]
+    [MaxLength(500)]
     public string Reason { get; set; } = string.Empty;
 }

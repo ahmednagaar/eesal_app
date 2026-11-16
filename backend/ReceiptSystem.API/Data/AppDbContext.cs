@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     // Module 2: Route Order
     public DbSet<Models.Route> Routes => Set<Models.Route>();
     public DbSet<RouteMerchant> RouteMerchants => Set<RouteMerchant>();
+    public DbSet<DeliveryDay> DeliveryDays => Set<DeliveryDay>();
+    public DbSet<DayInvoice> DayInvoices => Set<DayInvoice>();
 
     // Module 3: Ajal Register (Redesigned)
     public DbSet<AjalSession> AjalSessions => Set<AjalSession>();
@@ -255,6 +257,36 @@ public class AppDbContext : DbContext
             e.HasOne(rm => rm.Route).WithMany(r => r.RouteMerchants).HasForeignKey(rm => rm.RouteId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(rm => rm.Merchant).WithMany(m => m.RouteMerchants).HasForeignKey(rm => rm.MerchantId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(rm => rm.AddedByUser).WithMany().HasForeignKey(rm => rm.AddedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Module 2: DeliveryDay ──
+        mb.Entity<DeliveryDay>(e =>
+        {
+            e.HasKey(d => d.DeliveryDayId);
+            e.HasIndex(d => new { d.RouteId, d.DeliveryDate });
+            e.Property(d => d.DeliveryDate).HasColumnType("date");
+            e.Property(d => d.AssignedDriver).HasMaxLength(100);
+            e.Property(d => d.Status).HasMaxLength(20).HasDefaultValue("Draft");
+            e.Property(d => d.Notes).HasMaxLength(500);
+            e.Property(d => d.CreatedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(d => d.Route).WithMany().HasForeignKey(d => d.RouteId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(d => d.CreatedByUser).WithMany().HasForeignKey(d => d.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Module 2: DayInvoice ──
+        mb.Entity<DayInvoice>(e =>
+        {
+            e.HasKey(di => di.DayInvoiceId);
+            e.HasIndex(di => new { di.DeliveryDayId, di.RouteMerchantId }).IsUnique();
+            e.Property(di => di.InvoiceNumber).HasMaxLength(50);
+            e.Property(di => di.Quantity).HasMaxLength(200);
+            e.Property(di => di.Amount).HasColumnType("decimal(18,2)");
+            e.Property(di => di.Notes).HasMaxLength(300);
+            e.Property(di => di.EnteredAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(di => di.DeliveryDay).WithMany(d => d.DayInvoices).HasForeignKey(di => di.DeliveryDayId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(di => di.RouteMerchant).WithMany().HasForeignKey(di => di.RouteMerchantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(di => di.Merchant).WithMany().HasForeignKey(di => di.MerchantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(di => di.EnteredByUser).WithMany().HasForeignKey(di => di.EnteredByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── Module 3: AjalSession ──

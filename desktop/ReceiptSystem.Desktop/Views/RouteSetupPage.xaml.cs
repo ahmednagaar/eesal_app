@@ -118,7 +118,7 @@ public partial class RouteSetupPage : UserControl
         
         var filtered = string.IsNullOrEmpty(query)
             ? _allMerchantsCache
-            : _allMerchantsCache.Where(m => m.MerchantName.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+            : _allMerchantsCache.Where(m => Helpers.SearchHelper.MatchesMultiWord(m.MerchantName, query)).ToList();
 
         _merchants = new ObservableCollection<RouteMerchant>(filtered);
         RouteMerchantsList.ItemsSource = _merchants;

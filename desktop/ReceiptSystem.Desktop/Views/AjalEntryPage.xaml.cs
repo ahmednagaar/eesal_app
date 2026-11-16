@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -24,12 +24,48 @@ public partial class AjalEntryPage : UserControl
     private DriverComboItem? _selectedDriver;
     private bool _suppressRouteSearch;
     private bool _suppressDriverSearch;
+    private bool _suppressRouteSelectionChanged;
+    private bool _suppressDriverSelectionChanged;
 
     public AjalEntryPage(ApiClient api)
     {
         InitializeComponent();
         _api = api;
         Loaded += AjalEntryPage_Loaded;
+
+        // Keyboard navigation for driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(DriverSearchBox, DriverResults, DriverPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _suppressDriverSelectionChanged = true;
+                _selectedDriver = item;
+                _suppressDriverSearch = true;
+                DriverSearchBox.Text = item.fullName;
+                _suppressDriverSearch = false;
+                ClearDriverBtn.Visibility = System.Windows.Visibility.Visible;
+                DriverPopup.IsOpen = false;
+                DriverResults.SelectedItem = null;
+                _suppressDriverSelectionChanged = false;
+            }
+        });
+
+        // Keyboard navigation for route search
+        Helpers.SearchHelper.AttachKeyboardNavigation(RouteSearchBox, RouteResults, RoutePopup, selected =>
+        {
+            if (selected is Models.Route route)
+            {
+                _suppressRouteSelectionChanged = true;
+                _selectedRoute = route;
+                _suppressRouteSearch = true;
+                RouteSearchBox.Text = route.RouteName;
+                _suppressRouteSearch = false;
+                ClearRouteBtn.Visibility = System.Windows.Visibility.Visible;
+                RoutePopup.IsOpen = false;
+                RouteResults.SelectedItem = null;
+                _suppressRouteSelectionChanged = false;
+            }
+        });
     }
 
     private async void AjalEntryPage_Loaded(object sender, RoutedEventArgs e)
@@ -135,6 +171,7 @@ public partial class AjalEntryPage : UserControl
 
     private void RouteResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressRouteSelectionChanged) return;
         if (RouteResults.SelectedItem is Models.Route item)
         {
             _selectedRoute = item;
@@ -163,7 +200,7 @@ public partial class AjalEntryPage : UserControl
         if (string.IsNullOrEmpty(query)) { _selectedDriver = null; ClearDriverBtn.Visibility = Visibility.Collapsed; DriverPopup.IsOpen = false; return; }
         if (_selectedDriver != null && query == _selectedDriver.fullName) return;
         _selectedDriver = null;
-        var filtered = _drivers.Where(d => d.fullName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var filtered = _drivers.Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, query)).Take(50).ToList();
         DriverResults.ItemsSource = filtered;
         DriverPopup.IsOpen = filtered.Count > 0;
     }
@@ -176,6 +213,7 @@ public partial class AjalEntryPage : UserControl
 
     private void DriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressDriverSelectionChanged) return;
         if (DriverResults.SelectedItem is DriverComboItem item)
         {
             _selectedDriver = item;
@@ -305,6 +343,7 @@ public partial class AjalEntryPage : UserControl
     /// <summary>
     /// Creates a searchable merchant field (TextBox + Popup + ListBox) for each entry row.
     /// The selected MerchantComboItem is stored in the TextBox.DataContext.
+    /// Supports full keyboard navigation: ↑/↓ to navigate, Enter to select, Escape to close.
     /// </summary>
     private Grid CreateSearchableMerchantField()
     {
@@ -346,7 +385,7 @@ public partial class AjalEntryPage : UserControl
             FontSize = 12
         };
 
-        // ListBox item style
+        // ListBox item style with keyboard highlight
         var itemStyle = new Style(typeof(ListBoxItem));
         itemStyle.Setters.Add(new Setter(ListBoxItem.PaddingProperty, new Thickness(8, 6, 8, 6)));
         itemStyle.Setters.Add(new Setter(ListBoxItem.CursorProperty, Cursors.Hand));
@@ -356,6 +395,36 @@ public partial class AjalEntryPage : UserControl
         popup.Child = popupBorder;
 
         bool suppressSearch = false;
+        // Track the keyboard-highlighted index (-1 = none highlighted)
+        int highlightIndex = -1;
+
+        // Helper: commit the currently highlighted merchant and move focus to amount
+        void CommitSelection(MerchantComboItem item)
+        {
+            searchBox.DataContext = item;
+            suppressSearch = true;
+            searchBox.Text = item.merchantName;
+            suppressSearch = false;
+            popup.IsOpen = false;
+            highlightIndex = -1;
+            // Move focus to amount field
+            var parentRow = container.Parent as Grid;
+            if (parentRow != null)
+            {
+                var amountBox = parentRow.Children.OfType<TextBox>().FirstOrDefault(t => t.Tag?.ToString() == "amount");
+                amountBox?.Focus();
+            }
+        }
+
+        // Helper: update visual highlight on the listbox
+        void UpdateHighlight()
+        {
+            // Use SelectedIndex to show the highlight visually
+            listBox.SelectedIndex = highlightIndex;
+            // Scroll into view
+            if (highlightIndex >= 0 && highlightIndex < listBox.Items.Count)
+                listBox.ScrollIntoView(listBox.Items[highlightIndex]);
+        }
 
         // TextChanged — filter merchants
         searchBox.TextChanged += (s, e) =>
@@ -366,12 +435,16 @@ public partial class AjalEntryPage : UserControl
             {
                 searchBox.DataContext = null;
                 popup.IsOpen = false;
+                highlightIndex = -1;
                 return;
             }
             if (searchBox.DataContext is MerchantComboItem sel && query == sel.merchantName) return;
             searchBox.DataContext = null;
-            var filtered = _merchants.Where(m => m.merchantName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+            var filtered = _merchants.Where(m => Helpers.SearchHelper.MatchesMultiWord(m.merchantName, query)).Take(50).ToList();
             listBox.ItemsSource = filtered;
+            highlightIndex = -1;
+            // Temporarily disconnect SelectionChanged to avoid triggering commit
+            listBox.SelectedIndex = -1;
             popup.IsOpen = filtered.Count > 0;
         };
 
@@ -381,44 +454,86 @@ public partial class AjalEntryPage : UserControl
             if (string.IsNullOrWhiteSpace(searchBox.Text) && _merchants.Count > 0)
             {
                 listBox.ItemsSource = _merchants.Take(50).ToList();
+                highlightIndex = -1;
+                listBox.SelectedIndex = -1;
                 popup.IsOpen = true;
             }
         };
 
-        // Selection — pick merchant
+        // Mouse selection — pick merchant (only on mouse click, not keyboard highlight)
+        bool selectionFromKeyboard = false;
         listBox.SelectionChanged += (s, e) =>
         {
+            // Skip if this was triggered by keyboard navigation (UpdateHighlight sets SelectedIndex)
+            if (selectionFromKeyboard) return;
             if (listBox.SelectedItem is MerchantComboItem item)
             {
-                searchBox.DataContext = item;
-                suppressSearch = true;
-                searchBox.Text = item.merchantName;
-                suppressSearch = false;
-                popup.IsOpen = false;
+                CommitSelection(item);
                 listBox.SelectedItem = null;
-                // Move focus to amount field
-                var parentRow = container.Parent as Grid;
-                if (parentRow != null)
-                {
-                    var amountBox = parentRow.Children.OfType<TextBox>().FirstOrDefault(t => t.Tag?.ToString() == "amount");
-                    amountBox?.Focus();
-                }
             }
         };
 
-        // Enter key on search box moves to amount
-        searchBox.KeyDown += (s, e) =>
+        // Keyboard navigation on the search box: ↑/↓/Enter/Escape
+        searchBox.PreviewKeyDown += (s, e) =>
         {
-            if (e.Key == Key.Enter)
+            if (!popup.IsOpen) return;
+            int itemCount = listBox.Items.Count;
+            if (itemCount == 0) return;
+
+            switch (e.Key)
             {
-                e.Handled = true;
-                popup.IsOpen = false;
-                var parentRow = container.Parent as Grid;
-                if (parentRow != null)
-                {
-                    var amountBox = parentRow.Children.OfType<TextBox>().FirstOrDefault(t => t.Tag?.ToString() == "amount");
-                    amountBox?.Focus();
-                }
+                case Key.Down:
+                    e.Handled = true;
+                    highlightIndex = (highlightIndex < itemCount - 1) ? highlightIndex + 1 : highlightIndex;
+                    selectionFromKeyboard = true;
+                    UpdateHighlight();
+                    selectionFromKeyboard = false;
+                    break;
+
+                case Key.Up:
+                    e.Handled = true;
+                    highlightIndex = (highlightIndex > 0) ? highlightIndex - 1 : 0;
+                    selectionFromKeyboard = true;
+                    UpdateHighlight();
+                    selectionFromKeyboard = false;
+                    break;
+
+                case Key.Enter:
+                    e.Handled = true;
+                    // Re-read count live â€” itemCount at top of PreviewKeyDown may be stale
+                    // if ItemsSource was replaced between keystrokes by an async search result.
+                    int liveCount = listBox.Items.Count;
+                    if (highlightIndex >= 0 && highlightIndex < liveCount)
+                    {
+                        // Select the highlighted merchant
+                        if (listBox.Items[highlightIndex] is MerchantComboItem item)
+                            CommitSelection(item);
+                    }
+                    else if (liveCount == 1)
+                    {
+                        // Auto-select the single match
+                        if (listBox.Items[0] is MerchantComboItem singleItem)
+                            CommitSelection(singleItem);
+                    }
+                    else
+                    {
+                        // No highlight — just close popup and move to amount
+                        popup.IsOpen = false;
+                        highlightIndex = -1;
+                        var parentRow = container.Parent as Grid;
+                        if (parentRow != null)
+                        {
+                            var amountBox = parentRow.Children.OfType<TextBox>().FirstOrDefault(t => t.Tag?.ToString() == "amount");
+                            amountBox?.Focus();
+                        }
+                    }
+                    break;
+
+                case Key.Escape:
+                    e.Handled = true;
+                    popup.IsOpen = false;
+                    highlightIndex = -1;
+                    break;
             }
         };
 

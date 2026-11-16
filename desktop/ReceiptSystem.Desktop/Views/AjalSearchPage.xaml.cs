@@ -23,11 +23,33 @@ public partial class AjalSearchPage : UserControl
     private MerchantComboItem? _selectedMerchant;
     private bool _suppressMerchantSearch;
 
+    // Prevents SelectionChanged from committing a selection while the user
+    // is only navigating with ↑/↓ keys (keyboard navigation sets SelectedIndex
+    // which fires SelectionChanged — we don't want that to trigger a commit).
+    private bool _suppressMerchantSelectionChanged;
+
     public AjalSearchPage(ApiClient api)
     {
         _api = api;
         InitializeComponent();
         Loaded += async (_, _) => await LoadMerchantsAsync();
+
+        // Keyboard navigation for merchant search
+        Helpers.SearchHelper.AttachKeyboardNavigation(MerchantSearchBox, MerchantResults, MerchantPopup, selected =>
+        {
+            if (selected is MerchantComboItem item)
+            {
+                _selectedMerchant = item;
+                _suppressMerchantSearch = true;
+                _suppressMerchantSelectionChanged = true;
+                MerchantSearchBox.Text = item.merchantName;
+                _suppressMerchantSearch = false;
+                _suppressMerchantSelectionChanged = false;
+                ClearMerchantBtn.Visibility = System.Windows.Visibility.Visible;
+                MerchantPopup.IsOpen = false;
+                MerchantResults.SelectedItem = null;
+            }
+        });
     }
 
     private async Task LoadMerchantsAsync()
@@ -73,7 +95,7 @@ public partial class AjalSearchPage : UserControl
         _selectedMerchant = null;
 
         var filtered = _allMerchants
-            .Where(m => m.merchantName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Where(m => Helpers.SearchHelper.MatchesMultiWord(m.merchantName, query))
             .Take(50)
             .ToList();
 
@@ -99,6 +121,9 @@ public partial class AjalSearchPage : UserControl
 
     private void MerchantResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // Guard: skip when keyboard navigation set SelectedIndex (not a real mouse click)
+        if (_suppressMerchantSelectionChanged) return;
+
         if (MerchantResults.SelectedItem is MerchantComboItem item)
         {
             _selectedMerchant = item;
@@ -122,6 +147,25 @@ public partial class AjalSearchPage : UserControl
     }
 
     // ══════════════════════════════════════
+    // AUTO-SEARCH ON FILTER CHANGE
+    // ══════════════════════════════════════
+
+    private async void FilterStatus_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Only auto-search once the page is fully loaded (avoid firing on init)
+        if (!IsLoaded) return;
+        _currentPage = 1;
+        await SearchAsync();
+    }
+
+    private async void FilterDate_Changed(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        _currentPage = 1;
+        await SearchAsync();
+    }
+
+    // ══════════════════════════════════════
     // SEARCH
     // ══════════════════════════════════════
 
@@ -140,9 +184,11 @@ public partial class AjalSearchPage : UserControl
         ClearMerchantBtn.Visibility = Visibility.Collapsed;
 
         FilterInvoiceNum.Text = "";
-        FilterEmployee.Text = ""; FilterStatus.SelectedIndex = 0;
-        FilterDateFrom.SelectedDate = null; FilterDateTo.SelectedDate = null;
-        ResultsGrid.ItemsSource = null; ResultSummary.Text = "";
+        FilterStatus.SelectedIndex = 0;
+        FilterDateFrom.SelectedDate = null;
+        FilterDateTo.SelectedDate = null;
+        ResultsGrid.ItemsSource = null;
+        ResultSummary.Text = "";
         ExportBtn.IsEnabled = false;
     }
 

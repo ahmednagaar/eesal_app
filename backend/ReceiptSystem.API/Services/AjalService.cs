@@ -178,15 +178,25 @@ public class AjalService
     }
 
     // ═══════════════════════════════════════
-    // UPDATE SESSION (Driver, Notes)
+    // UPDATE SESSION (Route, Driver, Notes, Date)
     // ═══════════════════════════════════════
     public async Task<bool> UpdateSessionAsync(int sessionId, UpdateAjalSessionDto dto)
     {
         var session = await _db.AjalSessions.FindAsync(sessionId);
         if (session == null) return false;
 
+        if (dto.RouteId.HasValue)
+        {
+            var route = await _db.Routes.FindAsync(dto.RouteId.Value);
+            if (route != null) session.RouteId = dto.RouteId.Value;
+        }
         if (dto.DriverId.HasValue) session.DriverId = dto.DriverId;
-        if (dto.Notes != null) session.Notes = dto.Notes;
+        if (dto.Notes != null)     session.Notes     = dto.Notes;
+
+        // تعديل تاريخ الجلسة — نخزّن اليوم فقط بدون وقت
+        if (dto.SessionDate.HasValue)
+            session.SessionDate = dto.SessionDate.Value.Date;
+
         await _db.SaveChangesAsync();
         return true;
     }

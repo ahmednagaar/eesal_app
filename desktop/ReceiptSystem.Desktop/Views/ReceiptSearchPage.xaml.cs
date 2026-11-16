@@ -34,6 +34,35 @@ public partial class ReceiptSearchPage : UserControl
     {
         _api = api;
         InitializeComponent();
+
+        // Keyboard navigation for merchant search
+        Helpers.SearchHelper.AttachKeyboardNavigation(MerchantSearchBox, MerchantResults, MerchantPopup, selected =>
+        {
+            if (selected is MerchantComboItem item)
+            {
+                _selectedMerchant = item;
+                _suppressMerchantSearch = true;
+                MerchantSearchBox.Text = item.merchantName;
+                _suppressMerchantSearch = false;
+                ClearMerchantBtn.Visibility = System.Windows.Visibility.Visible;
+                MerchantPopup.IsOpen = false;
+                MerchantResults.SelectedItem = null;
+            }
+        });
+        // Keyboard navigation for driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(DriverSearchBox, DriverResults, DriverPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _selectedDriver = item;
+                _suppressDriverSearch = true;
+                DriverSearchBox.Text = item.fullName;
+                _suppressDriverSearch = false;
+                ClearDriverBtn.Visibility = System.Windows.Visibility.Visible;
+                DriverPopup.IsOpen = false;
+                DriverResults.SelectedItem = null;
+            }
+        });
         Loaded += async (_, _) =>
         {
             await LoadDriversAsync();
@@ -108,7 +137,7 @@ public partial class ReceiptSearchPage : UserControl
 
         // Filter merchants
         var filtered = _allMerchants
-            .Where(m => m.merchantName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Where(m => Helpers.SearchHelper.MatchesMultiWord(m.merchantName, query))
             .Take(50)
             .ToList();
 
@@ -181,7 +210,7 @@ public partial class ReceiptSearchPage : UserControl
         _selectedDriver = null;
 
         var filtered = _allDrivers
-            .Where(d => d.fullName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, query))
             .Take(50)
             .ToList();
 

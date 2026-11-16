@@ -34,8 +34,10 @@ public class CreateAjalSessionResponseDto
 // ─── Update Session ───
 public class UpdateAjalSessionDto
 {
-    public int? DriverId { get; set; }
-    public string? Notes { get; set; }
+    public int?      RouteId     { get; set; }
+    public int?      DriverId    { get; set; }
+    public string?   Notes       { get; set; }
+    public DateTime? SessionDate { get; set; }   // تعديل تاريخ الجلسة
 }
 
 // ─── Add Entries to Existing Session ───

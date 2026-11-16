@@ -51,6 +51,8 @@ public partial class ErpImportPage : UserControl
     private Models.Route? _selectedRoute;
     private bool _suppressDriverSearch;
     private bool _suppressRouteSearch;
+    private bool _suppressDriverSelectionChanged;
+    private bool _suppressRouteSelectionChanged;
 
     public ErpImportPage(ApiClient api)
     {
@@ -58,6 +60,43 @@ public partial class ErpImportPage : UserControl
         InitializeComponent();
         BlockSessionDate.SelectedDate = DateTime.Today;
         Loaded += async (_, _) => await LoadBatchesListAsync();
+
+        // Keyboard navigation for driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(DriverSearchBox, DriverResults, DriverPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _suppressDriverSelectionChanged = true;
+                _selectedDriver = item;
+                _suppressDriverSearch = true;
+                DriverSearchBox.Text = item.fullName;
+                _suppressDriverSearch = false;
+                ClearDriverBtn.Visibility = System.Windows.Visibility.Visible;
+                DriverPopup.IsOpen = false;
+                DriverResults.SelectedItem = null;
+                _suppressDriverSelectionChanged = false;
+                // Load driver books after keyboard Enter
+                if (item.driverId > 0)
+                    _ = LoadDriverBooksAsync(item.driverId);
+            }
+        });
+
+        // Keyboard navigation for route search
+        Helpers.SearchHelper.AttachKeyboardNavigation(RouteSearchBox, RouteResults, RoutePopup, selected =>
+        {
+            if (selected is Models.Route item)
+            {
+                _suppressRouteSelectionChanged = true;
+                _selectedRoute = item;
+                _suppressRouteSearch = true;
+                RouteSearchBox.Text = item.RouteName;
+                _suppressRouteSearch = false;
+                ClearRouteBtn.Visibility = System.Windows.Visibility.Visible;
+                RoutePopup.IsOpen = false;
+                RouteResults.SelectedItem = null;
+                _suppressRouteSelectionChanged = false;
+            }
+        });
     }
 
     // ══════════════════════════════════════
@@ -323,6 +362,7 @@ public partial class ErpImportPage : UserControl
 
     private async void DriverResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressDriverSelectionChanged) return;
         if (DriverResults.SelectedItem is DriverComboItem item)
         {
             _selectedDriver = item;
@@ -335,37 +375,7 @@ public partial class ErpImportPage : UserControl
 
             // Load driver books
             if (item.driverId > 0)
-            {
-                try
-                {
-                    var json = await _api.GetDriverBooksJsonAsync(item.driverId);
-                    if (json != null)
-                    {
-                        var data = Newtonsoft.Json.Linq.JObject.Parse(json);
-                        var books = data["books"] as Newtonsoft.Json.Linq.JArray;
-                        if (books != null && books.Count > 0)
-                        {
-                            var lines = books.Select(b =>
-                            {
-                                int bookNum = b["bookNumber"]?.Value<int>() ?? 0;
-                                int start = b["startReceiptNumber"]?.Value<int>() ?? 0;
-                                int end = b["endReceiptNumber"]?.Value<int>() ?? 0;
-                                int used = b["usedCount"]?.Value<int>() ?? 0;
-                                int remaining = b["remainingCount"]?.Value<int>() ?? 0;
-                                return $"دفتر #{bookNum}: إيصالات {start}–{end} (مستخدم: {used}, متبقي: {remaining})";
-                            });
-                            DriverBooksText.Text = string.Join("\n", lines);
-                            DriverBooksPanel.Visibility = Visibility.Visible;
-                        }
-                        else
-                        {
-                            DriverBooksText.Text = "لا توجد دفاتر مسجلة لهذا السائق";
-                            DriverBooksPanel.Visibility = Visibility.Visible;
-                        }
-                    }
-                }
-                catch { DriverBooksPanel.Visibility = Visibility.Collapsed; }
-            }
+                _ = LoadDriverBooksAsync(item.driverId);
         }
     }
 
@@ -373,6 +383,40 @@ public partial class ErpImportPage : UserControl
     {
         _selectedDriver = null; _suppressDriverSearch = true; DriverSearchBox.Text = ""; _suppressDriverSearch = false;
         ClearDriverBtn.Visibility = Visibility.Collapsed; DriverBooksPanel.Visibility = Visibility.Collapsed; DriverSearchBox.Focus();
+    }
+
+    private async Task LoadDriverBooksAsync(int driverId)
+    {
+        if (driverId <= 0) { DriverBooksPanel.Visibility = Visibility.Collapsed; return; }
+        try
+        {
+            var json = await _api.GetDriverBooksJsonAsync(driverId);
+            if (json != null)
+            {
+                var data = Newtonsoft.Json.Linq.JObject.Parse(json);
+                var books = data["books"] as Newtonsoft.Json.Linq.JArray;
+                if (books != null && books.Count > 0)
+                {
+                    var lines = books.Select(b =>
+                    {
+                        int bookNum = b["bookNumber"]?.Value<int>() ?? 0;
+                        int start = b["startReceiptNumber"]?.Value<int>() ?? 0;
+                        int end = b["endReceiptNumber"]?.Value<int>() ?? 0;
+                        int used = b["usedCount"]?.Value<int>() ?? 0;
+                        int remaining = b["remainingCount"]?.Value<int>() ?? 0;
+                        return $"دفتر #{bookNum}: إيصالات {start}–{end} (مستخدم: {used}, متبقي: {remaining})";
+                    });
+                    DriverBooksText.Text = string.Join("\n", lines);
+                    DriverBooksPanel.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    DriverBooksText.Text = "لا توجد دفاتر مسجلة لهذا السائق";
+                    DriverBooksPanel.Visibility = Visibility.Visible;
+                }
+            }
+        }
+        catch { DriverBooksPanel.Visibility = Visibility.Collapsed; }
     }
 
     private void RouteSearch_TextChanged(object sender, TextChangedEventArgs e)
@@ -395,6 +439,7 @@ public partial class ErpImportPage : UserControl
 
     private void RouteResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressRouteSelectionChanged) return;
         if (RouteResults.SelectedItem is Models.Route item)
         {
             _selectedRoute = item;
@@ -531,6 +576,8 @@ public partial class ErpImportPage : UserControl
         { ToastHelper.ShowError(RootGrid, "أدخل رقم آخر إيصال"); return; }
         if (endReceipt < startReceipt)
         { ToastHelper.ShowError(RootGrid, "رقم آخر إيصال يجب أن يكون أكبر من أو يساوي رقم أول إيصال"); return; }
+        if (_selectedRoute == null)
+        { ToastHelper.ShowError(RootGrid, "اختر المنطقة / الخط من القائمة"); return; }
         if (BlockSessionDate.SelectedDate == null)
         { ToastHelper.ShowError(RootGrid, "اختر تاريخ الجلسة"); return; }
 
@@ -553,7 +600,7 @@ public partial class ErpImportPage : UserControl
             SessionDate = BlockSessionDate.SelectedDate!.Value.ToString("yyyy-MM-dd"),
             StartReceiptNumber = startReceipt,
             EndReceiptNumber = endReceipt,
-            RouteArea = RouteSearchBox.Text.Trim(),
+            RouteArea = _selectedRoute!.RouteName,
             RowIds = rowIds,
             SkippedReceiptNumbers = skippedNumbers
         };

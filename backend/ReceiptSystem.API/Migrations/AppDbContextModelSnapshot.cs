@@ -17,7 +17,7 @@ namespace ReceiptSystem.API.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.32")
+                .HasAnnotation("ProductVersion", "8.0.33")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -746,6 +746,115 @@ namespace ReceiptSystem.API.Migrations
                             TotalAmountCollected = 28000m,
                             TotalReceiptsCount = 10
                         });
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.DayInvoice", b =>
+                {
+                    b.Property<int>("DayInvoiceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DayInvoiceId"));
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("DeliveryDayId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnteredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("EnteredByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("ManualPositionOverride")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Quantity")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("RouteMerchantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DayInvoiceId");
+
+                    b.HasIndex("EnteredByUserId");
+
+                    b.HasIndex("MerchantId");
+
+                    b.HasIndex("RouteMerchantId");
+
+                    b.HasIndex("DeliveryDayId", "RouteMerchantId")
+                        .IsUnique();
+
+                    b.ToTable("DayInvoices");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.DeliveryDay", b =>
+                {
+                    b.Property<int>("DeliveryDayId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DeliveryDayId"));
+
+                    b.Property<string>("AssignedDriver")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DeliveryDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("PrintedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RouteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Draft");
+
+                    b.HasKey("DeliveryDayId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("RouteId", "DeliveryDate");
+
+                    b.ToTable("DeliveryDays");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Driver", b =>
@@ -3836,7 +3945,7 @@ namespace ReceiptSystem.API.Migrations
                             FullName = "مدير النظام",
                             IsActive = true,
                             MustChangePassword = true,
-                            PasswordHash = "$2a$11$6M1X9d/votkomS6pEm2qEe/GaTxtl4PUWeBw1QzdmNn66OUMXUDsa",
+                            PasswordHash = "$2a$11$LWjPzXrnfNqw1uOPw/Vd..Nf2Ky7PJkNzeHJV/DSdOtsPKI5f5S/2",
                             Role = "Admin",
                             Username = "admin"
                         },
@@ -3847,7 +3956,7 @@ namespace ReceiptSystem.API.Migrations
                             FullName = "أمين الخزينة",
                             IsActive = true,
                             MustChangePassword = true,
-                            PasswordHash = "$2a$11$7sXUsZqcMr3Ir6uM3HfBEOip3CwBVS0ad5XF7Zzfcn9ihldmq8sw6",
+                            PasswordHash = "$2a$11$lzCKs/SSeBEmMM5/fVcXrOdNodU2Dp4XA0wtA0SiRWg3sg5YOOPeW",
                             Role = "Treasury",
                             Username = "خزينة"
                         },
@@ -3858,7 +3967,7 @@ namespace ReceiptSystem.API.Migrations
                             FullName = "موظف الكول سنتر",
                             IsActive = true,
                             MustChangePassword = true,
-                            PasswordHash = "$2a$11$oQGFlRMrivAD1MIvrzeYEOl1pKoSgJNy0Pf8x4uemJtthRNiZnQQq",
+                            PasswordHash = "$2a$11$9FkzRJ.OBgMOn1F2j7pp.evUc825iiAA7fX79TS05vKb3iF0UbgAa",
                             Role = "CallCenter",
                             Username = "callcenter"
                         });
@@ -4029,6 +4138,60 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("EnteredByUser");
 
                     b.Navigation("ReconciledByUser");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.DayInvoice", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.DeliveryDay", "DeliveryDay")
+                        .WithMany("DayInvoices")
+                        .HasForeignKey("DeliveryDayId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.User", "EnteredByUser")
+                        .WithMany()
+                        .HasForeignKey("EnteredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.Merchant", "Merchant")
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.RouteMerchant", "RouteMerchant")
+                        .WithMany()
+                        .HasForeignKey("RouteMerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DeliveryDay");
+
+                    b.Navigation("EnteredByUser");
+
+                    b.Navigation("Merchant");
+
+                    b.Navigation("RouteMerchant");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.DeliveryDay", b =>
+                {
+                    b.HasOne("ReceiptSystem.API.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReceiptSystem.API.Models.Route", "Route")
+                        .WithMany()
+                        .HasForeignKey("RouteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Route");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Driver", b =>
@@ -4576,6 +4739,11 @@ namespace ReceiptSystem.API.Migrations
                     b.Navigation("DetectedGaps");
 
                     b.Navigation("Receipts");
+                });
+
+            modelBuilder.Entity("ReceiptSystem.API.Models.DeliveryDay", b =>
+                {
+                    b.Navigation("DayInvoices");
                 });
 
             modelBuilder.Entity("ReceiptSystem.API.Models.Driver", b =>

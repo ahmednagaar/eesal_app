@@ -25,6 +25,34 @@ public partial class SessionsPage : UserControl
         _api = api;
         InitializeComponent();
         FilterDate.SelectedDate = DateTime.Today;
+
+        // Keyboard navigation for driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(DriverSearchBox, DriverResults, DriverPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _selectedFilterDriver = item;
+                _suppressFilterDriverSearch = true;
+                DriverSearchBox.Text = item.fullName;
+                _suppressFilterDriverSearch = false;
+                ClearDriverBtn.Visibility = System.Windows.Visibility.Visible;
+                DriverPopup.IsOpen = false;
+                DriverResults.SelectedItem = null;
+            }
+        });
+        // Keyboard navigation for merchant search (edit dialog)
+        Helpers.SearchHelper.AttachKeyboardNavigation(EditMerchantSearchBox, EditMerchantResults, EditMerchantPopup, selected =>
+        {
+            if (selected is MerchantComboItem item)
+            {
+                _editSelectedMerchant = item;
+                _suppressEditMerchantSearch = true;
+                EditMerchantSearchBox.Text = item.merchantName;
+                _suppressEditMerchantSearch = false;
+                EditMerchantPopup.IsOpen = false;
+                EditMerchantResults.SelectedItem = null;
+            }
+        });
         Loaded += async (_, _) =>
         {
             await LoadDriversAsync();
@@ -515,7 +543,7 @@ public partial class SessionsPage : UserControl
         if (string.IsNullOrEmpty(query)) { _editSelectedMerchant = null; ClearEditMerchantBtn.Visibility = Visibility.Collapsed; EditMerchantPopup.IsOpen = false; return; }
         if (_editSelectedMerchant != null && query == _editSelectedMerchant.merchantName) return;
         _editSelectedMerchant = null;
-        var filtered = _allMerchants.Where(m => m.merchantName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var filtered = _allMerchants.Where(m => Helpers.SearchHelper.MatchesMultiWord(m.merchantName, query)).Take(50).ToList();
         EditMerchantResults.ItemsSource = filtered;
         EditMerchantPopup.IsOpen = filtered.Count > 0;
     }
@@ -561,7 +589,7 @@ public partial class SessionsPage : UserControl
         if (string.IsNullOrEmpty(query)) { _selectedFilterDriver = null; ClearDriverBtn.Visibility = Visibility.Collapsed; DriverPopup.IsOpen = false; return; }
         if (_selectedFilterDriver != null && query == _selectedFilterDriver.fullName) return;
         _selectedFilterDriver = null;
-        var filtered = _allDrivers.Where(d => d.fullName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var filtered = _allDrivers.Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, query)).Take(50).ToList();
         DriverResults.ItemsSource = filtered;
         DriverPopup.IsOpen = filtered.Count > 0;
     }

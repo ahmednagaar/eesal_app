@@ -25,6 +25,15 @@ public partial class DailyInvoicesPage : UserControl
     {
         _api = api;
         InitializeComponent();
+
+        // Keyboard navigation for quick-add merchant search
+        Helpers.SearchHelper.AttachKeyboardNavigation(QuickAddBox, QuickAddResults, QuickAddPopup, selected =>
+        {
+            if (selected is ChecklistItem item)
+            {
+                QuickAddResults.SelectedItem = item;
+            }
+        });
         DatePicker.SelectedDate = DateTime.Today;
         LoadRoutes();
     }
@@ -241,7 +250,7 @@ public partial class DailyInvoicesPage : UserControl
         }
 
         var results = _checklist
-            .Where(c => !c.IsSelected && c.MerchantName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Where(c => !c.IsSelected && Helpers.SearchHelper.MatchesMultiWord(c.MerchantName, query))
             .Take(8)
             .ToList();
 

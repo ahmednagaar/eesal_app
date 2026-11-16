@@ -34,6 +34,22 @@ public partial class NewSessionPage : UserControl
         _api = api;
         InitializeComponent();
         SessionDate.SelectedDate = DateTime.Today;
+
+        // Keyboard navigation for driver search
+        Helpers.SearchHelper.AttachKeyboardNavigation(DriverSearchBox, DriverResults, DriverPopup, selected =>
+        {
+            if (selected is DriverComboItem item)
+            {
+                _selectedDriver = item;
+                _suppressDriverSearch = true;
+                DriverSearchBox.Text = item.fullName;
+                _suppressDriverSearch = false;
+                ClearDriverBtn.Visibility = System.Windows.Visibility.Visible;
+                DriverPopup.IsOpen = false;
+                DriverResults.SelectedItem = null;
+                LoadDriverBooks(item.driverId);
+            }
+        });
         Loaded += async (_, _) => await LoadFormDataAsync();
     }
 
@@ -702,7 +718,7 @@ public partial class NewSessionPage : UserControl
         if (string.IsNullOrEmpty(query)) { _selectedDriver = null; ClearDriverBtn.Visibility = Visibility.Collapsed; DriverPopup.IsOpen = false; return; }
         if (_selectedDriver != null && query == _selectedDriver.fullName) return;
         _selectedDriver = null;
-        var filtered = _allDrivers.Where(d => d.fullName.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+        var filtered = _allDrivers.Where(d => Helpers.SearchHelper.MatchesMultiWord(d.fullName, query)).Take(50).ToList();
         DriverResults.ItemsSource = filtered;
         DriverPopup.IsOpen = filtered.Count > 0;
     }
