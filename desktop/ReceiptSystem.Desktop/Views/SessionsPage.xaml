@@ -197,9 +197,9 @@
                                         <Border Background="#33EF4444" CornerRadius="4" Padding="8,4" Margin="0,2">
                                             <TextBlock FontSize="12" Foreground="{StaticResource AccentDangerBrush}">
                                                 <Run Text="⚠️ إيصال"/>
-                                                <Run Text="{Binding gapNumber}"/>
+                                                <Run Text="{Binding gapNumber, Mode=OneWay}"/>
                                                 <Run Text="—"/>
-                                                <Run Text="{Binding statusDisplay}"/>
+                                                <Run Text="{Binding statusDisplay, Mode=OneWay}"/>
                                             </TextBlock>
                                         </Border>
                                     </DataTemplate>
