@@ -212,15 +212,16 @@
         </Border>
 
         <!-- ═══ PAGINATION ═══ -->
-        <Border Grid.Row="2" HorizontalAlignment="Center" Margin="0,0,0,4"
-                Visibility="{Binding ElementName=DetailPanel, Path=Visibility, Converter={x:Null}}">
-            <StackPanel x:Name="PaginationPanel" Orientation="Horizontal" Margin="0,4">
-                <Button x:Name="PrevBtn" Content="◀ السابق" Style="{StaticResource SecondaryButton}"
-                        Padding="12,6" FontSize="12" Click="Prev_Click" IsEnabled="False"/>
-                <TextBlock x:Name="PageInfo" Text="صفحة 1" FontSize="13" Margin="16,0"
+        <Border Grid.Row="2" HorizontalAlignment="Center" Margin="0,4,0,4">
+            <StackPanel x:Name="PaginationPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="PrevBtn" Content="‹" Style="{StaticResource PaginationButton}"
+                        FontSize="18" Padding="10,2" Click="Prev_Click" IsEnabled="False"
+                        ToolTip="السابق"/>
+                <TextBlock x:Name="PageInfo" Text="صفحة 1" FontSize="12" Margin="6,0"
                            VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"/>
-                <Button x:Name="NextBtn" Content="التالي ▶" Style="{StaticResource SecondaryButton}"
-                        Padding="12,6" FontSize="12" Click="Next_Click"/>
+                <Button x:Name="NextBtn" Content="›" Style="{StaticResource PaginationButton}"
+                        FontSize="18" Padding="10,2" Click="Next_Click"
+                        ToolTip="التالي"/>
             </StackPanel>
         </Border>
 

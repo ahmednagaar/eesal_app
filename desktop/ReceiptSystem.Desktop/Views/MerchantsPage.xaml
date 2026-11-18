@@ -38,15 +38,17 @@
             </Border>
 
             <!-- Pagination Info -->
-            <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0">
                 <TextBlock x:Name="PageInfoText" FontSize="12"
                            Foreground="{StaticResource TextSecondaryBrush}"
-                           HorizontalAlignment="Right"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <Button x:Name="PrevBtn" Content="◀  السابق" Style="{StaticResource SecondaryButton}"
-                            Click="PrevPage_Click" Padding="16,8" FontSize="12" Margin="0,0,8,0"/>
-                    <Button x:Name="NextBtn" Content="التالي  ▶" Style="{StaticResource SecondaryButton}"
-                            Click="NextPage_Click" Padding="16,8" FontSize="12"/>
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <Button x:Name="PrevBtn" Content="‹" Style="{StaticResource PaginationButton}"
+                            Click="PrevPage_Click" FontSize="18" Padding="10,2"
+                            ToolTip="السابق"/>
+                    <Button x:Name="NextBtn" Content="›" Style="{StaticResource PaginationButton}"
+                            Click="NextPage_Click" FontSize="18" Padding="10,2"
+                            ToolTip="التالي"/>
                 </StackPanel>
             </Grid>
 

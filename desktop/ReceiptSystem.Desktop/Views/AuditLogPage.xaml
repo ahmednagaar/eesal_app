@@ -116,20 +116,21 @@
         </DataGrid>
 
         <!-- ═══ PAGINATION ═══ -->
-        <Border Grid.Row="2" Background="{StaticResource BgDeepBrush}" Padding="20,12"
+        <Border Grid.Row="2" Padding="20,6"
                 BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
             <Grid>
-                <TextBlock x:Name="PageInfoText" Text="صفحة 1" FontSize="13"
+                <TextBlock x:Name="PageInfoText" Text="صفحة 1" FontSize="12"
                            Foreground="{StaticResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <Button x:Name="PrevBtn" Content="→ السابقة"
-                            Style="{StaticResource SecondaryButton}"
-                            Click="PrevPage_Click" Padding="16,6" FontSize="12"
-                            Margin="0,0,8,0"/>
-                    <Button x:Name="NextBtn" Content="التالية ←"
-                            Style="{StaticResource SecondaryButton}"
-                            Click="NextPage_Click" Padding="16,6" FontSize="12"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <Button x:Name="PrevBtn" Content="‹"
+                            Style="{StaticResource PaginationButton}"
+                            Click="PrevPage_Click" FontSize="18" Padding="10,2"
+                            ToolTip="السابقة"/>
+                    <Button x:Name="NextBtn" Content="›"
+                            Style="{StaticResource PaginationButton}"
+                            Click="NextPage_Click" FontSize="18" Padding="10,2"
+                            ToolTip="التالية"/>
                 </StackPanel>
             </Grid>
         </Border>

@@ -149,14 +149,16 @@
         </Border>
 
         <!-- ═══ PAGINATION ═══ -->
-        <Border Grid.Row="3" Margin="24,8,24,20">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="PrevBtn" Content="→ السابق" Style="{StaticResource SecondaryButton}"
-                        Padding="10,6" FontSize="12" Click="Prev_Click" IsEnabled="False" Margin="0,0,8,0"/>
-                <TextBlock x:Name="PageInfo" Text="صفحة 1" FontSize="12" VerticalAlignment="Center"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0"/>
-                <Button x:Name="NextBtn" Content="التالي ←" Style="{StaticResource SecondaryButton}"
-                        Padding="10,6" FontSize="12" Click="Next_Click" IsEnabled="False"/>
+        <Border Grid.Row="3" Margin="24,4,24,16" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="PrevBtn" Content="‹" Style="{StaticResource PaginationButton}"
+                        FontSize="18" Padding="10,2" Click="Prev_Click" IsEnabled="False"
+                        ToolTip="السابق"/>
+                <TextBlock x:Name="PageInfo" Text="صفحة 1" FontSize="12" Margin="6,0"
+                           VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <Button x:Name="NextBtn" Content="›" Style="{StaticResource PaginationButton}"
+                        FontSize="18" Padding="10,2" Click="Next_Click" IsEnabled="False"
+                        ToolTip="التالي"/>
             </StackPanel>
         </Border>
 
