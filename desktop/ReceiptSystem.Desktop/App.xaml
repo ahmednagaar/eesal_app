@@ -654,8 +654,7 @@
                 </Setter>
             </Style>
 
-            <!-- TEMPORARILY DISABLED Testing WPF default DatePicker -->
-            <!--
+            <!-- Dark DatePicker — full custom template with dark calendar popup -->
             <Style TargetType="DatePicker">
                 <Setter Property="Background" Value="{StaticResource BgInputBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
@@ -743,13 +742,6 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
-            </Style>
-            -->
-            
-            <!-- SIMPLE TEST WPF Default DatePicker with white text -->
-            <Style TargetType="DatePicker">
-                <Setter Property="Foreground" Value="White" />
-                <Setter Property="Background" Value="{StaticResource BgInputBrush}" />
             </Style>
 
             <!-- Dark CheckBox -->
