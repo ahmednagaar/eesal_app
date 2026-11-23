@@ -7,6 +7,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ═══ FILTER BAR ═══ -->
@@ -114,7 +115,7 @@
         </Border>
 
         <!-- ═══ DETAIL / ACTIONS PANEL ═══ -->
-        <Border x:Name="DetailPanel" Grid.Row="2" Background="{StaticResource BgCardBrush}"
+        <Border x:Name="DetailPanel" Grid.Row="3" Background="{StaticResource BgCardBrush}"
                 CornerRadius="12" Margin="24,12,24,20" Padding="20,14" Visibility="Collapsed">
             <Grid>
                 <Grid.RowDefinitions>
@@ -226,7 +227,7 @@
         </Border>
 
         <!-- ═══ RECONCILE DIALOG ═══ -->
-        <Border x:Name="ReconcileDialog" Grid.RowSpan="3" Background="#CC000000" Visibility="Collapsed">
+        <Border x:Name="ReconcileDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
             <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="32,24"
                     MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center"
                     BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2">
@@ -249,7 +250,7 @@
         </Border>
 
         <!-- ═══ UNLOCK DIALOG ═══ -->
-        <Border x:Name="UnlockDialog" Grid.RowSpan="3" Background="#CC000000" Visibility="Collapsed">
+        <Border x:Name="UnlockDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
             <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="32,24"
                     MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center"
                     BorderBrush="{StaticResource AccentWarningBrush}" BorderThickness="2">
@@ -269,7 +270,7 @@
         </Border>
 
         <!-- ═══ EDIT RECEIPT DIALOG ═══ -->
-        <Border x:Name="EditReceiptDialog" Grid.RowSpan="3" Background="#CC000000" Visibility="Collapsed">
+        <Border x:Name="EditReceiptDialog" Grid.RowSpan="4" Background="#CC000000" Visibility="Collapsed">
             <Border Background="{StaticResource BgCardBrush}" CornerRadius="16" Padding="32,24"
                     MaxWidth="460" HorizontalAlignment="Center" VerticalAlignment="Center"
                     BorderBrush="{StaticResource AccentPrimaryBrush}" BorderThickness="2">
@@ -331,7 +332,7 @@
         </Border>
 
         <!-- Loading -->
-        <Border x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#88000000" Visibility="Collapsed">
+        <Border x:Name="LoadingOverlay" Grid.RowSpan="4" Background="#88000000" Visibility="Collapsed">
             <TextBlock Text="⏳ جاري التحميل..." FontSize="16" Foreground="White"
                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>

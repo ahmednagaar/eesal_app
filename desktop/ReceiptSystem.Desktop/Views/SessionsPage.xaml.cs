@@ -80,6 +80,7 @@ public partial class SessionsPage : UserControl
     {
         LoadingOverlay.Visibility = Visibility.Visible;
         DetailPanel.Visibility = Visibility.Collapsed;
+        PaginationPanel.Visibility = Visibility.Visible;
         try
         {
             string? date = FilterDate.SelectedDate?.ToString("yyyy-MM-dd");
@@ -164,13 +165,14 @@ public partial class SessionsPage : UserControl
     // ── Selection ──
     private void SessionsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (SessionsGrid.SelectedItem == null) { DetailPanel.Visibility = Visibility.Collapsed; return; }
+        if (SessionsGrid.SelectedItem == null) { DetailPanel.Visibility = Visibility.Collapsed; PaginationPanel.Visibility = Visibility.Visible; return; }
 
         dynamic row = SessionsGrid.SelectedItem;
         _selectedSessionId = (int)row.sessionId;
         _selectedSessionAmount = (decimal)row.rawAmount;
         DetailTitle.Text = $"جلسة {row.driverName} — {row.sessionDate}";
         DetailPanel.Visibility = Visibility.Visible;
+        PaginationPanel.Visibility = Visibility.Collapsed;
         ReceiptsDetail.Visibility = Visibility.Collapsed;
 
         bool isConfirmed = (bool)row.isConfirmed;
