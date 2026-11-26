@@ -247,8 +247,7 @@
                 <Setter Property="FontFamily" Value="Segoe UI" />
             </Style>
 
-            <!-- DatePickerTextBox — the inner textbox inside DatePicker -->
-            <!-- CRITICAL: IsReadOnly must be False to enable keyboard date entry -->
+            <!-- DatePickerTextBox — dark theme template with VisualState support -->
             <Style TargetType="DatePickerTextBox">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="White" />
@@ -261,18 +260,40 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="DatePickerTextBox">
-                            <Border Background="{TemplateBinding Background}" BorderThickness="0" Padding="{TemplateBinding Padding}">
-                                <Grid VerticalAlignment="Center">
-                                    <ScrollViewer x:Name="PART_ContentHost" Foreground="White" Focusable="False"
-                                                  HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"
-                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                  VerticalContentAlignment="Center" Margin="0" Padding="0" />
-                                    <ContentControl x:Name="PART_Watermark"
-                                                    Foreground="{StaticResource TextMutedBrush}"
-                                                    IsHitTestVisible="False" Focusable="False"
-                                                    Visibility="Collapsed" VerticalAlignment="Center" />
-                                </Grid>
-                            </Border>
+                            <Grid>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="WatermarkStates">
+                                        <VisualState x:Name="Unwatermarked"/>
+                                        <VisualState x:Name="Watermarked">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="ContentElement"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0" Duration="0"/>
+                                                <DoubleAnimation Storyboard.TargetName="PART_Watermark"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="1" Duration="0"/>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderThickness="0" Padding="{TemplateBinding Padding}">
+                                    <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                                        <Border x:Name="ContentElement" BorderThickness="0"/>
+                                        <Border x:Name="watermark_decorator" BorderThickness="0">
+                                            <ContentControl x:Name="PART_Watermark"
+                                                            Opacity="0" Focusable="False"
+                                                            IsHitTestVisible="False"
+                                                            Foreground="{StaticResource TextMutedBrush}"
+                                                            Padding="2"/>
+                                        </Border>
+                                        <ScrollViewer x:Name="PART_ContentHost" Margin="0"
+                                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                    </Grid>
+                                </Border>
+                            </Grid>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
